@@ -1,4 +1,4 @@
-# 🎃 RGBoo - Community Conttrolled RGB Module 👻
+# 🎃 RGBoo - Community Controlled RGB Module 👻
 
 A haunting collection of software that lets the community control RGB LEDs together! This project creates a complete pipeline where multiple users can submit color changes through a web interface, bringing shared lighting experiences to life - perfect for interactive displays, community art projects, or spooky collaborative lighting effects.
 
