@@ -1,6 +1,6 @@
-# 🎃 RGBoo - Spooktacular RGB LED Controller 👻
+# 🎃 RGBoo - Community Conttrolled RGB Module 👻
 
-A haunting collection of software that brings your RGB LEDs to life! This project creates a complete pipeline from web interface to hardware control, perfect for creating eerie lighting effects or any colorful display.
+A haunting collection of software that lets the community control RGB LEDs together! This project creates a complete pipeline where multiple users can submit color changes through a web interface, bringing shared lighting experiences to life - perfect for interactive displays, community art projects, or spooky collaborative lighting effects.
 
 ## 🦇 Project Architecture
 
