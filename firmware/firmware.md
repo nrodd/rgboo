@@ -1,0 +1,1 @@
+This firmware intake data over designated usb serial port. It takes the color that is passed in and then changes the color of the lights on the module that is attached to the esp32. 

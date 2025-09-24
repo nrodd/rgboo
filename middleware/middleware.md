@@ -1,0 +1,1 @@
+Python and flask api. Receives updates from website, does some things with that, and then calls into the firmware on the esp32 over usb serial port. 
