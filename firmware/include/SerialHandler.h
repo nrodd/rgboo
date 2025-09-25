@@ -4,15 +4,16 @@
 #include <Arduino.h>
 #include "Config.h"
 
-class SerialHandler {
+class SerialHandler
+{
 private:
     char buffer[SERIAL_BUFFER_SIZE];
     int bufferIndex;
     unsigned long lastReceiveTime;
-    
+
     void processReceivedData();
     void clearBuffer();
-    void debugPrint(const String& message);
+    void debugPrint(const String &message);
 
 public:
     SerialHandler();
