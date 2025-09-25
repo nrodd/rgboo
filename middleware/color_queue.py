@@ -3,6 +3,7 @@ import threading
 import time
 import logging
 from datetime import datetime, timedelta
+from obs import update_obs_text
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,17 @@ class ColorQueue:
                 
                 if success:
                     logger.info(f"Sent color to ESP32 for {color_request['username']}")
+                    
+                    # Send username to OBS
+                    try:
+                        obs_success = update_obs_text("CurrentUser", color_request['username'])
+                        if obs_success:
+                            logger.info(f"Updated OBS with username: {color_request['username']}")
+                        else:
+                            logger.warning(f"Failed to update OBS with username: {color_request['username']}")
+                    except Exception as obs_error:
+                        logger.error(f"Error updating OBS: {obs_error}")
+                        
                 else:
                     logger.error(f"Failed to send color: {message}")
                     
