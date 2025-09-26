@@ -7,7 +7,7 @@ from serial_controller import SerialController
 from firmware_config import Config
 from color_queue import ColorQueue
 from routes import register_routes
-from obs import OBSController
+from obs import start_obs_server, stop_obs_server
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -27,17 +27,17 @@ logger = logging.getLogger(__name__)
 # Initialize serial controller
 serial_controller = SerialController()
 
-# Initialize OBS controller
-obs_controller = OBSController()
+# Start OBS WebSocket server
+start_obs_server()
 
-# Initialize color queue with 20-second delay
-color_queue = ColorQueue(serial_controller, obs_controller)
+# Initialize color queue with 20-second delay (no OBS controller needed)
+color_queue = ColorQueue(serial_controller)
 color_queue.start_worker()
 
 # Register cleanup on app shutdown
 def cleanup():
     color_queue.stop_worker()
-    obs_controller.disconnect()
+    stop_obs_server()
 
 atexit.register(cleanup)
 
@@ -53,11 +53,8 @@ if __name__ == '__main__':
     else:
         logger.warning("Could not connect to ESP32 on startup - will retry on first request")
     
-    # Try to connect to OBS on startup
-    if obs_controller.connect():
-        logger.info("Successfully connected to OBS WebSocket")
-    else:
-        logger.warning("Could not connect to OBS on startup - OBS integration will be disabled")
+    # OBS WebSocket server starts automatically
+    logger.info("OBS WebSocket server started - Browser Source available at http://localhost:5002")
     
     # Start Flask app
     app.run(

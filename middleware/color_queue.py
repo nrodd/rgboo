@@ -3,6 +3,7 @@ import threading
 import time
 import logging
 from datetime import datetime, timedelta
+from obs import update_obs_username
 
 logger = logging.getLogger(__name__)
 
@@ -11,9 +12,8 @@ timer = 20
 class ColorQueue:
     """Simple queue for color requests with 20-second delay"""
     
-    def __init__(self, serial_controller, obs_controller=None):
+    def __init__(self, serial_controller):
         self.serial_controller = serial_controller
-        self.obs_controller = obs_controller
         self.request_queue = queue.Queue()
         self.worker_thread = None
         self.running = False
@@ -76,18 +76,15 @@ class ColorQueue:
                 if success:
                     logger.info(f"Sent color to ESP32 for {color_request['username']}")
                     
-                    # Send username to OBS if controller is available
-                    if self.obs_controller and self.obs_controller.connected:
-                        try:
-                            obs_success = self.obs_controller.update_text("CurrentUser", color_request['username'])
-                            if obs_success:
-                                logger.info(f"Updated OBS with username: {color_request['username']}")
-                            else:
-                                logger.warning(f"Failed to update OBS with username: {color_request['username']}")
-                        except Exception as obs_error:
-                            logger.error(f"Error updating OBS: {obs_error}")
-                    elif self.obs_controller:
-                        logger.warning("OBS controller not connected, skipping username update")
+                    # Update OBS WebSocket server with new username
+                    try:
+                        obs_success = update_obs_username(color_request['username'])
+                        if obs_success:
+                            logger.info(f"Updated OBS WebSocket with username: {color_request['username']}")
+                        else:
+                            logger.warning(f"Failed to update OBS WebSocket with username: {color_request['username']}")
+                    except Exception as obs_error:
+                        logger.error(f"Error updating OBS WebSocket: {obs_error}")
                         
                 else:
                     logger.error(f"Failed to send color: {message}")

@@ -3,4 +3,5 @@ Flask-CORS==4.0.0
 pyserial==3.5
 python-dotenv==1.0.0
 gunicorn==21.2.0
-obs-websocket-py==1.0
+flask-socketio==5.3.4
+eventlet==0.33.3

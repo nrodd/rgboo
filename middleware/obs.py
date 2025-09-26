@@ -1,77 +1,138 @@
-from obswebsocket import obsws, requests
+"""
+OBS Browser Source WebSocket Server
+Serves HTML page with real-time username updates via WebSocket
+"""
+
 import logging
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+import threading
+import time
 
 logger = logging.getLogger(__name__)
 
-class OBSController:
-    """Simple OBS WebSocket controller for updating text sources"""
+class OBSWebSocketServer:
+    """WebSocket server for OBS browser source integration"""
     
-    def __init__(self, host: str = "localhost", port: int = 4455, password: str = "yourpassword"):
-        self.host = host
+    def __init__(self, port=5002):
         self.port = port
-        self.password = password
-        self.ws = None
-        self.connected = False
+        self.app = None
+        self.socketio = None
+        self.server_thread = None
+        self.current_username = "Waiting for user..."
+        self.running = False
+        
+    def create_app(self):
+        """Create Flask app with SocketIO"""
+        app = Flask(__name__)
+        app.config['SECRET_KEY'] = 'obs-websocket-secret'
+        
+        @app.route('/')
+        def obs_page():
+            """Serve the OBS browser source page"""
+            return render_template('obs_browser_source.html', current_username=self.current_username)
+        
+        return app
     
-    def connect(self) -> bool:
-        """Connect to OBS WebSocket"""
+    def start_server(self):
+        """Start the WebSocket server in a separate thread"""
+        if self.running:
+            logger.warning("OBS WebSocket server already running")
+            return
+        
         try:
-            self.ws = obsws(self.host, self.port, self.password)
-            self.ws.connect()
-            self.connected = True
-            return True
+            self.app = self.create_app()
+            self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode='eventlet')
+            
+            # WebSocket event handlers
+            @self.socketio.on('connect')
+            def handle_connect(auth):
+                from flask import request
+                logger.info(f"OBS browser source connected from {request.remote_addr}")
+                emit('current_username', {
+                    'username': self.current_username,
+                    'timestamp': time.strftime('%H:%M:%S')
+                })
+            
+            @self.socketio.on('disconnect')
+            def handle_disconnect():
+                logger.info("OBS browser source disconnected")
+            
+            @self.socketio.on('request_current_username')
+            def handle_username_request():
+                emit('current_username', {
+                    'username': self.current_username,
+                    'timestamp': time.strftime('%H:%M:%S')
+                })
+            
+            # Start server in background thread
+            self.server_thread = threading.Thread(
+                target=self._run_server,
+                daemon=True
+            )
+            self.running = True
+            self.server_thread.start()
+            
+            logger.info(f"OBS WebSocket server started on port {self.port}")
+            logger.info(f"OBS Browser Source URL: http://localhost:{self.port}")
+            
         except Exception as e:
-            logger.error(f"Failed to connect to OBS: {e}")
-            return False
+            logger.error(f"Failed to start OBS WebSocket server: {e}")
+            self.running = False
     
-    def disconnect(self):
-        """Disconnect from OBS WebSocket"""
-        if self.ws and self.connected:
+    def _run_server(self):
+        """Internal method to run the server"""
+        try:
+            self.socketio.run(self.app, host='0.0.0.0', port=self.port, debug=False)
+        except Exception as e:
+            logger.error(f"OBS WebSocket server error: {e}")
+            self.running = False
+    
+    def stop_server(self):
+        """Stop the WebSocket server"""
+        self.running = False
+        if self.socketio:
+            self.socketio.stop()
+        logger.info("OBS WebSocket server stopped")
+    
+    def update_username(self, username):
+        """Update the current username and broadcast to all connected clients"""
+        self.current_username = username
+        
+        if self.socketio and self.running:
             try:
-                self.ws.disconnect()
-                self.connected = False
+                self.socketio.emit('username_update', {
+                    'username': username,
+                    'timestamp': time.strftime('%H:%M:%S')
+                })
+                logger.info(f"Broadcasted username update to OBS: {username}")
+                return True
             except Exception as e:
-                logger.error(f"Error disconnecting from OBS: {e}")
-    
-    def update_text(self, source_name: str, text: str) -> bool:
-        """Update a text source in OBS"""
-        if not self.connected:
+                logger.error(f"Failed to broadcast username update: {e}")
+                return False
+        else:
+            logger.warning("OBS WebSocket server not running, cannot update username")
             return False
-        
-        try:
-            self.ws.call(requests.SetInputSettings(
-                inputName=source_name,
-                inputSettings={"text": text},
-                overlay=True
-            ))
-            return True
-        except Exception as e:
-            logger.error(f"Failed to update text source '{source_name}': {e}")
-            return False
-
-# Simple convenience function
-def update_obs_text(source_name: str, text: str, host: str = "localhost", port: int = 4455, password: str = "yourpassword") -> bool:
-    """
-    Update OBS text source (connects, updates, disconnects)
     
-    Args:
-        source_name: Name of the text source in OBS
-        text: New text content
-        host: OBS host (default: localhost)
-        port: OBS port (default: 4455)
-        password: OBS password
-        
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    obs = OBSController(host, port, password)
-    if obs.connect():
-        result = obs.update_text(source_name, text)
-        obs.disconnect()
-        return result
-    return False
+    def is_running(self):
+        """Check if the server is running"""
+        return self.running
 
-# Example usage
-if __name__ == "__main__":
-    # Quick text update
-    update_obs_text("SongTitle", "Now Playing: Spooky Music")
+# Global OBS WebSocket server instance
+obs_websocket_server = OBSWebSocketServer()
+
+def start_obs_server():
+    """Start the OBS WebSocket server"""
+    obs_websocket_server.start_server()
+
+def stop_obs_server():
+    """Stop the OBS WebSocket server"""
+    obs_websocket_server.stop_server()
+
+def update_obs_username(username):
+    """Update the username displayed in OBS"""
+    return obs_websocket_server.update_username(username)
+
+def is_obs_server_running():
+    """Check if OBS server is running"""
+    return obs_websocket_server.is_running()
