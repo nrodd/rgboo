@@ -1,138 +1,71 @@
 """
-OBS Browser Source WebSocket Server
-Serves HTML page with real-time username updates via WebSocket
+OBS Browser Source Integration
+Provides routes and WebSocket handlers for OBS browser source functionality
 """
 
 import logging
-from flask import Flask, render_template
-from flask_socketio import SocketIO, emit
-import threading
 import time
+from flask import render_template, request
+from flask_socketio import emit
 
 logger = logging.getLogger(__name__)
 
-class OBSWebSocketServer:
-    """WebSocket server for OBS browser source integration"""
-    
-    def __init__(self, port=5002):
-        self.port = port
-        self.app = None
-        self.socketio = None
-        self.server_thread = None
-        self.current_username = "Waiting for user..."
-        self.running = False
-        
-    def create_app(self):
-        """Create Flask app with SocketIO"""
-        app = Flask(__name__)
-        app.config['SECRET_KEY'] = 'obs-websocket-secret'
-        
-        @app.route('/')
-        def obs_page():
-            """Serve the OBS browser source page"""
-            return render_template('obs_browser_source.html', current_username=self.current_username)
-        
-        return app
-    
-    def start_server(self):
-        """Start the WebSocket server in a separate thread"""
-        if self.running:
-            logger.warning("OBS WebSocket server already running")
-            return
-        
-        try:
-            self.app = self.create_app()
-            self.socketio = SocketIO(self.app, cors_allowed_origins="*", async_mode='eventlet')
-            
-            # WebSocket event handlers
-            @self.socketio.on('connect')
-            def handle_connect(auth):
-                from flask import request
-                logger.info(f"OBS browser source connected from {request.remote_addr}")
-                emit('current_username', {
-                    'username': self.current_username,
-                    'timestamp': time.strftime('%H:%M:%S')
-                })
-            
-            @self.socketio.on('disconnect')
-            def handle_disconnect():
-                logger.info("OBS browser source disconnected")
-            
-            @self.socketio.on('request_current_username')
-            def handle_username_request():
-                emit('current_username', {
-                    'username': self.current_username,
-                    'timestamp': time.strftime('%H:%M:%S')
-                })
-            
-            # Start server in background thread
-            self.server_thread = threading.Thread(
-                target=self._run_server,
-                daemon=True
-            )
-            self.running = True
-            self.server_thread.start()
-            
-            logger.info(f"OBS WebSocket server started on port {self.port}")
-            logger.info(f"OBS Browser Source URL: http://localhost:{self.port}")
-            
-        except Exception as e:
-            logger.error(f"Failed to start OBS WebSocket server: {e}")
-            self.running = False
-    
-    def _run_server(self):
-        """Internal method to run the server"""
-        try:
-            self.socketio.run(self.app, host='0.0.0.0', port=self.port, debug=False)
-        except Exception as e:
-            logger.error(f"OBS WebSocket server error: {e}")
-            self.running = False
-    
-    def stop_server(self):
-        """Stop the WebSocket server"""
-        self.running = False
-        if self.socketio:
-            self.socketio.stop()
-        logger.info("OBS WebSocket server stopped")
-    
-    def update_username(self, username):
-        """Update the current username and broadcast to all connected clients"""
-        self.current_username = username
-        
-        if self.socketio and self.running:
-            try:
-                self.socketio.emit('username_update', {
-                    'username': username,
-                    'timestamp': time.strftime('%H:%M:%S')
-                })
-                logger.info(f"Broadcasted username update to OBS: {username}")
-                return True
-            except Exception as e:
-                logger.error(f"Failed to broadcast username update: {e}")
-                return False
-        else:
-            logger.warning("OBS WebSocket server not running, cannot update username")
-            return False
-    
-    def is_running(self):
-        """Check if the server is running"""
-        return self.running
+# Global variable for current username
+current_obs_username = "Waiting for user..."
 
-# Global OBS WebSocket server instance
-obs_websocket_server = OBSWebSocketServer()
+def setup_obs_routes(app, socketio):
+    """Set up OBS routes and SocketIO handlers on the existing Flask app"""
+    
+    # OBS Browser Source route (local access only)
+    @app.route('/obs')
+    def obs_browser_source():
+        """Serve the OBS browser source page - local access only"""
+        # Only allow local access
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', ''))
+        if not (client_ip.startswith('127.0.0.1') or client_ip.startswith('::1') or client_ip.startswith('localhost') or client_ip == ''):
+            logger.warning(f"Blocked external access to /obs from IP: {client_ip}")
+            return "Access denied", 403
+        
+        return render_template('obs_browser_source.html', current_username=current_obs_username)
 
-def start_obs_server():
-    """Start the OBS WebSocket server"""
-    obs_websocket_server.start_server()
+    # SocketIO event handlers for OBS (local access only)
+    @socketio.on('connect')
+    def handle_connect():
+        # Only allow local WebSocket connections
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', ''))
+        if not (client_ip.startswith('127.0.0.1') or client_ip.startswith('::1') or client_ip.startswith('localhost') or client_ip == ''):
+            logger.warning(f"Blocked external WebSocket connection from IP: {client_ip}")
+            return False  # Reject connection
+        
+        logger.info(f"OBS browser source connected from {client_ip}")
+        emit('current_username', {
+            'username': current_obs_username,
+            'timestamp': time.strftime('%H:%M:%S')
+        })
 
-def stop_obs_server():
-    """Stop the OBS WebSocket server"""
-    obs_websocket_server.stop_server()
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        logger.info("OBS browser source disconnected")
 
-def update_obs_username(username):
+    @socketio.on('request_current_username')
+    def handle_username_request():
+        emit('current_username', {
+            'username': current_obs_username,
+            'timestamp': time.strftime('%H:%M:%S')
+        })
+
+def update_obs_username(username, socketio):
     """Update the username displayed in OBS"""
-    return obs_websocket_server.update_username(username)
-
-def is_obs_server_running():
-    """Check if OBS server is running"""
-    return obs_websocket_server.is_running()
+    global current_obs_username
+    current_obs_username = username
+    
+    try:
+        socketio.emit('username_update', {
+            'username': username,
+            'timestamp': time.strftime('%H:%M:%S')
+        })
+        logger.info(f"Broadcasted username update to OBS: {username}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to broadcast username update: {e}")
+        return False
