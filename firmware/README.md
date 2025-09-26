@@ -1,4 +1,4 @@
-# ESP32 RGB Controller Firmware 
+# ESP32 RGB Controller Firmware
 
 This firmware reads color data from USB serial port and will eventually control RGB LEDs connected to an ESP32.
 

@@ -1,4 +1,4 @@
-# 🎃 RGB Controller Middleware 
+# 🎃 RGB Controller Middleware
 
 A Python Flask API that serves as middleware between a web frontend and ESP32 firmware for controlling RGB LEDs. Now includes a queue system for delayed execution and OBS Studio integration.
 
