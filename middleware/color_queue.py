@@ -7,6 +7,8 @@ from obs import update_obs_text
 
 logger = logging.getLogger(__name__)
 
+timer = 20
+
 class ColorQueue:
     """Simple queue for color requests with 20-second delay"""
     
@@ -30,7 +32,7 @@ class ColorQueue:
     def add_request(self, username: str, r: int, g: int, b: int) -> str:
         """Add a color request to the queue"""
         request_id = f"{username}_{int(time.time())}"
-        scheduled_time = datetime.now() + timedelta(seconds=20)
+        scheduled_time = datetime.now() + timedelta(seconds=timer)
         
         color_request = {
             'username': username,

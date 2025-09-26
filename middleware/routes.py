@@ -1,6 +1,7 @@
 from flask import request, jsonify
 from datetime import datetime
 import logging
+from color_queue import timer 
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +66,12 @@ def register_routes(app, serial_controller, color_queue):
             
             response = {
                 'status': 'queued',
-                'message': 'Color request queued successfully - will be sent in 20 seconds',
+                'message': f'Color request queued successfully - will be sent in {timer} seconds',
                 'username': username,
                 'color': color,
                 'request_id': request_id,
                 'scheduled_time': (datetime.now().replace(microsecond=0) + 
-                                 __import__('datetime').timedelta(seconds=20)).isoformat(),
+                                 __import__('datetime').timedelta(seconds=timer)).isoformat(),
                 'timestamp': datetime.now().isoformat()
             }
             logger.info(f"Successfully queued color request for user '{username}' (ID: {request_id})")
