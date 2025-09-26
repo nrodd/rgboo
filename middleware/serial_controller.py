@@ -174,38 +174,6 @@ class SerialController:
             logger.error(f"Unexpected error sending color: {e}")
             return False, f"Unexpected error: {e}"
     
-    def send_color_hex(self, hex_color: str) -> Tuple[bool, str]:
-        """Send hex color to ESP32"""
-        try:
-            # Ensure connection
-            if not self.is_connected():
-                if not self.connect():
-                    return False, "Could not establish serial connection"
-            
-            # Format HEX command
-            command = f"HEX:{hex_color}\n"
-            
-            # Send command
-            self.serial_connection.write(command.encode('utf-8'))
-            self.serial_connection.flush()
-            
-            logger.info(f"Sent HEX command: {command.strip()}")
-            
-            # Optional: Read response from ESP32
-            time.sleep(0.1)
-            if self.serial_connection.in_waiting > 0:
-                response = self.serial_connection.read(self.serial_connection.in_waiting)
-                logger.debug(f"ESP32 response: {response.decode('utf-8', errors='ignore')}")
-            
-            return True, "Hex color sent successfully"
-            
-        except serial.SerialException as e:
-            logger.error(f"Serial error sending hex color: {e}")
-            self.disconnect()  # Reset connection on error
-            return False, f"Serial communication error: {e}"
-        except Exception as e:
-            logger.error(f"Unexpected error sending hex color: {e}")
-            return False, f"Unexpected error: {e}"
     
     def get_port_info(self) -> Optional[Dict]:
         """Get information about current port"""
