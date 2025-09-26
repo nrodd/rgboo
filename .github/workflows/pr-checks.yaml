@@ -4,10 +4,6 @@ on:
   pull_request:
     branches:
       - 'main'
-  # FOR TESTING
-  push:
-    branches:
-      - 'feat/build-checks-on-pr'
 
 jobs:
   changes:
