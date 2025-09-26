@@ -31,18 +31,41 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.firmware == 'true' }}
     steps:
-      - run: echo "we building firmware"
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Install PlatformIO Core
+      run: |
+        curl -fsSL https://raw.githubusercontent.com/platformio/platformio-core-installer/master/get-platformio.py -o get-platformio.py
+        python get-platformio.py
+      shell: bash
+    - run: cd firmware
+    - run: pio run
+      shell: bash
   
   build-middleware:
     needs: [changes]
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.middleware == 'true' }}
     steps:
-    - run: echo "we building middleware"
-
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - run: cd middleware
+    - run: pip install -r requirements.txt
+    - run: python test_api.py
   build-web:
     needs: [changes]
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.web == 'true' }}
     steps:
-    - run: echo "we building web"
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    - run: cd web
+    - run: npm ci
+    - run: npm run build
