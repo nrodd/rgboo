@@ -67,11 +67,10 @@ jobs:
     needs: [changes]
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.web == 'true' }}
-    defaults:
-      run:
-        working-directory: './web'
     steps:
     - uses: actions/checkout@v4
+      with:
+        working-directory: './web'
     - uses: actions/setup-node@v4
       with:
         node-version: '20'
