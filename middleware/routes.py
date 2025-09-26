@@ -84,67 +84,6 @@ def register_routes(app, serial_controller, color_queue):
                 'timestamp': datetime.now().isoformat()
             }), 500
 
-    @app.route('/api/color/hex', methods=['POST'])
-    def set_color_hex():
-        """
-        Alternative endpoint to set color using hex format
-        Expected JSON payload:
-        {
-            "username": "string",
-            "hex": "#FF8040"
-        }
-        """
-        try:
-            if not request.is_json:
-                return jsonify({'error': 'Request must be JSON'}), 400
-            
-            data = request.get_json()
-            
-            # Validate required fields
-            if 'username' not in data or 'hex' not in data:
-                return jsonify({'error': 'Username and hex color are required'}), 400
-            
-            hex_color = data['hex']
-            username = data['username']
-            
-            # Validate hex format
-            if not hex_color.startswith('#') or len(hex_color) != 7:
-                return jsonify({'error': 'Hex color must be in format #RRGGBB'}), 400
-            
-            try:
-                # Convert hex to RGB
-                hex_color = hex_color.lstrip('#')
-                r = int(hex_color[0:2], 16)
-                g = int(hex_color[2:4], 16)
-                b = int(hex_color[4:6], 16)
-            except ValueError:
-                return jsonify({'error': 'Invalid hex color format'}), 400
-            
-            logger.info(f"Hex color change request from user '{username}': {data['hex']} -> RGB({r}, {g}, {b})")
-            
-            # Add color request to queue (20-second delay)
-            request_id = color_queue.add_request(username, r, g, b)
-            
-            response = {
-                'status': 'queued',
-                'message': 'Color request queued successfully - will be sent in 20 seconds',
-                'username': username,
-                'hex': data['hex'],
-                'rgb': {'r': r, 'g': g, 'b': b},
-                'request_id': request_id,
-                'scheduled_time': (datetime.now().replace(microsecond=0) + 
-                                 __import__('datetime').timedelta(seconds=20)).isoformat(),
-                'timestamp': datetime.now().isoformat()
-            }
-            return jsonify(response), 200
-                
-        except Exception as e:
-            logger.error(f"Error processing hex color request: {str(e)}")
-            return jsonify({
-                'status': 'error',
-                'message': 'Internal server error',
-                'timestamp': datetime.now().isoformat()
-            }), 500
 
     @app.route('/api/status', methods=['GET'])
     def get_status():

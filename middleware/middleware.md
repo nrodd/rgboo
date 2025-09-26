@@ -41,18 +41,6 @@ Content-Type: application/json
 ```
 **Response:** Request is queued and will be sent to ESP32 after 20 seconds.
 
-### Set Hex Color (Queued)
-```
-POST /api/color/hex
-Content-Type: application/json
-
-{
-    "username": "user123",
-    "hex": "#FF8040"
-}
-```
-**Response:** Request is queued and will be sent to ESP32 after 20 seconds.
-
 ### Queue Management
 ```
 GET /api/queue          # Get detailed queue status
