@@ -73,12 +73,6 @@ void SerialHandler::processReceivedData()
         // Future: Parse RGB values and control LEDs
         Serial.println("RGB command detected - ready for LED control implementation");
     }
-    else if (receivedData.startsWith("HEX:"))
-    {
-        debugPrint("Detected HEX color command");
-        // Future: Parse HEX color values
-        Serial.println("HEX command detected - ready for LED control implementation");
-    }
     else
     {
         // Generic data received
