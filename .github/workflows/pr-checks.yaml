@@ -1,0 +1,50 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+  # FOR TESTING
+  push:
+    branches:
+      - 'feat/build-checks-on-pr'
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      firmware: ${{ steps.changes.outputs.firmware }}
+      middleware: ${{ steps.changes.outputs.middleware }}
+      web: ${{ steps.changes.outputs.web }}
+    steps:
+    - id: changes
+      uses: dorny/paths-filter@v3
+      with:
+        filters: |
+          firmware:
+          - 'firmware/**'
+          middleware:
+          - 'middleware/**'
+          web:
+          - 'web/**'
+
+  build-firmware:
+    needs: [changes]
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.firmware == 'true' }}
+    steps:
+      - run: echo "we building firmware"
+  
+  build-middleware:
+    needs: [changes]
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.middleware == 'true' }}
+    steps:
+    - run: echo "we building middleware"
+
+  build-web:
+    needs: [changes]
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.web == 'true' }}
+    steps:
+    - run: echo "we building web"
