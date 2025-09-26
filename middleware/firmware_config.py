@@ -5,7 +5,7 @@ class Config:
     
     # Flask settings
     HOST = os.getenv('HOST', '127.0.0.1')  # localhost
-    PORT = int(os.getenv('PORT', 5000))
+    PORT = int(os.getenv('PORT', 5001))
     DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
     
     # Serial communication settings

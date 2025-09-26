@@ -8,7 +8,6 @@ A Python Flask API that serves as middleware between a web frontend and ESP32 fi
 - **20-Second Queue System** - Requests are queued and sent after delay
 - **USB Serial Communication** with ESP32
 - **Automatic ESP32 Detection** via VID/PID matching
-- **Multiple Color Formats** (RGB values and HEX)
 - **OBS Studio Integration** - Update text sources in OBS
 - **Background Processing** - Queue worker processes requests automatically
 - **Modular Architecture** - Clean separation of routes, queue, and controllers
@@ -129,7 +128,6 @@ The middleware automatically:
 2. **Establishes serial connection** at 115200 baud
 3. **Sends color commands** in the format:
    - `RGB:255,128,64\n` for RGB values
-   - `HEX:#FF8040\n` for hex colors
 4. **Handles connection errors** with automatic reconnection
 
 ## Logging

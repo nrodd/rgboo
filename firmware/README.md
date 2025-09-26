@@ -8,7 +8,7 @@ This firmware reads color data from USB serial port and will eventually control 
 - Buffer management with overflow protection
 - Timeout handling for incomplete messages
 - Debug output support
-- Basic color command detection (RGB: and HEX: prefixes)
+- Basic color command detection (RGB: prefixes)
 
 ## Hardware Requirements
 - ESP32 development board
@@ -52,7 +52,6 @@ firmware/
 
 ## Supported Commands (Future)
 - `RGB:255,128,64` - Set RGB color values
-- `HEX:#FF8040` - Set color using hex notation
 
 ## Configuration
 Edit `Config.h` to modify:

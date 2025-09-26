@@ -4,7 +4,7 @@ import logging
 import atexit
 
 from serial_controller import SerialController
-from middleware.firmware_config import Config
+from firmware_config import Config
 from color_queue import ColorQueue
 from routes import register_routes
 

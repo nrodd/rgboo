@@ -6,7 +6,7 @@ import requests
 import json
 import time
 
-BASE_URL = "http://127.0.0.1:5000"
+BASE_URL = "http://127.0.0.1:5001"
 
 def test_health_check():
     """Test the health check endpoint"""
@@ -35,27 +35,6 @@ def test_set_rgb_color():
     try:
         response = requests.post(
             f"{BASE_URL}/api/color",
-            json=data,
-            headers={'Content-Type': 'application/json'}
-        )
-        print(f"Status: {response.status_code}")
-        print(f"Response: {json.dumps(response.json(), indent=2)}")
-        return response.status_code == 200
-    except Exception as e:
-        print(f"Error: {e}")
-        return False
-
-def test_set_hex_color():
-    """Test setting hex color"""
-    print("\nTesting HEX color endpoint...")
-    data = {
-        "username": "testuser",
-        "hex": "#FF8040"
-    }
-    
-    try:
-        response = requests.post(
-            f"{BASE_URL}/api/color/hex",
             json=data,
             headers={'Content-Type': 'application/json'}
         )
@@ -96,7 +75,7 @@ def test_invalid_requests():
 if __name__ == "__main__":
     print("RGB Controller Middleware API Test Suite")
     print("=" * 50)
-    print("Make sure the API server is running at http://127.0.0.1:5000")
+    print("Make sure the API server is running at http://127.0.0.1:5001")
     print("=" * 50)
     
     # Wait a moment for user to read
@@ -105,7 +84,6 @@ if __name__ == "__main__":
     # Run tests
     test_health_check()
     test_set_rgb_color()
-    test_set_hex_color()
     test_status_endpoint()
     test_invalid_requests()
     

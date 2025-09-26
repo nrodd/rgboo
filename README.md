@@ -18,7 +18,7 @@ The system consists of three main components working together:
 - Listens for color commands over USB serial
 - Controls RGB LED strips connected to the board
 - Built with Arduino framework and PlatformIO
-- Handles RGB and HEX color formats
+- Handles RGB color formats
 
 ### 🧙‍♀️ `middleware/`
 **Python Flask API**
@@ -27,7 +27,7 @@ The system consists of three main components working together:
 - Communicates with ESP32 via USB serial
 - Handles user tracking and logging
 - Auto-detects ESP32 connections
-- Supports both RGB values and HEX colors
+- Supports RGB colors
 
 ### 🕸️ `web/`
 **React Web Interface**
