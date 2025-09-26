@@ -27,6 +27,7 @@ jobs:
           - 'web/**'
 
   build-firmware:
+    name: '👻 build firmware'
     needs: [changes]
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.firmware == 'true' }}
@@ -49,6 +50,7 @@ jobs:
     - run: pio run
   
   build-middleware:
+    name: '🧙 build middleware'
     needs: [changes]
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.middleware == 'true' }}
@@ -60,10 +62,12 @@ jobs:
     - uses: actions/setup-python@v5
       with:
         python-version: '3.x'
+    - run: python -m pip install --upgrade pip
     - run: pip install -r requirements.txt
     - run: python test_api.py
 
   build-web:
+    name: '🕸️ build web'
     needs: [changes]
     runs-on: ubuntu-latest
     if: ${{ needs.changes.outputs.web == 'true' }}
