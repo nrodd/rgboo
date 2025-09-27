@@ -1,77 +1,71 @@
-from obswebsocket import obsws, requests
+"""
+OBS Browser Source Integration
+Provides routes and WebSocket handlers for OBS browser source functionality
+"""
+
 import logging
+import time
+from flask import render_template, request
+from flask_socketio import emit
 
 logger = logging.getLogger(__name__)
 
-class OBSController:
-    """Simple OBS WebSocket controller for updating text sources"""
-    
-    def __init__(self, host: str = "localhost", port: int = 4455, password: str = "yourpassword"):
-        self.host = host
-        self.port = port
-        self.password = password
-        self.ws = None
-        self.connected = False
-    
-    def connect(self) -> bool:
-        """Connect to OBS WebSocket"""
-        try:
-            self.ws = obsws(self.host, self.port, self.password)
-            self.ws.connect()
-            self.connected = True
-            return True
-        except Exception as e:
-            logger.error(f"Failed to connect to OBS: {e}")
-            return False
-    
-    def disconnect(self):
-        """Disconnect from OBS WebSocket"""
-        if self.ws and self.connected:
-            try:
-                self.ws.disconnect()
-                self.connected = False
-            except Exception as e:
-                logger.error(f"Error disconnecting from OBS: {e}")
-    
-    def update_text(self, source_name: str, text: str) -> bool:
-        """Update a text source in OBS"""
-        if not self.connected:
-            return False
-        
-        try:
-            self.ws.call(requests.SetInputSettings(
-                inputName=source_name,
-                inputSettings={"text": text},
-                overlay=True
-            ))
-            return True
-        except Exception as e:
-            logger.error(f"Failed to update text source '{source_name}': {e}")
-            return False
+# Global variable for current username
+current_obs_username = "Waiting for user..."
 
-# Simple convenience function
-def update_obs_text(source_name: str, text: str, host: str = "localhost", port: int = 4455, password: str = "yourpassword") -> bool:
-    """
-    Update OBS text source (connects, updates, disconnects)
+def setup_obs_routes(app, socketio):
+    """Set up OBS routes and SocketIO handlers on the existing Flask app"""
     
-    Args:
-        source_name: Name of the text source in OBS
-        text: New text content
-        host: OBS host (default: localhost)
-        port: OBS port (default: 4455)
-        password: OBS password
+    # OBS Browser Source route (local access only)
+    @app.route('/obs')
+    def obs_browser_source():
+        """Serve the OBS browser source page - local access only"""
+        # Only allow local access
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', ''))
+        if not (client_ip.startswith('127.0.0.1') or client_ip.startswith('::1') or client_ip.startswith('localhost') or client_ip == ''):
+            logger.warning(f"Blocked external access to /obs from IP: {client_ip}")
+            return "Access denied", 403
         
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    obs = OBSController(host, port, password)
-    if obs.connect():
-        result = obs.update_text(source_name, text)
-        obs.disconnect()
-        return result
-    return False
+        return render_template('obs_browser_source.html', current_username=current_obs_username)
 
-# Example usage
-if __name__ == "__main__":
-    # Quick text update
-    update_obs_text("SongTitle", "Now Playing: Spooky Music")
+    # SocketIO event handlers for OBS (local access only)
+    @socketio.on('connect')
+    def handle_connect():
+        # Only allow local WebSocket connections
+        client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', ''))
+        if not (client_ip.startswith('127.0.0.1') or client_ip.startswith('::1') or client_ip.startswith('localhost') or client_ip == ''):
+            logger.warning(f"Blocked external WebSocket connection from IP: {client_ip}")
+            return False  # Reject connection
+        
+        logger.info(f"OBS browser source connected from {client_ip}")
+        emit('current_username', {
+            'username': current_obs_username,
+            'timestamp': time.strftime('%H:%M:%S')
+        })
+
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        logger.info("OBS browser source disconnected")
+
+    @socketio.on('request_current_username')
+    def handle_username_request():
+        emit('current_username', {
+            'username': current_obs_username,
+            'timestamp': time.strftime('%H:%M:%S')
+        })
+
+def update_obs_username(username, socketio):
+    """Update the username displayed in OBS"""
+    global current_obs_username
+    current_obs_username = username
+    
+    try:
+        socketio.emit('username_update', {
+            'username': username,
+            'timestamp': time.strftime('%H:%M:%S')
+        })
+        logger.info(f"Broadcasted username update to OBS: {username}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to broadcast username update: {e}")
+        return False
