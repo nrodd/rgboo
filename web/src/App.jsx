@@ -1,13 +1,11 @@
 import './App.css'
-import ColorForm from './components/ColorForm'
+import { Footer, MainContent } from './layout'
 
-function App() {
-
-  return (
-    <>
-      <ColorForm />
-    </>
-  )
-}
+const App = () => (
+  <div className="flex flex-col h-screen justify-between">
+    <MainContent />
+    <Footer />
+  </div>
+)
 
 export default App
