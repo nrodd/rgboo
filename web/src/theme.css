@@ -21,6 +21,10 @@
     @apply bg-linear-to-b from-arcana-900 from-30% to-pumpkin-900 to-80% bg-cover bg-center bg-no-repeat bg-fixed h-screen;
   }
 
+  .info-icon {
+    @apply fixed top-6 left-6 text-bone;
+  }
+
   .form-field {
     @apply text-base md:text-md font-bold text-bone border-1 border-pumpkin-400 rounded-md
   }
@@ -28,12 +32,18 @@
   .form-button:hover, .form-button:active {
     @apply text-arcana-900 bg-linear-to-r from-pumpkin-400 to-pumpkin-600;
   }
+
+  .footer {
+    @apply flex justify-center content-center h-12 mt-8 py-2 space-x-12;
+  }
 }
 
+/* for color input */
 .color-input .react-colorful {
   width: auto;
 }
 
+/* for GitHub icon */
 path {
   fill: var(--color-bone);
   width: auto;
