@@ -8,8 +8,7 @@ export const ColorForm = () => {
         window.alert('we got values:\n' + JSON.stringify(values, null, 2));
     }
 
-    return <div className="w-lg py-4 bg-violet-900 rounded-md">
-        <h1>Send a color</h1>
+    return <div className="px-6">
         <Formik initialValues={{
             username: '',
             color: {
@@ -22,13 +21,13 @@ export const ColorForm = () => {
         validationSchema={colorFormSchema}
         >
             <Form>
-                <div className="flex flex-col">
-                    <label htmlFor='username'>Name</label>
-                    <Field id='username' name='username' placeholder='Jaxe11ingt0n' className="border-2 border-rose-800 rounded-sm" />
-                    <ErrorMessage name='username' />
-                    <label htmlFor='color'>Color</label>
-                    <ColorInput />
-                    <button type='submit'>Submit</button>
+                <div className="flex flex-col space-y-8">
+                    <div className="flex flex-col space-y-4">
+                        <Field id='username' name='username' placeholder='Name' className="form-field pl-4 placeholder-bone" />
+                        <ErrorMessage name='username' component="span" className="text-bone" />
+                        <ColorInput />
+                    </div>
+                    <button type='submit' className="form-field form-button">Send</button>
                 </div>
             </Form>
         </Formik>
