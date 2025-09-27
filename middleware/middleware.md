@@ -8,10 +8,13 @@ A Python Flask API that serves as middleware between a web frontend and ESP32 fi
 - **20-Second Queue System** - Requests are queued and sent after delay
 - **USB Serial Communication** with ESP32
 - **Automatic ESP32 Detection** via VID/PID matching
-- **OBS Studio Integration** - Update text sources in OBS
+- **Real-Time OBS Studio Integration** - WebSocket-based browser source for live username updates
+- **Unified Server Architecture** - Single Flask app handles both API and WebSocket connections
+- **Security Controls** - OBS endpoints restricted to local access only
 - **Background Processing** - Queue worker processes requests automatically
-- **Modular Architecture** - Clean separation of routes, queue, and controllers
-- **User Tracking** with username logging
+- **Modular Architecture** - Clean separation of routes, queue, controllers, and OBS functionality
+- **User Tracking** with username logging and real-time display
+- **External API Access** - Ready for Cloudflare tunnel integration
 - **Error Handling** and validation
 - **CORS Support** for web frontend integration
 - **Comprehensive Logging** for debugging
@@ -52,6 +55,12 @@ GET /api/status
 ```
 Returns serial connection status, available ports, and queue status.
 
+### OBS Browser Source (Local Only)
+```
+GET /obs
+```
+**Local Access Only:** HTML page with real-time username updates via WebSocket for OBS Studio browser source. External access is blocked for security.
+
 ## 🦇 Installation
 
 1. **Create virtual environment:**
@@ -77,15 +86,16 @@ Returns serial connection status, available ports, and queue status.
 
 ### Development Server
 ```bash
-python run_dev_server.py
+python app.py
 ```
 
 ### Production Server
 ```bash
-gunicorn -w 4 -b 127.0.0.1:5000 app:app
+gunicorn -w 1 --worker-class eventlet -b 127.0.0.1:5001 app:app
 ```
 
-The API will be available at `http://127.0.0.1:5000`
+The API will be available at `http://127.0.0.1:5001`
+The OBS browser source will be available at `http://127.0.0.1:5001/obs` (local only)
 
 ## 🦴 Testing
 
@@ -98,28 +108,38 @@ python test_api.py
 
 ```
 middleware/
-├── app.py                 # Flask application setup and initialization
-├── routes.py              # API route handlers (separated for cleanliness)
-├── color_queue.py         # Queue system for 20-second delays
-├── serial_controller.py   # ESP32 USB serial communication
-├── obs.py                 # OBS Studio WebSocket integration
-├── config.py             # Configuration settings
-├── requirements.txt      # Python dependencies
-├── .env.example         # Environment configuration template
-├── run.py               # Development server launcher
-├── test_api.py          # API test suite
-├── README.md            # This file
-└── middleware.md        # Original requirements
+├── app.py                    # Main Flask app with SocketIO integration
+├── routes.py                 # API route handlers
+├── color_queue.py            # Queue system for 20-second delays
+├── serial_controller.py      # ESP32 USB serial communication
+├── obs.py                    # OBS Studio browser source integration
+├── firmware_config.py        # Configuration settings
+├── requirements.txt          # Python dependencies
+├── test_api.py              # API test suite
+├── test_obs.py              # OBS integration test
+├── templates/
+│   └── obs_browser_source.html  # OBS browser source HTML template
+└── middleware.md            # This documentation
 ```
 
 ## Configuration
 
-Environment variables (optional):
+Environment variables (optional - see `firmware_config.py`):
 - `HOST`: API host address (default: 127.0.0.1)
-- `PORT`: API port number (default: 5000)
+- `PORT`: API port number (default: 5001)
 - `DEBUG`: Enable debug mode (default: True)
 - `SERIAL_BAUD_RATE`: ESP32 baud rate (default: 115200)
 - `SERIAL_TIMEOUT`: Serial timeout in seconds (default: 2)
+
+## OBS Studio Integration
+
+The middleware includes a real-time browser source for OBS Studio:
+
+1. **Add Browser Source** in OBS Studio
+2. **Set URL to:** `http://127.0.0.1:5001/obs`
+3. **Username updates automatically** when color requests are processed
+4. **Secure local-only access** - external requests to `/obs` are blocked
+5. **WebSocket-powered** for instant updates without page refresh
 
 ## ESP32 Communication
 
@@ -153,18 +173,24 @@ All errors return appropriate HTTP status codes and JSON error messages.
 ## 🕸️ Integration
 
 This middleware is designed to work with:
-- **Frontend**: React web interface for user color input
+- **Frontend**: Web interface for user color input (via Cloudflare tunnel)
 - **Firmware**: ESP32 C++ application for LED control  
 - **Hardware**: ESP32 development board with RGB LED strips
-- **OBS Studio**: For streaming overlays and text updates
+- **OBS Studio**: Real-time browser source for streaming overlays
 - **Queue System**: 20-second delay for community-controlled lighting
+- **External Access**: Cloudflare tunnel for public API access (OBS remains local-only)
 
 ## 🦴 Architecture Flow
 
 ```
-Web Frontend → Flask API → Queue (20s delay) → ESP32 → RGB LEDs
-                    ↓
-               OBS Studio (optional text updates)
+External Users (via Cloudflare) → Flask API → Queue (20s delay) → ESP32 → RGB LEDs
+                                        ↓                              ↑
+Local OBS Studio ← WebSocket Updates ← Username Display ←─────────────┘
 ```
 
-The updated middleware provides a robust, queue-based system perfect for community-controlled RGB lighting with streaming integration!
+**Security Model:**
+- **API Endpoints** (`/api/*`): Accessible externally via Cloudflare
+- **OBS Browser Source** (`/obs`): Local access only for security
+- **WebSocket Updates**: Real-time username display in OBS
+
+The updated middleware provides a robust, secure system perfect for community-controlled RGB lighting with streaming integration and external API access!
