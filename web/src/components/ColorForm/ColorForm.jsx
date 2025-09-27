@@ -8,7 +8,7 @@ export const ColorForm = () => {
         window.alert('we got values:\n' + JSON.stringify(values, null, 2));
     }
 
-    return <div className="px-6">
+    return <div className="px-6 md:mr-12 md:w-112">
         <Formik initialValues={{
             username: '',
             color: {
