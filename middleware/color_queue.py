@@ -11,12 +11,12 @@ timer = 20
 class ColorQueue:
     """Simple queue for color requests with 20-second delay"""
     
-    def __init__(self, serial_controller, obs_controller=None):
+    def __init__(self, serial_controller, obs_update_callback=None):
         self.serial_controller = serial_controller
-        self.obs_controller = obs_controller
         self.request_queue = queue.Queue()
         self.worker_thread = None
         self.running = False
+        self.obs_update_callback = obs_update_callback
     
     def start_worker(self):
         """Start the background worker thread"""
@@ -72,26 +72,25 @@ class ColorQueue:
                     color_request['g'], 
                     color_request['b']
                 )
-                
+
                 if success:
                     logger.info(f"Sent color to ESP32 for {color_request['username']}")
-                    
-                    # Send username to OBS if controller is available
-                    if self.obs_controller and self.obs_controller.connected:
-                        try:
-                            obs_success = self.obs_controller.update_text("CurrentUser", color_request['username'])
-                            if obs_success:
-                                logger.info(f"Updated OBS with username: {color_request['username']}")
-                            else:
-                                logger.warning(f"Failed to update OBS with username: {color_request['username']}")
-                        except Exception as obs_error:
-                            logger.error(f"Error updating OBS: {obs_error}")
-                    elif self.obs_controller:
-                        logger.warning("OBS controller not connected, skipping username update")
-                        
                 else:
                     logger.error(f"Failed to send color: {message}")
-                    
+
+                # Update OBS WebSocket server with new username (always)
+                if self.obs_update_callback:
+                    try:
+                        obs_success = self.obs_update_callback(color_request['username'])
+                        if obs_success:
+                            logger.info(f"Updated OBS WebSocket with username: {color_request['username']}")
+                        else:
+                            logger.warning(f"Failed to update OBS WebSocket with username: {color_request['username']}")
+                    except Exception as obs_error:
+                        logger.error(f"Error updating OBS WebSocket: {obs_error}")
+                else:
+                    logger.warning("No OBS update callback available")
+                
             except queue.Empty:
                 continue
             except Exception as e:

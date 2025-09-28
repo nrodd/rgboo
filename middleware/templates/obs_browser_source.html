@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>RGB Controller - Current User</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', sans-serif;
+            background: transparent;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .username-container {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px 40px;
+            border-radius: 15px;
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+
+        .username-container.update {
+            transform: scale(1.05);
+            border-color: #ff6600;
+            box-shadow: 0 0 30px rgba(255, 102, 0, 0.5);
+        }
+
+        .label {
+            font-size: 24px;
+            color: #cccccc;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .username {
+            font-size: 48px;
+            font-weight: bold;
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s ease;
+        }
+
+        .timestamp {
+            font-size: 16px;
+            color: #888888;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        .connection-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .connected {
+            color: #00ff00;
+            border: 1px solid #00ff00;
+        }
+
+        .disconnected {
+            color: #ff0000;
+            border: 1px solid #ff0000;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="connection-status" id="status">Connecting...</div>
+
+    <div class="username-container" id="container">
+        <div class="label">Current User</div>
+        <div class="username" id="username">{{ current_username }}</div>
+        <div class="timestamp" id="timestamp">Last updated: Never</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const usernameEl = document.getElementById('username');
+        const timestampEl = document.getElementById('timestamp');
+        const containerEl = document.getElementById('container');
+        const statusEl = document.getElementById('status');
+
+        socket.on('connect', function () {
+            console.log('Connected to OBS WebSocket server');
+            statusEl.innerText = 'Connected';
+            statusEl.className = 'connection-status connected';
+        });
+
+        socket.on('disconnect', function () {
+            console.log('Disconnected from OBS WebSocket server');
+            statusEl.innerText = 'Disconnected';
+            statusEl.className = 'connection-status disconnected';
+        });
+
+        socket.on('username_update', function (data) {
+            console.log('Username update received:', data);
+
+            // Add update animation
+            containerEl.classList.add('update');
+
+            // Update content
+            usernameEl.innerText = data.username;
+            timestampEl.innerText = 'Last updated: ' + new Date().toLocaleTimeString();
+
+            // Remove animation after delay
+            setTimeout(() => {
+                containerEl.classList.remove('update');
+            }, 300);
+        });
+
+        // Request current username on connect
+        socket.on('connect', function () {
+            socket.emit('request_current_username');
+        });
+
+        socket.on('current_username', function (data) {
+            usernameEl.innerText = data.username;
+            timestampEl.innerText = 'Last updated: ' + (data.timestamp || 'Unknown');
+        });
+    </script>
+</body>
+
+</html>
