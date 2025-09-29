@@ -7,7 +7,7 @@ export default {
 
     // Handle API requests
     if (url.pathname.startsWith("/api/")) {
-      const targetUrl = "https://api.rgboo.com" + url.pathname.replace("/api", "");
+      const targetUrl = "https://api.rgboo.com" + url.pathname;
 
       // Handle CORS preflight
       if (request.method === "OPTIONS") {
