@@ -1,13 +1,12 @@
-import './App.css'
-import ColorForm from './components/ColorForm'
+import { Footer, MainContent } from './layout';
+import InfoButton from './components/InfoButton';
 
-function App() {
-
-  return (
-    <>
-      <ColorForm />
-    </>
-  )
-}
+const App = () => (
+  <div className="flex flex-col h-screen justify-between">
+    <InfoButton />
+    <MainContent />
+    <Footer />
+  </div>
+)
 
 export default App
