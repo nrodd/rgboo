@@ -38,7 +38,7 @@
   }
 
   .footer {
-    @apply flex justify-center content-center h-12 md:h-24 mt-8 py-2 space-x-12 md:space-x-8;
+    @apply flex justify-center content-center h-14 md:h-24 mt-8 pt-2 pb-4 space-x-12 md:space-x-8;
   }
 }
 
