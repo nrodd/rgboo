@@ -44,11 +44,11 @@ export const TwitchEmbed = ({ channel = 'roddzillaaa', className = '' }) => {
     return (
         <div className={`twitch-embed-container w-full ${className}`}>
             {/* Responsive container with 16:9 aspect ratio */}
-            <div className="relative w-full overflow-hidden rounded-lg" style={{ paddingBottom: '56.25%' /* 16:9 aspect ratio */ }}>
+            <div className="aspect-video w-full overflow-hidden rounded-lg">
                 <div 
                     ref={embedRef}
-                    className="absolute top-0 left-0 w-full h-full"
-                    style={{ minHeight: '200px', maxHeight: '100%' }}
+                    className="w-full h-full"
+                    style={{ minHeight: '200px' }}
                 />
             </div>
         </div>
