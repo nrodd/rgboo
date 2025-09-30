@@ -23,16 +23,12 @@
             background: rgba(0, 0, 0, 0.7);
             padding: 20px 40px;
             border-radius: 15px;
-            border: 2px solid #00ff00;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
             backdrop-filter: blur(5px);
             transition: all 0.3s ease;
         }
 
         .username-container.update {
             transform: scale(1.05);
-            border-color: #ff6600;
-            box-shadow: 0 0 30px rgba(255, 102, 0, 0.5);
         }
 
         .label {
@@ -46,21 +42,19 @@
         .username {
             font-size: 48px;
             font-weight: bold;
-            color: #00ff00;
-            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            color: #FFF8DC;
+            text-shadow: 0 0 10px rgba(255, 165, 100, 0.3);
             min-height: 60px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: color 0.3s ease;
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .timestamp {
-            font-size: 16px;
-            color: #888888;
-            margin-top: 15px;
-            font-style: italic;
-        }
 
         .connection-status {
             position: absolute;
@@ -88,16 +82,14 @@
     <div class="connection-status" id="status">Connecting...</div>
 
     <div class="username-container" id="container">
-        <div class="label">Current User</div>
+        <div class="label">Current Boo</div>
         <div class="username" id="username">{{ current_username }}</div>
-        <div class="timestamp" id="timestamp">Last updated: Never</div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
     <script>
         const socket = io();
         const usernameEl = document.getElementById('username');
-        const timestampEl = document.getElementById('timestamp');
         const containerEl = document.getElementById('container');
         const statusEl = document.getElementById('status');
 
@@ -121,7 +113,6 @@
 
             // Update content
             usernameEl.innerText = data.username;
-            timestampEl.innerText = 'Last updated: ' + new Date().toLocaleTimeString();
 
             // Remove animation after delay
             setTimeout(() => {
@@ -136,7 +127,6 @@
 
         socket.on('current_username', function (data) {
             usernameEl.innerText = data.username;
-            timestampEl.innerText = 'Last updated: ' + (data.timestamp || 'Unknown');
         });
     </script>
 </body>
