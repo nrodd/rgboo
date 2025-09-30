@@ -1,7 +1,8 @@
 from flask import request, jsonify
 from datetime import datetime
 import logging
-from color_queue import timer 
+from color_queue import timer
+from database import get_request_database 
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,15 @@ def register_routes(app, serial_controller, color_queue):
             # Add color request to queue with proper timing
             color_request = color_queue.add_request(username, color['r'], color['g'], color['b'])
             
+            # Log request to database
+            try:
+                db = get_request_database()
+                db_id = db.log_request(username, color['r'], color['g'], color['b'])
+                logger.debug(f"Request logged to database with ID: {db_id}")
+            except Exception as db_error:
+                logger.error(f"Failed to log request to database: {db_error}")
+                # Don't fail the request if database logging fails
+            
             response = {
                 'status': 'queued',
                 'message': f'Color request queued successfully - Position {color_request["queue_position"]} in queue, estimated wait: {color_request["estimated_wait_seconds"]} seconds',
@@ -112,8 +122,7 @@ def register_routes(app, serial_controller, color_queue):
         return jsonify({
             'status': 'success',
             'message': f'Cleared {cleared_count} requests from queue',
-            'cleared_count': cleared_count,
-            'timestamp': datetime.now().isoformat()
+            'cleared_count': cleared_count
         })
 
     @app.errorhandler(404)
