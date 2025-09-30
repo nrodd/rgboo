@@ -2,9 +2,13 @@ from flask import request, jsonify
 from datetime import datetime
 import logging
 from color_queue import timer
-from database import get_request_database 
+from database import get_request_database
+from better_profanity import profanity
 
 logger = logging.getLogger(__name__)
+
+# Initialize profanity filter
+profanity.load_censor_words()
 
 def register_routes(app, serial_controller, color_queue):
     """Register all API routes with the Flask app"""
@@ -49,6 +53,14 @@ def register_routes(app, serial_controller, color_queue):
             
             color = data['color']
             username = data['username']
+            
+            # Check username for profanity
+            if profanity.contains_profanity(username):
+                logger.warning(f"Profanity detected in username: '{username}'")
+                return jsonify({
+                    'error': 'Username contains inappropriate language. Please choose a different username.',
+                    'code': 'PROFANITY_DETECTED'
+                }), 400
             
             # Validate color format
             if not all(key in color for key in ['r', 'g', 'b']):
