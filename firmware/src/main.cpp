@@ -26,72 +26,33 @@ void updateLEDColor(uint8_t r, uint8_t g, uint8_t b, uint8_t brightness)
     Serial.printf("Transitioning to: R=%d, G=%d, B=%d (Brightness fixed at 20%)\n", r, g, b);
 }
 
-// Function to handle smooth color transitions
+// Function to handle smooth color transitions using FastLED blend
 void handleColorTransition()
 {
     if (!transitionInProgress)
         return;
 
-    // Transition parameters
-    const uint8_t TRANSITION_SPEED = 8; // Higher = faster transition (1-255)
+    // Transition parameters - how much to blend toward target each frame
+    const uint8_t BLEND_AMOUNT = 20; // Higher = faster transition (1-255)
 
-    // Calculate if we need to transition
-    bool needsUpdate = false;
-    CRGB newColor = currentColor;
+    // Use FastLED's blend function for smooth color mixing
+    currentColor = blend(currentColor, targetColor, BLEND_AMOUNT);
 
-    // Smoothly transition each color component
-    if (currentColor.r != targetColor.r)
+    // Update all LEDs with the blended color
+    fill_solid(leds, MAX_LEDS, currentColor);
+    FastLED.show();
+
+    // Check if transition is complete (colors are very close)
+    if (abs(currentColor.r - targetColor.r) <= 1 &&
+        abs(currentColor.g - targetColor.g) <= 1 &&
+        abs(currentColor.b - targetColor.b) <= 1)
     {
-        if (currentColor.r < targetColor.r)
-        {
-            newColor.r = min(currentColor.r + TRANSITION_SPEED, targetColor.r);
-        }
-        else
-        {
-            newColor.r = max(currentColor.r - TRANSITION_SPEED, targetColor.r);
-        }
-        needsUpdate = true;
-    }
 
-    if (currentColor.g != targetColor.g)
-    {
-        if (currentColor.g < targetColor.g)
-        {
-            newColor.g = min(currentColor.g + TRANSITION_SPEED, targetColor.g);
-        }
-        else
-        {
-            newColor.g = max(currentColor.g - TRANSITION_SPEED, targetColor.g);
-        }
-        needsUpdate = true;
-    }
-
-    if (currentColor.b != targetColor.b)
-    {
-        if (currentColor.b < targetColor.b)
-        {
-            newColor.b = min(currentColor.b + TRANSITION_SPEED, targetColor.b);
-        }
-        else
-        {
-            newColor.b = max(currentColor.b - TRANSITION_SPEED, targetColor.b);
-        }
-        needsUpdate = true;
-    }
-
-    // Update LEDs if color changed
-    if (needsUpdate)
-    {
-        currentColor = newColor;
+        // Snap to exact target color and finish transition
+        currentColor = targetColor;
         fill_solid(leds, MAX_LEDS, currentColor);
         FastLED.show();
-    }
 
-    // Check if transition is complete
-    if (currentColor.r == targetColor.r &&
-        currentColor.g == targetColor.g &&
-        currentColor.b == targetColor.b)
-    {
         transitionInProgress = false;
         Serial.printf("Transition complete: R=%d, G=%d, B=%d\n",
                       currentColor.r, currentColor.g, currentColor.b);
