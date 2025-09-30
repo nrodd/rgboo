@@ -21,7 +21,7 @@ export const InfoButton = () => {
             {showTooltip && (
                 <div className="absolute z-50 -left-64 top-0 w-64 p-4 bg-arcana-900/95 border border-pumpkin-400 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-200 ease-out">
                     <div className="text-bone text-sm leading-relaxed">
-                        <h3 className="font-bold text-base mb-2">RGB Boo Project</h3>
+                        <h3 className="font-bold text-base mb-2">The Project</h3>
                         <p className="mb-2">
                             This project controls a physical LED strip in real-time! When you submit a color, it gets added to a queue.
                         </p>
