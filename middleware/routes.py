@@ -61,20 +61,21 @@ def register_routes(app, serial_controller, color_queue):
             # Log the request
             logger.info(f"Color change request from user '{username}': RGB({color['r']}, {color['g']}, {color['b']})")
             
-            # Add color request to queue (20-second delay)
-            request_id = color_queue.add_request(username, color['r'], color['g'], color['b'])
+            # Add color request to queue with proper timing
+            color_request = color_queue.add_request(username, color['r'], color['g'], color['b'])
             
             response = {
                 'status': 'queued',
-                'message': f'Color request queued successfully - will be sent in {timer} seconds',
+                'message': f'Color request queued successfully - Position {color_request["queue_position"]} in queue, estimated wait: {color_request["estimated_wait_seconds"]} seconds',
                 'username': username,
                 'color': color,
-                'request_id': request_id,
-                'scheduled_time': (datetime.now().replace(microsecond=0) + 
-                                 __import__('datetime').timedelta(seconds=timer)).isoformat(),
+                'request_id': color_request['request_id'],
+                'queue_position': color_request['queue_position'],
+                'estimated_wait_seconds': color_request['estimated_wait_seconds'],
+                'scheduled_time': color_request['scheduled_time'].isoformat(),
                 'timestamp': datetime.now().isoformat()
             }
-            logger.info(f"Successfully queued color request for user '{username}' (ID: {request_id})")
+            logger.info(f"Successfully queued color request for user '{username}' (ID: {color_request['request_id']}) - Position: {color_request['queue_position']}, Wait: {color_request['estimated_wait_seconds']}s")
             return jsonify(response), 200
                 
         except Exception as e:
@@ -100,7 +101,9 @@ def register_routes(app, serial_controller, color_queue):
     @app.route('/api/queue', methods=['GET'])
     def get_queue_status():
         """Get detailed queue status"""
-        return jsonify(color_queue.get_queue_status())
+        status = color_queue.get_queue_status()
+        status['queue_contents'] = color_queue.get_queue_contents()
+        return jsonify(status)
 
     @app.route('/api/queue/clear', methods=['POST'])
     def clear_queue():
