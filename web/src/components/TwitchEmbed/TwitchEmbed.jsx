@@ -25,7 +25,7 @@ export const TwitchEmbed = ({ channel = 'roddzillaaa', className = '' }) => {
                     height: '100%',
                     channel: channel,
                     layout: 'video',
-                    autoplay: false,
+                    autoplay: true,
                     muted: true, // Start muted to comply with browser autoplay policies
                     // Optional: Add parent domain for better compatibility
                     parent: [window.location.hostname]
@@ -45,7 +45,7 @@ export const TwitchEmbed = ({ channel = 'roddzillaaa', className = '' }) => {
         <div className={`twitch-embed-container w-full ${className}`}>
             {/* Responsive container with 16:9 aspect ratio */}
             <div className="aspect-video w-full overflow-hidden rounded-lg">
-                <div 
+                <div
                     ref={embedRef}
                     className="w-full h-full"
                     style={{ minHeight: '200px' }}
