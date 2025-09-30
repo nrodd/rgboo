@@ -117,8 +117,8 @@ export const ColorForm = () => {
             <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out transform ${showPopup ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'
                 }`}>
                 <div className={`mx-4 mt-4 p-4 rounded-lg shadow-lg text-center ${message.type === 'success'
-                        ? 'bg-green-900/90 border border-pumpkin-400 text-bone backdrop-blur-sm'
-                        : 'bg-red-900/90 border border-pumpkin-400 text-bone backdrop-blur-sm'
+                    ? 'bg-green-900/90 border border-pumpkin-400 text-bone backdrop-blur-sm'
+                    : 'bg-red-900/90 border border-pumpkin-400 text-bone backdrop-blur-sm'
                     }`}>
                     <p className="font-medium">{message.text}</p>
                     {message.type === 'success' && message.eta !== null && (

@@ -29,6 +29,14 @@
     @apply fixed top-6 text-bone;
   }
 
+  .info-icon svg {
+    @apply transition-transform duration-200 ease-out;
+  }
+
+  .info-icon:hover svg {
+    @apply scale-90;
+  }
+
   .form-field {
     @apply text-base md:text-md font-bold text-bone border-1 border-pumpkin-400 rounded-md
   }
