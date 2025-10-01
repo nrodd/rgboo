@@ -19,7 +19,7 @@ export const ColorForm = () => {
             const endTime = new Date(savedCooldownEnd);
             const now = new Date();
             const remainingTime = Math.max(0, Math.ceil((endTime - now) / 1000));
-            
+
             if (remainingTime > 0) {
                 setCooldownTime(remainingTime);
                 setIsOnCooldown(true);
@@ -81,13 +81,13 @@ export const ColorForm = () => {
                     eta: responseData.estimated_wait_seconds
                 });
                 setShowPopup(true);
-                
+
                 // Start 30-second cooldown
                 const cooldownEndTime = new Date(Date.now() + 30 * 1000); // 30 seconds from now
                 localStorage.setItem(COOLDOWN_KEY, cooldownEndTime.toISOString());
                 setCooldownTime(30);
                 setIsOnCooldown(true);
-                
+
                 console.log('Color submitted successfully:', responseData);
                 console.log('Queue Position:', responseData.queue_position);
                 console.log('Estimated Wait Seconds:', responseData.estimated_wait_seconds);
@@ -155,10 +155,10 @@ export const ColorForm = () => {
                         className={`form-field form-button ${isOnCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
                         disabled={isSubmitting || isOnCooldown}
                     >
-                        {isSubmitting 
-                            ? 'Sending...' 
-                            : isOnCooldown 
-                                ? `Wait ${cooldownTime}s` 
+                        {isSubmitting
+                            ? 'Sending...'
+                            : isOnCooldown
+                                ? `Wait ${cooldownTime}s`
                                 : 'Send'
                         }
                     </button>

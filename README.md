@@ -25,6 +25,7 @@ The system consists of three main components working together:
 - REST API that bridges web and hardware
 - Receives color requests from the web frontend
 - Communicates with ESP32 via USB serial
+- Starts a webssocket to communicate with OBS
 - Handles user tracking and logging
 - Auto-detects ESP32 connections
 - Supports RGB colors
@@ -33,17 +34,11 @@ The system consists of three main components working together:
 **React Web Interface**
 - Modern React application built with Vite
 - User-friendly color picker interface
-- Deployed on Cloudflare Pages
+- Deployed with Cloudflare workers
 - Sends color commands to the middleware API
 - Real-time color preview and control
 
 ## 🎭 Getting Started
-
-### Prerequisites
-- ESP32 development board with RGB LED strip
-- Python 3.8+ for the middleware
-- Node.js 18+ for the web interface
-- PlatformIO or Arduino IDE for firmware
 
 ### Quick Setup
 1. **Flash the firmware** to your ESP32
@@ -54,7 +49,7 @@ The system consists of three main components working together:
 
 ## 🦴 Technology Stack
 
-- **Frontend**: React, Vite, Cloudflare Pages
+- **Frontend**: React, Vite, Cloudflare worker
 - **Backend**: Python, Flask, pySerial
 - **Firmware**: C++, Arduino Framework, PlatformIO
 - **Hardware**: ESP32, RGB LED strips
