@@ -37,11 +37,13 @@ export const ColorForm = () => {
                 // Success - show success message with ETA
                 setMessage({
                     type: 'success',
-                    text: `Color submitted successfully! You are #${responseData.position} in the queue.`,
-                    eta: responseData.eta
+                    text: `Color submitted successfully! You are #${responseData.queue_position} in the queue.`,
+                    eta: responseData.estimated_wait_seconds
                 });
                 setShowPopup(true);
                 console.log('Color submitted successfully:', responseData);
+                console.log('Queue Position:', responseData.queue_position);
+                console.log('Estimated Wait Seconds:', responseData.estimated_wait_seconds);
             } else {
                 // Handle different error scenarios
                 if (response.status === 400 && responseData.code === 'PROFANITY_DETECTED') {
@@ -125,7 +127,9 @@ export const ColorForm = () => {
                         <p className="text-sm mt-2 opacity-90 text-bone">
                             {message.eta === 0
                                 ? 'Your color will appear immediately!'
-                                : `Estimated wait time: ${Math.ceil(message.eta / 60)} minute${Math.ceil(message.eta / 60) !== 1 ? 's' : ''}`
+                                : message.eta < 60
+                                    ? `Estimated wait time: ${message.eta} second${message.eta !== 1 ? 's' : ''}`
+                                    : `Estimated wait time: ${Math.ceil(message.eta / 60)} minute${Math.ceil(message.eta / 60) !== 1 ? 's' : ''}`
                             }
                         </p>
                     )}

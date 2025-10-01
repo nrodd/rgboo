@@ -10,26 +10,33 @@ export const TwitchEmbed = ({ channel = 'roddzillaaa', className = '' }) => {
             script.src = 'https://embed.twitch.tv/embed/v1.js';
             script.async = true;
             script.onload = () => initializeEmbed();
+            script.onerror = (error) => {
+                console.error('Failed to load Twitch embed script:', error);
+            };
             document.body.appendChild(script);
         } else {
             initializeEmbed();
         }
 
         function initializeEmbed() {
-            if (embedRef.current && window.Twitch) {
-                // Clear any existing embed
-                embedRef.current.innerHTML = '';
+            try {
+                if (embedRef.current && window.Twitch) {
+                    // Clear any existing embed
+                    embedRef.current.innerHTML = '';
 
-                new window.Twitch.Embed(embedRef.current, {
-                    width: '100%',
-                    height: '100%',
-                    channel: channel,
-                    layout: 'video',
-                    autoplay: true,
-                    muted: true, // Start muted to comply with browser autoplay policies
-                    // Optional: Add parent domain for better compatibility
-                    parent: [window.location.hostname]
-                });
+                    new window.Twitch.Embed(embedRef.current, {
+                        width: '100%',
+                        height: '100%',
+                        channel: channel,
+                        layout: 'video',
+                        autoplay: true, // Disable autoplay to avoid deprecated warnings
+                        parent: [window.location.hostname],
+                        // Use allowfullscreen for better compatibility
+                        allowfullscreen: true
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to initialize Twitch embed:', error);
             }
         }
 
@@ -48,7 +55,11 @@ export const TwitchEmbed = ({ channel = 'roddzillaaa', className = '' }) => {
                 <div
                     ref={embedRef}
                     className="w-full h-full"
-                    style={{ minHeight: '200px' }}
+                    style={{
+                        minHeight: '200px',
+                        visibility: 'visible',
+                        display: 'block'
+                    }}
                 />
             </div>
         </div>
