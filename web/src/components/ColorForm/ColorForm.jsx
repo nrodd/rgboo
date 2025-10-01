@@ -3,10 +3,32 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { ColorInput } from './ColorInput';
 import { colorFormSchema } from './colorForm.schema';
 
+const COOLDOWN_KEY = 'rgboo_cooldown_end';
+
 export const ColorForm = () => {
     const [message, setMessage] = useState({ type: '', text: '', eta: null });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPopup, setShowPopup] = useState(false);
+    const [cooldownTime, setCooldownTime] = useState(0);
+    const [isOnCooldown, setIsOnCooldown] = useState(false);
+
+    // Check for existing cooldown on component mount
+    useEffect(() => {
+        const savedCooldownEnd = localStorage.getItem(COOLDOWN_KEY);
+        if (savedCooldownEnd) {
+            const endTime = new Date(savedCooldownEnd);
+            const now = new Date();
+            const remainingTime = Math.max(0, Math.ceil((endTime - now) / 1000));
+            
+            if (remainingTime > 0) {
+                setCooldownTime(remainingTime);
+                setIsOnCooldown(true);
+            } else {
+                // Cooldown expired, clean up
+                localStorage.removeItem(COOLDOWN_KEY);
+            }
+        }
+    }, []);
 
     // Auto-hide popup after 7 seconds
     useEffect(() => {
@@ -17,6 +39,24 @@ export const ColorForm = () => {
             return () => clearTimeout(timer);
         }
     }, [showPopup]);
+
+    // Cooldown timer effect
+    useEffect(() => {
+        let interval;
+        if (isOnCooldown && cooldownTime > 0) {
+            interval = setInterval(() => {
+                setCooldownTime(prev => {
+                    if (prev <= 1) {
+                        setIsOnCooldown(false);
+                        localStorage.removeItem(COOLDOWN_KEY); // Clean up when cooldown ends
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [isOnCooldown, cooldownTime]);
 
     const onSubmit = async (values, { setSubmitting }) => {
         setIsSubmitting(true);
@@ -34,13 +74,20 @@ export const ColorForm = () => {
             const responseData = await response.json();
 
             if (response.ok) {
-                // Success - show success message with ETA
+                // Success - show success message with ETA and start cooldown
                 setMessage({
                     type: 'success',
                     text: `Color submitted successfully! You are #${responseData.queue_position} in the queue.`,
                     eta: responseData.estimated_wait_seconds
                 });
                 setShowPopup(true);
+                
+                // Start 30-second cooldown
+                const cooldownEndTime = new Date(Date.now() + 30 * 1000); // 30 seconds from now
+                localStorage.setItem(COOLDOWN_KEY, cooldownEndTime.toISOString());
+                setCooldownTime(30);
+                setIsOnCooldown(true);
+                
                 console.log('Color submitted successfully:', responseData);
                 console.log('Queue Position:', responseData.queue_position);
                 console.log('Estimated Wait Seconds:', responseData.estimated_wait_seconds);
@@ -105,10 +152,15 @@ export const ColorForm = () => {
                     </div>
                     <button
                         type='submit'
-                        className="form-field form-button"
-                        disabled={isSubmitting}
+                        className={`form-field form-button ${isOnCooldown ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={isSubmitting || isOnCooldown}
                     >
-                        {isSubmitting ? 'Sending...' : 'Send'}
+                        {isSubmitting 
+                            ? 'Sending...' 
+                            : isOnCooldown 
+                                ? `Wait ${cooldownTime}s` 
+                                : 'Send'
+                        }
                     </button>
                 </div>
             </Form>
