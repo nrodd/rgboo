@@ -37,11 +37,13 @@ export const ColorForm = () => {
                 // Success - show success message with ETA
                 setMessage({
                     type: 'success',
-                    text: `Color submitted successfully! You are #${responseData.position} in the queue.`,
-                    eta: responseData.eta
+                    text: `Color submitted successfully! You are #${responseData.queue_position} in the queue.`,
+                    eta: responseData.estimated_wait_seconds
                 });
                 setShowPopup(true);
                 console.log('Color submitted successfully:', responseData);
+                console.log('Queue Position:', responseData.queue_position);
+                console.log('Estimated Wait Seconds:', responseData.estimated_wait_seconds);
             } else {
                 // Handle different error scenarios
                 if (response.status === 400 && responseData.code === 'PROFANITY_DETECTED') {
@@ -82,7 +84,7 @@ export const ColorForm = () => {
     };
 
 
-    return <div className="px-6 md:mr-12 md:w-112">
+    return <div className="sm:px-6 md:mr-12 md:w-112">
         <Formik initialValues={{
             username: '',
             color: {
@@ -97,7 +99,7 @@ export const ColorForm = () => {
             <Form>
                 <div className="flex flex-col space-y-8">
                     <div className="flex flex-col space-y-4">
-                        <Field id='username' name='username' placeholder='Name' className="form-field pl-4 placeholder-bone" />
+                        <Field id='username' name='username' placeholder='Name' className="text-sm sm:text-base form-field pl-4 py-2 placeholder-bone" />
                         <ErrorMessage name='username' component="span" className="text-bone" />
                         <ColorInput />
                     </div>
@@ -125,7 +127,9 @@ export const ColorForm = () => {
                         <p className="text-sm mt-2 opacity-90 text-bone">
                             {message.eta === 0
                                 ? 'Your color will appear immediately!'
-                                : `Estimated wait time: ${Math.ceil(message.eta / 60)} minute${Math.ceil(message.eta / 60) !== 1 ? 's' : ''}`
+                                : message.eta < 60
+                                    ? `Estimated wait time: ${message.eta} second${message.eta !== 1 ? 's' : ''}`
+                                    : `Estimated wait time: ${Math.ceil(message.eta / 60)} minute${Math.ceil(message.eta / 60) !== 1 ? 's' : ''}`
                             }
                         </p>
                     )}
