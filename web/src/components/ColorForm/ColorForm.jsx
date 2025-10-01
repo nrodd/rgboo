@@ -84,7 +84,7 @@ export const ColorForm = () => {
     };
 
 
-    return <div className="px-6 md:mr-12 md:w-112">
+    return <div className="sm:px-6 md:mr-12 md:w-112">
         <Formik initialValues={{
             username: '',
             color: {
@@ -99,7 +99,7 @@ export const ColorForm = () => {
             <Form>
                 <div className="flex flex-col space-y-8">
                     <div className="flex flex-col space-y-4">
-                        <Field id='username' name='username' placeholder='Name' className="form-field pl-4 placeholder-bone" />
+                        <Field id='username' name='username' placeholder='Name' className="text-sm sm:text-base form-field pl-4 py-2 placeholder-bone" />
                         <ErrorMessage name='username' component="span" className="text-bone" />
                         <ColorInput />
                     </div>
