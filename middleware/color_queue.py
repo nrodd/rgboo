@@ -112,20 +112,20 @@ class ColorQueue:
                 )
 
                 if success:
-                    logger.info(f"✓ Sent color RGB({color_request['r']}, {color_request['g']}, {color_request['b']}) to ESP32 for {username}")
+                    logger.info(f"SUCCESS: Sent color RGB({color_request['r']}, {color_request['g']}, {color_request['b']}) to ESP32 for {username}")
                 else:
-                    logger.error(f"✗ Failed to send color for {username}: {message}")
+                    logger.error(f"ERROR: Failed to send color for {username}: {message}")
 
                 # Update OBS WebSocket server with new username (always)
                 if self.obs_update_callback:
                     try:
                         obs_success = self.obs_update_callback(username)
                         if obs_success:
-                            logger.info(f"✓ Updated OBS WebSocket with username: {username}")
+                            logger.info(f"SUCCESS: Updated OBS WebSocket with username: {username}")
                         else:
-                            logger.warning(f"⚠ Failed to update OBS WebSocket with username: {username}")
+                            logger.warning(f"WARNING: Failed to update OBS WebSocket with username: {username}")
                     except Exception as obs_error:
-                        logger.error(f"✗ Error updating OBS WebSocket: {obs_error}")
+                        logger.error(f"ERROR: Error updating OBS WebSocket: {obs_error}")
                 else:
                     logger.warning("No OBS update callback available")
                 
