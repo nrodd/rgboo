@@ -1,3 +1,6 @@
+
+<img width="1280" height="640" alt="Frame 1" src="https://github.com/user-attachments/assets/eb4006a3-cf0b-45b5-ba8a-ae0744f52fe7" />
+
 # 🎃 RGBoo 👻
 
 A haunting collection of software that lets the community control RGB LEDs together! This project creates a complete pipeline where multiple users can submit color changes through a web interface, bringing shared lighting experiences to life - perfect for interactive displays, community art projects, or spooky collaborative lighting effects.
