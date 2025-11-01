@@ -23,7 +23,7 @@
   }
 
   .main-content {
-    @apply flex flex-col justify-center mt-12 mb-auto px-12 gap-8 sm:gap-10;
+    @apply flex flex-col justify-center mt-auto mb-auto px-12 gap-8 sm:gap-10;
   }
 
   .info-icon {
@@ -38,26 +38,11 @@
     @apply scale-90;
   }
 
-  .form-field {
-    @apply text-base md:text-md font-bold text-bone border-1 border-pumpkin-400 rounded-md
-  }
 
-  .form-button {
-    @apply text-sm sm:text-base py-2;
-  }
-
-  .form-button:hover, .form-button:active {
-    @apply text-arcana-900 bg-linear-to-r from-pumpkin-400 to-pumpkin-600 transition-colors;
-  }
 
   .footer {
     @apply flex justify-center content-center h-14 md:h-24 mt-8 pt-2 pb-4 space-x-12 md:space-x-8;
   }
-}
-
-/* for color input */
-.color-input .react-colorful {
-  width: auto;
 }
 
 /* for GitHub icon */
