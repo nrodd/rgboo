@@ -1,1 +1,11 @@
-This firmware intake data over designated usb serial port. It takes the color that is passed in and then changes the color of the lights on the module that is attached to the esp32. 
+# ESP32 Firmware
+
+Arduino-based firmware for ESP32 microcontroller that controls RGB LED strips in real-time.
+
+## Features
+
+- Serial communication over USB for receiving color commands
+- WS2812B LED strip control using FastLED library
+- Smooth color transitions with blending effects
+- Brightness limiting for safety (20% maximum)
+- Real-time color updates from middleware commands
