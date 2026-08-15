@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && npx tsc --noEmit",
     "lint": "eslint .",
     "preview": "yarn build && vite preview",
     "deploy": "yarn build && wrangler deploy"
