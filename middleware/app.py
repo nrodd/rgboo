@@ -5,12 +5,12 @@ import logging
 import atexit
 import os
 
-from serial_controller import SerialController
-from firmware_config import Config
-from color_queue import ColorQueue
-from routes import register_routes
-from obs import setup_obs_routes, update_obs_username
-from database import init_request_database
+from .serial_controller import SerialController
+from .firmware_config import Config
+from .color_queue import ColorQueue
+from .routes import register_routes
+from .obs import setup_obs_routes, update_obs_username
+from .database import init_request_database
 
 # Initialize Flask app
 app = Flask(__name__)
