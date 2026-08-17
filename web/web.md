@@ -1,6 +1,16 @@
-# Web Frontend
+# 🕸️ web
 
-React-based web application that provides the user interface for the RGBoo project.
+Cloudflare workers deployed web app that call allows someone to submit a color and name to the middleware. The twitch stream will also be displayed on here.
+
+## Setup
+
+- [node >=22](https://nodejs.org/en/download)
+- [yarn](https://classic.yarnpkg.com/en/docs/install)
+
+```
+cd web
+yarn
+```
 
 ## Features
 
