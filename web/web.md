@@ -5,7 +5,7 @@ Cloudflare workers deployed web app that call allows someone to submit a color a
 ## Setup
 
 - [node >=22](https://nodejs.org/en/download)
-- [yarn >=1.22](https://classic.yarnpkg.com/en/docs/install)
+- [yarn](https://classic.yarnpkg.com/en/docs/install)
 
 ```
 cd web
