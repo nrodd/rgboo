@@ -1,8 +1,6 @@
 import ColorForm from "../components/ColorForm";
 import { TwitchEmbed } from "../components/TwitchEmbed";
-import LogoIconSrc from "../assets/pumpkin.svg";
-import * as React from "react";
-const LogoIcon = LogoIconSrc as unknown as React.ComponentType<any>;
+import LogoIcon from "../assets/pumpkin.svg?react";
 
 export const MainContent = () => (
   <div id="main-content" className="main-content">
