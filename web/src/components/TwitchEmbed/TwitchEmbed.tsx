@@ -1,4 +1,7 @@
 import { useEffect, useRef } from "react";
+import { useDevEmbed } from "../../libs/useDevEmbed";
+
+const devVideoUrl = "./dev-embed.mp4";
 
 interface TwitchEmbedProps {
   channel?: string;
@@ -10,8 +13,11 @@ export const TwitchEmbed = ({
   className = "",
 }: TwitchEmbedProps) => {
   const embedRef = useRef<HTMLDivElement | null>(null);
+  const devEmbed = useDevEmbed();
 
   useEffect(() => {
+    if (devEmbed) return;
+
     if (!window.Twitch) {
       const script = document.createElement("script");
       script.src = "https://embed.twitch.tv/embed/v1.js";
@@ -54,17 +60,32 @@ export const TwitchEmbed = ({
   }, [channel]);
 
   return (
-    <div className={`twitch-embed-container w-full ${className}`}>
+    <div
+      data-testid="twitch-embed-container"
+      className={`twitch-embed-container w-full ${className}`}
+    >
       <div className="aspect-video w-full overflow-hidden rounded-lg">
-        <div
-          ref={embedRef}
-          className="w-full h-full"
-          style={{
-            minHeight: "200px",
-            visibility: "visible",
-            display: "block",
-          }}
-        />
+        {devEmbed ? (
+          <video
+            src={devVideoUrl}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-cover"
+            style={{ minHeight: "200px" }}
+          />
+        ) : (
+          <div
+            ref={embedRef}
+            className="w-full h-full"
+            style={{
+              minHeight: "200px",
+              visibility: "visible",
+              display: "block",
+            }}
+          />
+        )}
       </div>
     </div>
   );

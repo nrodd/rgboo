@@ -1,7 +1,5 @@
 import { useState } from "react";
-import InfoIconSrc from "../../assets/info.svg";
-import * as React from "react";
-const InfoIcon = InfoIconSrc as unknown as React.ComponentType<any>;
+import InfoIcon from "../../assets/info.svg?react";
 import { useScreenSize } from "../../libs/useScreenSize";
 
 const SM = "32";
@@ -14,6 +12,7 @@ export const InfoButton = () => {
   return (
     <div
       className="info-icon right-6"
+      data-testid="info-button"
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >

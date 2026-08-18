@@ -12,6 +12,8 @@ cd web
 yarn
 ```
 
+Copy `.env.example` to `.env.local`.
+
 ## Features
 
 - Color selection form with RGB picker
@@ -27,6 +29,22 @@ yarn
 ## Deployment
 
 Deployed using Cloudflare Workers.
+
+## Testing
+
+Testing is powered through [Vitest](https://vitest.dev/) using [Playwright](https://playwright.dev/) for browser support. Can be run in headless mode (default) or in a browser. Server is mocked through [Mock Service Worker](https://mswjs.io/).
+
+```
+yarn test
+
+yarn test:browser
+```
+
+Playwright might require you to install directly for testing browsers.
+
+```
+npx playwright install
+```
 
 ## API Integration
 

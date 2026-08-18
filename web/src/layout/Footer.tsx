@@ -1,6 +1,4 @@
-import GhLogoSrc from "../assets/github-mark-white.svg";
-import * as React from "react";
-const GhLogo = GhLogoSrc as unknown as React.ComponentType<any>;
+import GhLogo from "../assets/github-mark-white.svg?react";
 import TwitchLogo from "../assets/twitch-icon.svg?url";
 import { useScreenSize } from "../libs/useScreenSize";
 
@@ -11,7 +9,7 @@ export const Footer = () => {
   const { isMobile } = useScreenSize();
 
   return (
-    <div id="footer" className="footer">
+    <div id="footer" data-testid="footer" className="footer">
       <a
         href="https://twitch.tv/roddzillaaa"
         target="_blank"
