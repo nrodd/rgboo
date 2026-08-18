@@ -84,5 +84,6 @@ jobs:
         with:
           node-version: "22"
       - run: corepack yarn install --immutable
+      - run: corepack yarn playwright install
       - run: corepack yarn build
       - run: corepack yarn test
