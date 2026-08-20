@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useDevEmbed } from "../../libs/useDevEmbed";
 
-const devVideoUrl = "./dev-embed.mp4";
+const devVideoUrl = "/dev-assets/dev-embed.mp4";
 
 interface TwitchEmbedProps {
   channel?: string;
