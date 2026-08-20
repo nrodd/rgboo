@@ -1,7 +1,5 @@
 import { useState } from "react";
-import InfoIconSrc from "../../assets/info.svg";
-import * as React from "react";
-const InfoIcon = InfoIconSrc as unknown as React.ComponentType<any>;
+import InfoIcon from "../../assets/info.svg?react";
 import { useScreenSize } from "../../libs/useScreenSize";
 
 const SM = "32";
