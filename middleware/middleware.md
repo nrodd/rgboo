@@ -16,12 +16,15 @@ A Python Flask API that serves as middleware between a web frontend and ESP32 fi
 ## API Endpoints
 
 ### Health Check
+
 ```
 GET /
 ```
+
 Returns API status, ESP32 connection info, and queue status.
 
 ### Set RGB Color (Queued)
+
 ```
 POST /api/color
 Content-Type: application/json
@@ -35,29 +38,36 @@ Content-Type: application/json
     }
 }
 ```
+
 **Response:** Request is queued and will be sent to ESP32 after 20 seconds.
 
 ### Queue Management
+
 ```
 GET /api/queue          # Get detailed queue status
 POST /api/queue/clear   # Clear all pending requests
 ```
 
 ### System Status
+
 ```
 GET /api/status
 ```
+
 Returns serial connection status, available ports, and queue status.
 
 ### OBS Browser Source (Local Only)
+
 ```
 GET /obs
 ```
+
 **Local Access Only:** HTML page with real-time username updates via WebSocket for OBS Studio browser source. External access is blocked for security.
 
 ## 🦇 Installation
 
 1. **Create virtual environment:**
+
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate  # On macOS/Linux
@@ -66,11 +76,12 @@ GET /obs
    ```
 
 2. **Install dependencies:**
+
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements-dev.txt
    ```
 
-4. **Configure environment (optional):**
+3. **Configure environment (optional):**
    ```bash
    cp .env.example .env
    # Edit .env with your settings
@@ -79,11 +90,13 @@ GET /obs
 ## Usage
 
 ### Development Server
+
 ```bash
 python app.py
 ```
 
 ### Production Server
+
 ```bash
 gunicorn -w 1 --worker-class eventlet -b 127.0.0.1:5001 app:app
 ```
@@ -91,6 +104,15 @@ gunicorn -w 1 --worker-class eventlet -b 127.0.0.1:5001 app:app
 The API will be available at `http://127.0.0.1:5001`
 The OBS browser source will be available at `http://127.0.0.1:5001/obs` (local only)
 
+### Testing
+
+API unit tests can be run through pytest.
+
+```bash
+pytest tests
+```
+
+Additional tests are available at root matching format `test_*.py`.
 
 ## 👹 File Structure
 
@@ -113,6 +135,7 @@ middleware/
 ## Configuration
 
 Environment variables (optional - see `firmware_config.py`):
+
 - `HOST`: API host address (default: 127.0.0.1)
 - `PORT`: API port number (default: 5001)
 - `DEBUG`: Enable debug mode (default: True)
@@ -130,6 +153,7 @@ The middleware includes a real-time browser source for OBS Studio:
 ## ESP32 Communication
 
 The middleware automatically:
+
 1. **Detects ESP32** by scanning USB ports for known VID/PID pairs
 2. **Establishes serial connection** at 115200 baud
 3. **Sends color commands** in the format:
@@ -137,6 +161,7 @@ The middleware automatically:
 4. **Handles connection errors** with automatic reconnection
 
 **Security Model:**
+
 - **API Endpoints** (`/api/*`): Accessible externally via Cloudflare
 - **OBS Browser Source** (`/obs`): Local access only for security
 - **WebSocket Updates**: Real-time username display in OBS

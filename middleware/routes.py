@@ -1,8 +1,8 @@
 from flask import request, jsonify
 from datetime import datetime
 import logging
-from color_queue import timer
-from database import get_request_database
+from .color_queue import timer
+from .database import get_request_database
 from better_profanity import profanity
 
 logger = logging.getLogger(__name__)
