@@ -12,6 +12,7 @@ export const InfoButton = () => {
   return (
     <div
       className="info-icon right-6"
+      data-testid="info-button"
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >

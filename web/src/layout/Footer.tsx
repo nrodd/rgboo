@@ -9,7 +9,7 @@ export const Footer = () => {
   const { isMobile } = useScreenSize();
 
   return (
-    <div id="footer" className="footer">
+    <div id="footer" data-testid="footer" className="footer">
       <a
         href="https://twitch.tv/roddzillaaa"
         target="_blank"

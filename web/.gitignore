@@ -30,3 +30,7 @@ dist-ssr
 !.dev.vars.example
 .env*
 !.env.example
+
+# test files
+.vitest-attachments/
+__screenshots__/

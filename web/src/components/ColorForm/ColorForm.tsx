@@ -4,6 +4,7 @@ import { ColorInput } from "./ColorInput";
 import { colorFormSchema } from "./colorForm.schema";
 
 const COOLDOWN_KEY = "rgboo_cooldown_end";
+const COOLDOWN_SECONDS = import.meta.env.MODE === "test" ? 0 : 30;
 
 export const ColorForm = () => {
   const [message, setMessage] = useState<{
@@ -26,7 +27,10 @@ export const ColorForm = () => {
         Math.ceil((endTime.getTime() - now.getTime()) / 1000),
       );
 
-      if (remainingTime > 0) {
+      if (COOLDOWN_SECONDS === 0) {
+        // Tests should not be blocked by cooldown; ensure key is removed
+        localStorage.removeItem(COOLDOWN_KEY);
+      } else if (remainingTime > 0) {
         setCooldownTime(remainingTime);
         setIsOnCooldown(true);
       } else {
@@ -84,10 +88,10 @@ export const ColorForm = () => {
         });
         setShowPopup(true);
 
-        const cooldownEndTime = new Date(Date.now() + 30 * 1000);
+        const cooldownEndTime = new Date(Date.now() + COOLDOWN_SECONDS * 1000);
         localStorage.setItem(COOLDOWN_KEY, cooldownEndTime.toISOString());
-        setCooldownTime(30);
-        setIsOnCooldown(true);
+        setCooldownTime(COOLDOWN_SECONDS);
+        setIsOnCooldown(COOLDOWN_SECONDS > 0);
 
         console.log("Color submitted successfully:", responseData);
       } else {
@@ -126,7 +130,10 @@ export const ColorForm = () => {
   };
 
   return (
-    <div className="sm:px-6 md:mr-12 md:w-112">
+    <div
+      data-testid="color-form-container"
+      className="sm:px-6 md:mr-12 md:w-112"
+    >
       <Formik
         initialValues={{
           username: "",
@@ -145,6 +152,7 @@ export const ColorForm = () => {
               <Field
                 id="username"
                 name="username"
+                aria-label="username"
                 placeholder="Name"
                 className="text-sm sm:text-base form-field pl-4 py-2 placeholder-bone"
               />
