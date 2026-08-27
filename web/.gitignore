@@ -34,3 +34,5 @@ dist-ssr
 # test files
 .vitest-attachments/
 __screenshots__/
+*storybook.log
+storybook-static
