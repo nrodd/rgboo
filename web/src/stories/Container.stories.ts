@@ -9,7 +9,6 @@ const meta = {
     layout: "centered",
   },
   tags: ["autodocs"],
-  argTypes: {},
   args: {},
 } satisfies Meta<typeof Container>;
 
@@ -18,6 +17,27 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    children: "something",
+    children: "a comfortable amount of privacy",
+  },
+};
+
+export const Thick: Story = {
+  args: {
+    children: "you can hardly see through me",
+    variant: "thick",
+  },
+};
+
+export const Thin: Story = {
+  args: {
+    children: "ok pervert that's enough",
+    variant: "thin",
+  },
+};
+
+export const ClassOverrides: Story = {
+  args: {
+    children: "I can override the class styles",
+    className: "rounded-full w-80 align-left",
   },
 };
