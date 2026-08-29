@@ -157,6 +157,22 @@
       background-position: 100% 0;
     }
   }
+
+  .button-base {
+    @apply relative inline-flex font-main uppercase text-base duration-100 ease-out cursor-pointer text-ghoul-400 duration-100 ease-out;
+
+    &:disabled {
+      @apply cursor-wait text-ghoul-900;
+    }
+
+    &:active {
+      @apply text-ghoul-600;
+    }
+  }
+
+  .button-container {
+    @apply absolute flex items-center justify-center rounded-full font-main uppercase text-base transition-[inset,font-size] duration-150 ease-in-out;
+  }
 }
 
 /* for color input */

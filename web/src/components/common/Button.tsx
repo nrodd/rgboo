@@ -1,18 +1,13 @@
 import { MouseEventHandler, PropsWithChildren } from "react";
 import { cn } from "../../libs/cn";
 import { Container, ContainerProps } from "./Container";
+import { BaseButtonProps } from "./types";
 
-interface ButtonProps extends ContainerProps {
+interface ButtonProps extends BaseButtonProps, ContainerProps {
   /** if `true`, the component is disabled */
   disabled?: boolean;
   /** if `true`, the component fills its container's width */
   fullWidth?: boolean;
-  /** text label that renders when `children` is excluded */
-  label?: string;
-  /** callback function */
-  onClick?: MouseEventHandler<HTMLButtonElement> | undefined;
-  /** The HTML `type` attribute applied to `button` and `a` elements. */
-  type?: "button" | "submit" | "reset";
 }
 
 export const Button = ({
@@ -26,13 +21,8 @@ export const Button = ({
 }: ButtonProps) => (
   <button
     className={cn(
-      "group relative inline-flex min-w-[48px] min-h-[48px]",
+      "group button-base min-w-[48px] min-h-[48px]",
       "px-4 py-1",
-      "font-main uppercase text-base",
-      "duration-100 ease-out",
-      disabled
-        ? "cursor-wait text-ghoul-900"
-        : "cursor-pointer text-ghoul-400 active:text-ghoul-600",
       fullWidth ? "w-full" : "w-fit",
     )}
     data-testid={testId}
@@ -47,12 +37,7 @@ export const Button = ({
     </span>
     <Container
       className={cn(
-        "absolute inset-2",
-        "flex items-center justify-center",
-        "rounded-full",
-        "font-main uppercase text-base",
-        "transition-[inset,font-size] duration-150 ease-in-out",
-
+        "button-container inset-2",
         !disabled && [
           "group-hover:inset-x-0 group-hover:inset-y-1 group-hover:text-md",
           "group-active:inset-x-0.5 group-active:inset-y-1.5 group-active:text-md",
