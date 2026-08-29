@@ -154,12 +154,12 @@ export const ColorForm = () => {
                 name="username"
                 aria-label="username"
                 placeholder="Name"
-                className="text-sm sm:text-base form-field pl-4 py-2 placeholder-bone"
+                className="text-sm sm:text-base form-field pl-4 py-2 placeholder-ghoul-400"
               />
               <ErrorMessage
                 name="username"
                 component="span"
-                className="text-bone"
+                className="text-ghoul-400"
               />
               <ColorInput />
             </div>
@@ -189,13 +189,13 @@ export const ColorForm = () => {
           <div
             className={`mx-4 mt-4 p-4 rounded-lg shadow-lg text-center ${
               message.type === "success"
-                ? "bg-green-900/90 border border-pumpkin-400 text-bone backdrop-blur-sm"
-                : "bg-red-900/90 border border-pumpkin-400 text-bone backdrop-blur-sm"
+                ? "bg-green-900/90 border border-pumpkin-400 text-ghoul-400 backdrop-blur-sm"
+                : "bg-red-900/90 border border-pumpkin-400 text-ghoul-400 backdrop-blur-sm"
             }`}
           >
             <p className="font-medium">{message.text}</p>
             {message.type === "success" && message.eta !== null && (
-              <p className="text-sm mt-2 opacity-90 text-bone">
+              <p className="text-sm mt-2 opacity-90 text-ghoul-400">
                 {message.eta === 0
                   ? "Your color will appear immediately!"
                   : message.eta < 60

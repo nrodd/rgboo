@@ -1,10 +1,8 @@
-import { type ClassValue } from "clsx";
 import { PropsWithChildren } from "react";
 import { cn } from "../../libs/cn";
+import { Styled, Testable } from "./types";
 
-interface ContainerProps {
-  /** class overrides or additional styles */
-  className?: string;
+export interface ContainerProps extends Styled, Testable {
   /** level of transparency **/
   variant?: "default" | "thick" | "thin";
 }
@@ -12,9 +10,11 @@ interface ContainerProps {
 export const Container = ({
   children,
   className,
+  "data-testid": testId = "container",
   variant = "default",
 }: PropsWithChildren<ContainerProps>) => (
   <div
+    data-testid={testId}
     className={cn(
       "px-6 py-3 glass align-center justify-center",
       variant === "thick" ? "glass-thick" : "",
