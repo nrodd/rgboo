@@ -1,8 +1,9 @@
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, RefObject } from "react";
 import { cn } from "../../libs/cn";
 import { Styled, Testable } from "./types";
 
 export interface ContainerProps extends Styled, Testable {
+  ref?: RefObject<HTMLDivElement | null> | null;
   /** level of transparency **/
   variant?: "default" | "thick" | "thin";
 }
@@ -11,6 +12,7 @@ export const Container = ({
   children,
   className,
   "data-testid": testId = "container",
+  ref = null,
   variant = "default",
 }: PropsWithChildren<ContainerProps>) => (
   <div
@@ -21,6 +23,7 @@ export const Container = ({
       variant === "thin" ? "glass-thin" : "",
       className,
     )}
+    ref={ref}
   >
     {children}
   </div>
