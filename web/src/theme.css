@@ -1,9 +1,10 @@
-@import url("https://fonts.googleapis.com/css2?family=Freckle+Face&family=League+Spartan:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Freckle+Face&family=League+Spartan:wght@100..900&family=Spicy+Rice&display=swap");
 @import "tailwindcss";
 
 @theme {
   --font-sans: League Spartan, sans-serif;
   --font-main: Freckle Face, sans-serif;
+  --font-secondary: Spicy Rice, sans-serif;
 
   --color-*: initial;
 
@@ -20,7 +21,7 @@
   --color-arcana-400: #6441a4;
   --color-arcana-900: #160b1a;
 
-  --text-sm: 0.875rem;
+  --text-sm: 0.75rem;
   --text-base: 1rem;
   --text-md: 1.5rem;
   --text-xl: 4.875rem;
