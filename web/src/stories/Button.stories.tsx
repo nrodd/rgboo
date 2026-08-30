@@ -9,7 +9,7 @@ const meta = {
     layout: "centered",
   },
   tags: ["autodocs"],
-  args: {},
+  args: { label: "Submit" },
 } satisfies Meta<typeof Button>;
 
 export default meta;
@@ -17,7 +17,6 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    label: "Submit",
     onClick: () => alert("Boo!"),
   },
 };

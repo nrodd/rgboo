@@ -12,6 +12,7 @@ const meta = {
   tags: ["autodocs"],
   args: {
     icon: <InfoIcon />,
+    label: "default",
   },
 } satisfies Meta<typeof IconButton>;
 

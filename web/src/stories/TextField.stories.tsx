@@ -11,7 +11,7 @@ const meta = {
     layout: "centered",
   },
   tags: ["autodocs"],
-  args: {},
+  args: { name: "name" },
 } satisfies Meta<typeof TextField>;
 
 export default meta;
@@ -32,12 +32,7 @@ const StorySetup = ({
 export const Default: Story = {
   render: (args) => (
     <StorySetup>
-      <TextField
-        {...args}
-        name="name"
-        label="Full Name"
-        placeholder="Placeholder"
-      />
+      <TextField {...args} label="Full Name" placeholder="Placeholder" />
     </StorySetup>
   ),
 };
@@ -45,7 +40,7 @@ export const Default: Story = {
 export const Empty: Story = {
   render: (args) => (
     <StorySetup>
-      <TextField {...args} name="name" />
+      <TextField {...args} />
     </StorySetup>
   ),
 };
@@ -53,7 +48,7 @@ export const Empty: Story = {
 export const Placeholder: Story = {
   render: (args) => (
     <StorySetup>
-      <TextField {...args} name="name" placeholder="Placeholder" />
+      <TextField {...args} placeholder="Placeholder" />
     </StorySetup>
   ),
 };
@@ -61,7 +56,7 @@ export const Placeholder: Story = {
 export const Filled: Story = {
   render: (args) => (
     <StorySetup name="Jack Skellington">
-      <TextField {...args} name="name" />
+      <TextField {...args} />
     </StorySetup>
   ),
 };
@@ -69,7 +64,7 @@ export const Filled: Story = {
 export const Disabled: Story = {
   render: (args) => (
     <StorySetup name="Jack Skellington">
-      <TextField {...args} name="name" disabled />
+      <TextField {...args} disabled />
     </StorySetup>
   ),
 };
@@ -77,7 +72,7 @@ export const Disabled: Story = {
 export const Labeled: Story = {
   render: (args) => (
     <StorySetup name="Jack Skellington">
-      <TextField {...args} name="name" label="Full Name" />
+      <TextField {...args} label="Full Name" />
     </StorySetup>
   ),
 };

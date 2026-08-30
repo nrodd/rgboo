@@ -166,7 +166,7 @@
       @apply cursor-wait text-ghoul-900;
     }
 
-    &:active {
+    &:enabled:active {
       @apply text-ghoul-600;
     }
   }

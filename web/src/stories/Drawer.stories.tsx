@@ -10,7 +10,10 @@ const meta = {
     layout: "centered",
   },
   tags: ["autodocs"],
-  args: {},
+  args: {
+    onClose: () => {},
+    open: false,
+  },
 } satisfies Meta<typeof Drawer>;
 
 export default meta;
