@@ -1,0 +1,41 @@
+# What NOT to upload to Cloud Build.
+#
+# The Cloud Run image is built from the repo root (cloud_api/Dockerfile needs
+# both cloud_api/ and shared/), so the upload would otherwise include the
+# whole repo -- roughly 400MB of it web/node_modules.
+#
+# Keep cloud_api/ and shared/: the build needs them.
+
+.git/
+.gitignore
+
+# Node / frontend -- not part of the API image
+node_modules/
+web/
+dist/
+build/
+
+# Firmware toolchain output
+firmware/.pio/
+firmware/.vscode/
+
+# Python bytecode and virtualenvs
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Local databases and logs
+*.db
+*.log
+
+# The bridge runs on the home machine, not in the image
+bridge/
+
+# The old middleware is not deployed
+middleware/
+
+# Docs
+docs/
+*.md

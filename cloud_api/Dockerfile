@@ -15,6 +15,8 @@ COPY cloud_api ./cloud_api
 ENV PORT=8080
 EXPOSE 8080
 
-# --factory defers building the Flask app (and its Firestore client)
-# until each gunicorn worker boots, instead of at module import time.
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--factory", "cloud_api.app:create_app"]
+# The trailing () calls the factory at worker boot, so the Flask app (and
+# its Firestore client) is built per worker rather than at module import
+# time. Written as a call rather than with --factory, which needs
+# gunicorn >= 22; this pin is 21.2.0.
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "cloud_api.app:create_app()"]
