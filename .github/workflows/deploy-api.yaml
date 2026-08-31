@@ -1,0 +1,137 @@
+name: Deploy API
+
+# On demand only: Actions -> "Deploy API" -> Run workflow.
+# Nothing here fires on push or merge. During the migration, when production
+# changes is a deliberate choice (see docs/gcp-migration-plan.md).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (must be new; reusing a tag makes rollback ambiguous)"
+        required: true
+        type: string
+      confirm:
+        description: "Actually deploy? Unchecked = build and push only, no traffic change."
+        required: true
+        type: boolean
+        default: false
+
+# No stored secrets. Auth is Workload Identity Federation, and the provider
+# only accepts OIDC tokens from this repository, so these identifiers are
+# safe in source control -- knowing them grants nothing on its own.
+env:
+  PROJECT_ID: rgboo-leds
+  REGION: us-east1
+  SERVICE: rgboo-api
+  REGISTRY: us-east1-docker.pkg.dev
+  WIF_PROVIDER: projects/186324327580/locations/global/workloadIdentityPools/github/providers/github
+  DEPLOYER_SA: rgboo-deployer@rgboo-leds.iam.gserviceaccount.com
+
+jobs:
+  deploy:
+    name: "☁️ deploy cloud_api"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required to mint the OIDC token GCP trades for credentials
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # The same suite CI runs on PRs. A deploy button that skips tests is a
+      # way to ship something main never validated.
+      - name: Test
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r cloud_api/requirements.txt pytest
+          pytest cloud_api/tests -q
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Refuse to overwrite an existing tag
+        run: |
+          IMAGE="${REGISTRY}/${PROJECT_ID}/rgboo/${SERVICE}:${{ inputs.tag }}"
+          if gcloud artifacts docker images describe "$IMAGE" >/dev/null 2>&1; then
+            echo "::error::Tag '${{ inputs.tag }}' already exists. Pick a new one."
+            exit 1
+          fi
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Authenticate Docker to Artifact Registry
+        run: gcloud auth configure-docker "$REGISTRY" --quiet
+
+      # Build context is the repo root: cloud_api/Dockerfile needs shared/ too,
+      # which is also why this cannot be `gcloud run deploy --source cloud_api/`.
+      # Runners are linux/amd64, matching Cloud Run.
+      - name: Build and push
+        run: |
+          docker build -f cloud_api/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Stop here unless confirmed
+        if: ${{ !inputs.confirm }}
+        run: |
+          {
+            echo "### Built, not deployed"
+            echo ""
+            echo "Image \`$IMAGE\` is pushed and ready, and live traffic is untouched."
+            echo "Re-run with **confirm** checked to route traffic to it."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Env vars (including API_KEY) carry over from the previous revision.
+      # --set-env-vars would replace all of them, so it is deliberately absent;
+      # use --update-env-vars to change one.
+      - name: Deploy to Cloud Run
+        if: ${{ inputs.confirm }}
+        run: |
+          gcloud run deploy "$SERVICE" --project="$PROJECT_ID" \
+            --image="$IMAGE" --region="$REGION" --platform=managed
+
+      - name: Verify
+        if: ${{ inputs.confirm }}
+        run: |
+          URL="$(gcloud run services describe "$SERVICE" --project="$PROJECT_ID" \
+            --region="$REGION" --format='value(status.url)')"
+
+          CODE="$(curl -s -o /tmp/health -w '%{http_code}' --max-time 60 "$URL/")"
+          echo "health: $CODE $(cat /tmp/health)"
+          test "$CODE" = "200"
+
+          # Auth must still be enforced after a deploy.
+          UNAUTH="$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$URL/api/status")"
+          echo "unauthenticated /api/status: $UNAUTH (expected 401)"
+          test "$UNAUTH" = "401"
+
+          PREV="$(gcloud run revisions list --project="$PROJECT_ID" --region="$REGION" \
+            --service="$SERVICE" --sort-by="~metadata.creationTimestamp" \
+            --format='value(metadata.name)' --limit=2 | tail -1)"
+          REVISION="$(gcloud run services describe "$SERVICE" --project="$PROJECT_ID" \
+            --region="$REGION" --format='value(status.latestReadyRevisionName)')"
+
+          {
+            echo "### Deployed"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Revision | \`$REVISION\` |"
+            echo "| Image | \`$IMAGE\` |"
+            echo "| URL | $URL |"
+            echo "| Health | $CODE |"
+            echo "| Unauthenticated check | $UNAUTH (401 expected) |"
+            echo ""
+            echo "Roll back to the previous revision:"
+            echo '```'
+            echo "gcloud run services update-traffic $SERVICE --project=$PROJECT_ID \\"
+            echo "  --region=$REGION --to-revisions=$PREV=100"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

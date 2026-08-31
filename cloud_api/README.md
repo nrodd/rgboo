@@ -18,6 +18,11 @@ python -m cloud_api.app
 This talks to a real Firestore database (Phase 4 of the migration plan
 creates one) -- there's no local emulator wired up here.
 
+## Poking at it by hand
+
+`postman/` has a collection and environments for local and deployed targets --
+see `postman/README.md`.
+
 ## Tests
 
 Tests use fakes/mocks for the store, so no GCP credentials or network
@@ -41,5 +46,12 @@ docker run -p 8080:8080 -e API_KEY=dev-secret rgboo-api
 
 ## Deploying
 
-Deployment to Cloud Run is Phase 4 of the migration plan, not part of
-this phase -- see `docs/gcp-migration-plan.md`.
+Live on Cloud Run at https://rgboo-api-186324327580.us-east1.run.app
+(project `rgboo-leds`, region `us-east1`).
+
+Deploy with the **Deploy API** workflow: Actions -> Deploy API -> Run
+workflow, giving it a new image tag. Leave `confirm` unchecked to build and
+test without touching live traffic.
+
+Full steps, the by-hand equivalent, and rollback: `docs/deploying.md`.
+One-time provisioning: `docs/gcp-setup.md`.

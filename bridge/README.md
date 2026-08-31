@@ -78,6 +78,22 @@ python) in the unit to match the machine. `Restart=always` plus durable
 Firestore state means a crash or reboot resumes the queue instead of
 losing it -- the main durability win over the old in-memory queue.
 
+## Updating a running bridge
+
+There is no deploy button for the bridge -- it lives behind home NAT, so
+nothing can push to it. Pull, on that machine:
+
+```
+cd /opt/rgboo && git pull
+.venv/bin/pip install -r bridge/requirements.txt   # only if requirements changed
+sudo systemctl restart rgboo-bridge
+journalctl -u rgboo-bridge -f
+```
+
+Restarting mid-queue is safe: pending requests live in Firestore, so the
+bridge picks them back up (overdue ones dispatch immediately). See
+`docs/deploying.md` for rollback.
+
 ## How it works
 
 - **`main.py`** wires everything together and owns shutdown.
