@@ -112,7 +112,7 @@
       );
     mix-blend-mode: screen;
     transform-origin: center;
-    /* animation: glass-float 10s ease-in-out infinite; */
+    animation: glass-float 10s ease-in-out infinite;
     opacity: 0.9;
   }
 
@@ -128,7 +128,7 @@
     );
     background-size: 200% 100%;
     mix-blend-mode: overlay;
-    /* animation: glass-shimmer 3.5s linear infinite; */
+    animation: glass-shimmer 3.5s linear infinite;
     opacity: 0.85;
   }
 
