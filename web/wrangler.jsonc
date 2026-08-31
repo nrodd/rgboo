@@ -12,7 +12,26 @@
 	},
 	"observability": {
 		"enabled": true
+	},
+	/**
+	 * Where worker/index.js proxies /api/* to.
+	 *
+	 * Cutover to GCP is a change to this value plus a deploy; rollback is
+	 * changing it back. See docs/gcp-migration-plan.md.
+	 *   old: https://api.rgboo.com          (Cloudflare Tunnel -> home machine)
+	 *   new: https://<service>.run.app      (Cloud Run)
+	 */
+	"vars": {
+		"API_UPSTREAM": "https://api.rgboo.com"
 	}
+	/**
+	 * Secrets are NOT set here -- they are uploaded with `wrangler secret put`:
+	 *   wrangler secret put API_KEY           # Cloud Run shared secret
+	 *   wrangler secret put CF_ACCESS_ID      # Cloudflare Access service token
+	 *   wrangler secret put CF_ACCESS_SECRET
+	 * The Worker sends whichever of these are configured, so both can be set
+	 * during the migration. See web.md.
+	 */
 	/**
 	 * Smart Placement
 	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
