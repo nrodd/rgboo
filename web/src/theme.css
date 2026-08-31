@@ -1,20 +1,30 @@
-@import url('https://fonts.googleapis.com/css2?family=League+Spartan:wght@100..900&display=swap');
-@import 'tailwindcss';
+@import url("https://fonts.googleapis.com/css2?family=Freckle+Face&family=League+Spartan:wght@100..900&family=Spicy+Rice&display=swap");
+@import "tailwindcss";
 
 @theme {
   --font-sans: League Spartan, sans-serif;
+  --font-main: Freckle Face, sans-serif;
+  --font-secondary: Spicy Rice, sans-serif;
 
   --color-*: initial;
-  --color-bone: #EBDBBE;
-  --color-pumpkin-400: #E36810;
-  --color-pumpkin-600: #7D3909;
-  --color-pumpkin-900: #270302;
-  --color-arcana-400: #6441A4;
-  --color-arcana-900: #160B1A;
 
-  --text-base: 2rem;
-  --text-sm: 1.75rem;
-  --text-md: 3rem;
+  --color-white: #fff;
+
+  --color-ghoul-400: #ebdbbe;
+  --color-ghoul-600: #b7a687;
+  --color-ghoul-900: #8f8d87;
+
+  --color-pumpkin-400: #e36810;
+  --color-pumpkin-600: #7d3909;
+  --color-pumpkin-900: #270302;
+
+  --color-arcana-400: #6441a4;
+  --color-arcana-900: #160b1a;
+
+  --text-sm: 0.75rem;
+  --text-base: 1rem;
+  --text-md: 1.5rem;
+  --text-xl: 4.875rem;
 }
 
 @layer components {
@@ -27,7 +37,7 @@
   }
 
   .info-icon {
-    @apply fixed top-6 text-bone;
+    @apply fixed top-6 text-ghoul-400;
   }
 
   .info-icon svg {
@@ -39,19 +49,130 @@
   }
 
   .form-field {
-    @apply text-base md:text-md font-bold text-bone border-1 border-pumpkin-400 rounded-md
+    @apply text-base md:text-md font-bold text-ghoul-400 border-1 border-pumpkin-400 rounded-md;
   }
 
   .form-button {
     @apply text-sm sm:text-base py-2;
   }
 
-  .form-button:hover, .form-button:active {
+  .form-button:hover,
+  .form-button:active {
     @apply text-arcana-900 bg-linear-to-r from-pumpkin-400 to-pumpkin-600 transition-colors;
   }
 
   .footer {
     @apply flex justify-center content-center h-14 md:h-24 mt-8 pt-2 pb-4 space-x-12 md:space-x-8;
+  }
+
+  .glass {
+    @apply relative rounded-xl overflow-hidden border bg-white/5 backdrop-blur-md shadow-lg;
+    border-color: rgba(255, 255, 255, 0.12);
+    background-image: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.02)
+    );
+    --glass-accent: rgba(255, 255, 255, 0.12);
+  }
+
+  /* stronger/translucent variants */
+  .glass-thick {
+    @apply bg-white/8 border-white/20;
+    backdrop-filter: blur(14px) saturate(120%);
+  }
+
+  .glass-thin {
+    @apply bg-white/2 border-white/10;
+    backdrop-filter: blur(0px) saturate(100%);
+  }
+
+  /* animated highlights that create the "liquid" look */
+  .glass::before,
+  .glass::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    inset: 0;
+    z-index: 0;
+  }
+
+  /* soft drifting glows */
+  .glass-active::before {
+    background:
+      radial-gradient(
+        400px 200px at 10% 20%,
+        rgba(255, 255, 255, 0.12),
+        transparent 8%
+      ),
+      radial-gradient(
+        300px 150px at 85% 80%,
+        rgba(255, 255, 255, 0.06),
+        transparent 12%
+      );
+    mix-blend-mode: screen;
+    transform-origin: center;
+    animation: glass-float 10s ease-in-out infinite;
+    opacity: 0.9;
+  }
+
+  /* moving sheen / shimmer */
+  .glass-active::after {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.14) 45%,
+      rgba(255, 255, 255, 0.18) 50%,
+      rgba(255, 255, 255, 0.14) 55%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    mix-blend-mode: overlay;
+    animation: glass-shimmer 3.5s linear infinite;
+    opacity: 0.85;
+  }
+
+  /* ensure content sits above the effects */
+  .glass > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  @keyframes glass-float {
+    0% {
+      transform: translate3d(-6%, -2%, 0) rotate(-2deg) scale(1.02);
+    }
+    50% {
+      transform: translate3d(6%, 4%, 0) rotate(2deg) scale(1);
+    }
+    100% {
+      transform: translate3d(-6%, -2%, 0) rotate(-2deg) scale(1.02);
+    }
+  }
+
+  @keyframes glass-shimmer {
+    0% {
+      background-position: -100% 0;
+    }
+    100% {
+      background-position: 100% 0;
+    }
+  }
+
+  .button-base {
+    @apply relative inline-flex font-main uppercase text-base duration-100 ease-out cursor-pointer text-ghoul-400 duration-100 ease-out;
+
+    &:disabled {
+      @apply cursor-wait text-ghoul-900;
+    }
+
+    &:enabled:active {
+      @apply text-ghoul-600;
+    }
+  }
+
+  .button-container {
+    @apply absolute flex items-center justify-center rounded-full font-main uppercase text-base transition-[inset,font-size] duration-150 ease-in-out;
   }
 }
 
@@ -62,7 +183,7 @@
 
 /* for GitHub icon */
 .github-icon path {
-  fill: var(--color-bone);
+  fill: var(--color-ghoul-400);
   width: auto;
   height: auto;
 }
