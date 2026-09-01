@@ -11,7 +11,7 @@ export const MainContent = () => (
       </h1>
     </div>
     <div>
-      <TwitchEmbed channel="fireplace_on24" />
+      <TwitchEmbed channel="roddzillaaa" />
     </div>
     <div className="lg:absolute lg:bottom-0 lg:right-0 md:w-auto md:flex-shrink-0 w-full mt-12 mb-12 z-40">
       <ColorForm />
