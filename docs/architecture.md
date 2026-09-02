@@ -157,8 +157,7 @@ name is never stored in readable form.
 ## API
 
 `GET /` is open. `/api/*` and `/admin/*` require `X-Api-Key`. The separate
-`api-admin.rgboo.com` hostname is Cloudflare Access-protected and the Worker
-forwards its requests with the existing API credential.
+same-origin `/admin-api/*` paths and forwards the existing API credential.
 
 | Route | Does |
 |---|---|

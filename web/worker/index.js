@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker for rgboo.com.
  *
- * Serves the static app and proxies /api/* and api-admin.rgboo.com to whichever middleware is
+ * Serves the static app and proxies /api/* and /admin-api/* to whichever middleware is
  * currently live, adding the credentials that upstream expects. The
  * frontend never holds an API secret. The Worker authenticates both public
  * and admin API calls to Cloud Run with its API key.
@@ -50,36 +50,23 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // api-admin.rgboo.com is protected by Cloudflare Access. It proxies the
-    // admin API directly, using the same Worker-to-Cloud Run credential as the
-    // public API.
-    if (url.hostname === "api-admin.rgboo.com") {
+    // Admin calls are same-origin from the Cloudflare Access-protected /admin
+    // page. Rewrite the Worker path to the API's existing /admin/* routes and
+    // authenticate them exactly like the public API.
+    if (url.pathname.startsWith("/admin-api/")) {
+      const adminPath = url.pathname === "/admin-api/health"
+        ? "/"
+        : url.pathname.replace(/^\/admin-api/, "/admin");
       const upstream = env.API_UPSTREAM || DEFAULT_API_UPSTREAM;
-      const targetUrl = upstream.replace(/\/$/, "") + url.pathname + url.search;
+      const targetUrl = upstream.replace(/\/$/, "") + adminPath + url.search;
       const headers = new Headers(upstreamHeaders(env));
-
-      if (request.method === "OPTIONS") {
-        return new Response(null, {
-          status: 204,
-          headers: {
-            "Access-Control-Allow-Origin": "https://rgboo.com",
-            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-          },
-        });
-      }
-
-      const response = await fetch(targetUrl, {
+      return fetch(targetUrl, {
         method: request.method,
         headers,
         body: request.method !== "GET" && request.method !== "HEAD"
           ? await request.text()
           : undefined,
       });
-      const responseHeaders = new Headers(response.headers);
-      responseHeaders.set("Access-Control-Allow-Origin", "https://rgboo.com");
-      responseHeaders.set("Vary", "Origin");
-      return new Response(response.body, { status: response.status, headers: responseHeaders });
     }
 
     // Handle API requests
