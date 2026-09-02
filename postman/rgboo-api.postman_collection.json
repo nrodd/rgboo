@@ -1,0 +1,864 @@
+{
+  "info": {
+    "_postman_id": "c7d753ff-ee70-49e5-a4c5-ee5484c6d1e7",
+    "name": "RGBoo API",
+    "description": "The RGBoo cloud API (cloud_api/), which accepts colour requests, paces them one per 20 seconds, and parks them in Firestore for the home-machine bridge to dispatch.\n\nPick an environment first: **RGBoo Local** or **RGBoo Cloud Run**.\n\nEvery request sends `X-Api-Key: {{api_key}}` from the collection auth, except `GET /` (open by design, for uptime checks) and the two requests in **Auth** that deliberately send a bad key.\n\nNote: requests created here are real. They sit in the queue until the bridge dispatches them or you run **Clear queue**.\n\nThe **Admin** folder needs `admin_key` as well, a separate and more privileged secret than `api_key`.\n\nSee docs/architecture.md and docs/admin-clear-current.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-Api-Key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{api_key}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Fail fast with a clear message instead of a confusing 401/ECONNREFUSED.",
+          "if (!pm.environment.get('base_url')) {",
+          "  throw new Error('No base_url set \u2014 select the RGBoo Local or RGBoo Cloud Run environment.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Open endpoint \u2014 no API key required, so uptime checks need no secret. Reports whether Firestore is reachable and whether the bridge has sent a heartbeat in the last 2 minutes.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('reports healthy', () => pm.expect(b.status).to.eql('healthy'));",
+                  "pm.test('reports bridge liveness', () => pm.expect(b).to.have.property('bridge_online'));",
+                  "// serial_connected is null when the bridge is offline, false in --dry-run.",
+                  "console.log('bridge_online:', b.bridge_online, '| serial_connected:', b.serial_connected);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Colour",
+      "item": [
+        {
+          "name": "Submit a colour",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/color",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "color"
+              ]
+            },
+            "description": "The main endpoint. Validates, assigns the next 20-second slot, and writes a pending document. Saves request_id and scheduled_time to environment variables for the requests that follow.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"postman\",\n  \"color\": {\n    \"r\": 255,\n    \"g\": 0,\n    \"b\": 0\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('queued', () => pm.expect(b.status).to.eql('queued'));",
+                  "pm.test('returns the contract fields', () => {",
+                  "  ['request_id','queue_position','estimated_wait_seconds','scheduled_time'].forEach(",
+                  "    k => pm.expect(b).to.have.property(k));",
+                  "});",
+                  "pm.test('echoes the colour back', () => pm.expect(b.color).to.eql({r:255,g:0,b:0}));",
+                  "pm.environment.set('last_request_id', b.request_id);",
+                  "pm.environment.set('last_scheduled_time', b.scheduled_time);",
+                  "console.log('scheduled for', b.scheduled_time, '- in', b.estimated_wait_seconds, 'seconds');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Submit a second colour (pacing)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/color",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "color"
+              ]
+            },
+            "description": "Run straight after the previous request. Its slot must be exactly 20 seconds later \u2014 that spacing is enforced by a Firestore transaction, so it holds even with concurrent requests hitting different API instances.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"postman-two\",\n  \"color\": {\n    \"r\": 0,\n    \"g\": 0,\n    \"b\": 255\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "const prev = pm.environment.get('last_scheduled_time');",
+                  "pm.test('slot is 20s after the previous one', () => {",
+                  "  pm.expect(prev, 'run \"Submit a colour\" first').to.be.a('string');",
+                  "  const gap = (new Date(b.scheduled_time) - new Date(prev)) / 1000;",
+                  "  pm.expect(gap).to.eql(20);",
+                  "});",
+                  "pm.environment.set('last_scheduled_time', b.scheduled_time);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rejected: rgb out of range",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/color",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "color"
+              ]
+            },
+            "description": "Each channel must be an integer 0-255.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"postman\",\n  \"color\": {\n    \"r\": 999,\n    \"g\": 0,\n    \"b\": 0\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('names the offending channel', () => pm.expect(pm.response.json().error).to.include('r'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rejected: missing username",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/color",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "color"
+              ]
+            },
+            "description": "username is required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"color\": {\n    \"r\": 1,\n    \"g\": 2,\n    \"b\": 3\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('explains what is missing', () => pm.expect(pm.response.json().error).to.include('Username'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rejected: profane username",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/color",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "color"
+              ]
+            },
+            "description": "Usernames go on a public stream overlay, so they run through a profanity filter. Returns the PROFANITY_DETECTED code the frontend keys off.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"shit\",\n  \"color\": {\n    \"r\": 1,\n    \"g\": 2,\n    \"b\": 3\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('uses the PROFANITY_DETECTED code', () => pm.expect(pm.response.json().code).to.eql('PROFANITY_DETECTED'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Queue",
+      "item": [
+        {
+          "name": "Queue status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "status"
+              ]
+            },
+            "description": "Queue size, the next free slot, and hardware state read from the bridge's heartbeat. serial_connected and serial_port are null when the bridge is offline."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('includes queue_status', () => pm.expect(b.queue_status).to.have.property('queue_size'));",
+                  "pm.test('includes bridge liveness', () => pm.expect(b).to.have.property('bridge_online'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List pending",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/queue",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "queue"
+              ]
+            },
+            "description": "Pending requests in slot order. Needs the Firestore composite index on (status, scheduled_time) \u2014 a 500 here usually means that index is missing or still building."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('returns queue_contents', () => pm.expect(b.queue_contents).to.be.an('array'));",
+                  "pm.test('entries are ordered and shaped correctly', () => {",
+                  "  b.queue_contents.forEach(e => {",
+                  "    ['username','scheduled_time','queue_position','estimated_wait_seconds'].forEach(",
+                  "      k => pm.expect(e).to.have.property(k));",
+                  "  });",
+                  "});",
+                  "console.log('pending:', b.queue_contents.length);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gone: the old public clear path",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/queue/clear",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "queue",
+                "clear"
+              ]
+            },
+            "description": "Clearing the queue used to live here, reachable by anyone through rgboo.com. It now requires the admin key at /admin/queue/clear."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 - no longer a public endpoint', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Rejected: no API key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "status"
+              ]
+            },
+            "description": "Auth is enforced in the application, not by Cloud Run IAM \u2014 the service is deployed --allow-unauthenticated precisely so this check is the one that matters.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('says Unauthorized', () => pm.expect(pm.response.json().error).to.eql('Unauthorized'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rejected: wrong API key",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "status"
+              ]
+            },
+            "description": "Compared in constant time, so a wrong key cannot be narrowed down by timing.",
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Api-Key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "definitely-not-the-key",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "The panic button: pulls one user off the stream without touching anyone else's queue. Needs `admin_key`, which is a DIFFERENT secret from `api_key` -- the Worker adds api_key to every request it proxies, so it identifies the Worker rather than a person.\n\nThese are real. Pressing Clear current user cancels that person's queued colours and redacts their name permanently.",
+      "item": [
+        {
+          "name": "Rejected: the Worker's API key",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/clear-current",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "clear-current"
+              ]
+            },
+            "description": "The regular key must NOT open the admin path. This is the whole reason a second secret exists, so it is worth asserting rather than assuming."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('the Worker key is not an admin key', () => pm.expect(pm.response.json().error).to.eql('Unauthorized'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Rejected: no key",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/clear-current",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "clear-current"
+              ]
+            },
+            "description": "No credentials at all.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clear current user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/clear-current",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "clear-current"
+              ]
+            },
+            "description": "Blanks the overlay, cancels only that user's pending requests, and redacts their name in the log. Everyone else keeps their place in the queue.\n\nIdempotent: press it twice and the second call reports nothing displayed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Admin-Key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{admin_key}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('reports what it did', () => {",
+                  "  ['cleared_username','cancelled_count','redacted_count','blocked','bridge_online']",
+                  "    .forEach(k => pm.expect(b).to.have.property(k));",
+                  "});",
+                  "pm.test('warns if the bridge cannot act yet', () => {",
+                  "  if (!b.bridge_online) console.log('bridge offline - overlay clears when it reconnects');",
+                  "  pm.expect(b.status).to.eql('success');",
+                  "});",
+                  "console.log('cleared:', b.cleared_username, '| cancelled:', b.cancelled_count);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clear a specific user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/clear-current",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "clear-current"
+              ]
+            },
+            "description": "For a name that has already scrolled past. Targets it directly instead of whoever is currently displayed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"SomeName\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Admin-Key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{admin_key}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clear and block",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/clear-current",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "clear-current"
+              ]
+            },
+            "description": "Also adds the name to the denylist so resubmitting it is rejected. Stored as a hash, never the raw string -- otherwise it would undo the redaction.\n\nA speed bump for the lazy repeat offender, not a real defence: anyone determined appends a digit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"block\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Admin-Key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{admin_key}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "// The real contract: a block happens exactly when there was someone",
+                  "// to clear. Running this after another clear legitimately finds an",
+                  "// empty overlay, so asserting `blocked === true` outright would be",
+                  "// asserting run order rather than behaviour.",
+                  "pm.test('blocks precisely when someone was cleared', () => {",
+                  "  pm.expect(b.blocked).to.eql(b.cleared_username !== null);",
+                  "});",
+                  "if (b.cleared_username === null) console.log('nothing displayed - nothing to block');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clear the whole queue",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/queue/clear",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "queue",
+                "clear"
+              ]
+            },
+            "description": "Cancels EVERY pending request, not just one person's. Moved under /admin because it cancels other people's colours -- a visitor should not be able to trigger it, and the Worker does not proxy /admin/*.\n\nTo remove one user instead, use Clear current user.",
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Admin-Key",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "{{admin_key}}",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('reports how many were cancelled', () => pm.expect(b.cleared_count).to.be.a('number'));",
+                  "console.log('cancelled', b.cleared_count, 'pending request(s)');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

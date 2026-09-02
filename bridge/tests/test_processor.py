@@ -51,7 +51,7 @@ def test_future_request_is_not_dispatched_yet(mock_store, mock_serial):
 
 
 """Test a request cancelled after queueing is skipped -- this is how
-POST /api/queue/clear stops the LEDs changing"""
+POST /admin/queue/clear stops the LEDs changing"""
 def test_cancelled_request_is_skipped_on_reread(mock_store, mock_serial):
     processor = build(mock_store, mock_serial)
     processor.upsert(make_request(offset_seconds=-1))

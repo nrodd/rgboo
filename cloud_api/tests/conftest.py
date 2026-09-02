@@ -32,6 +32,10 @@ def mock_store():
         'serial_connected': None,
         'serial_port': None
     }
+    store.get_current_username.return_value = "CurrentUser"
+    store.cancel_pending_for_user.return_value = 2
+    store.redact_username.return_value = 3
+    store.is_blocked.return_value = False
     return store
 
 

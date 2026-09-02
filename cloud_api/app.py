@@ -31,16 +31,30 @@ def create_app(store=None) -> Flask:
         store = RequestStore(get_firestore_client())
 
     @app.before_request
-    def enforce_api_key():
-        # Health check stays open so uptime checks don't need the secret.
+    def enforce_auth():
+        """Open health check, admin key, or the Worker key.
+
+        /admin/* does not accept API_KEY: the Worker sends that on everything
+        it proxies, so it means "came via rgboo.com", not "is an admin".
+        """
+        # Open, so uptime checks need no secret.
         if request.path == '/':
             return None
-        if not Config.API_KEY:
-            logger.error("API_KEY is not configured; rejecting request")
+
+        if request.path.startswith('/admin/'):
+            return _require(Config.ADMIN_KEY, 'X-Admin-Key', 'ADMIN_KEY')
+
+        return _require(Config.API_KEY, 'X-Api-Key', 'API_KEY')
+
+    def _require(configured, header, name):
+        """Constant-time header check. Fails closed when unconfigured."""
+        if not configured:
+            # Fail closed: never fall through, never accept the other key.
+            logger.error(f"{name} is not configured; rejecting request")
             return jsonify({'error': 'Server misconfigured'}), 500
-        supplied = request.headers.get('X-Api-Key', '')
-        if not hmac.compare_digest(supplied, Config.API_KEY):
+        if not hmac.compare_digest(request.headers.get(header, ''), configured):
             return jsonify({'error': 'Unauthorized'}), 401
+        return None
 
     register_routes(app, store)
     return app

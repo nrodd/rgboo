@@ -17,6 +17,7 @@ from google.cloud import firestore
 from shared.schema import (
     BRIDGE_DOC,
     META_COLLECTION,
+    OVERLAY_CONTROL_DOC,
     REQUESTS_COLLECTION,
     STATUS_DONE,
     STATUS_FAILED,
@@ -70,6 +71,7 @@ class BridgeStore:
         self._client = client
         self._requests = client.collection(REQUESTS_COLLECTION)
         self._bridge_ref = client.collection(META_COLLECTION).document(BRIDGE_DOC)
+        self._overlay_ref = client.collection(META_COLLECTION).document(OVERLAY_CONTROL_DOC)
 
     def _pending_query(self):
         # No order_by here (unlike cloud_api's get_queue_contents): sorting
@@ -94,12 +96,27 @@ class BridgeStore:
         """Re-read a request doc; None if it no longer exists.
 
         Called immediately before the serial write so a request cancelled
-        via POST /api/queue/clear after being queued is still skipped.
+        via POST /admin/queue/clear after being queued is still skipped.
         """
         snapshot = self._requests.document(doc_id).get()
         if not snapshot.exists:
             return None
         return to_color_request(snapshot)
+
+    def read_overlay_clear_request(self):
+        """Timestamp of the cloud's most recent overlay-clear request, or None.
+
+        Read-only from this side: meta/overlay_control is written solely by the
+        cloud API, so the two halves never contend on the same fields.
+        """
+        snapshot = self._overlay_ref.get()
+        if not snapshot.exists:
+            return None
+        return (snapshot.to_dict() or {}).get('clear_requested_at')
+
+    def watch_overlay_control(self, on_snapshot: Callable):
+        """Subscribe to the overlay-control doc; returns the watch handle."""
+        return self._overlay_ref.on_snapshot(on_snapshot)
 
     def mark_done(self, doc_id: str) -> None:
         self._set_status(doc_id, STATUS_DONE)

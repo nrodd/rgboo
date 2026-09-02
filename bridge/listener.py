@@ -62,13 +62,47 @@ class PendingWatcher:
             logger.error(f"Error handling Firestore snapshot: {e}")
 
 
-class PendingPoller:
-    """Feeds the processor by re-listing pending requests on an interval."""
+class OverlayControlWatcher:
+    """Watches the cloud's overlay-control doc and hands it to the controller."""
 
-    def __init__(self, store, processor, interval_seconds: float):
+    def __init__(self, store, controller):
+        self._store = store
+        self._controller = controller
+        self._watch = None
+
+    def start(self) -> None:
+        self._watch = self._store.watch_overlay_control(self._on_snapshot)
+        logger.info("Listening for overlay clear requests")
+
+    def stop(self) -> None:
+        if self._watch is not None:
+            try:
+                self._watch.unsubscribe()
+            except Exception as e:
+                logger.warning(f"Error unsubscribing from overlay control watch: {e}")
+            self._watch = None
+
+    def _on_snapshot(self, doc_snapshots, changes, read_time) -> None:
+        try:
+            for snapshot in doc_snapshots:
+                data = snapshot.to_dict() or {}
+                self._controller.handle(data.get('clear_requested_at'))
+        except Exception as e:
+            logger.error(f"Error handling overlay control snapshot: {e}")
+
+
+class PendingPoller:
+    """Feeds the processor by re-listing pending requests on an interval.
+
+    Also re-checks the overlay-control doc when one is given, so an admin clear
+    still lands if the snapshot stream has quietly died.
+    """
+
+    def __init__(self, store, processor, interval_seconds: float, overlay_controller=None):
         self._store = store
         self._processor = processor
         self._interval = interval_seconds
+        self._overlay_controller = overlay_controller
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
 
@@ -86,6 +120,9 @@ class PendingPoller:
             self._processor.sync(self._store.list_pending())
         except Exception as e:
             logger.error(f"Error polling for pending requests: {e}")
+
+        if self._overlay_controller is not None:
+            self._overlay_controller.check_now()
 
     def _loop(self) -> None:
         while not self._stop.is_set():

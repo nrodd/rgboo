@@ -63,6 +63,14 @@ def register_routes(app, store):
                     'code': 'PROFANITY_DETECTED'
                 }), 400
 
+            # Blocked by an admin clear. One extra read per submission.
+            if store.is_blocked(username):
+                logger.warning(f"Blocked username attempted: '{username}'")
+                return jsonify({
+                    'error': 'Username contains inappropriate language. Please choose a different username.',
+                    'code': 'PROFANITY_DETECTED'
+                }), 400
+
             # Validate color format
             if not all(key in color for key in ['r', 'g', 'b']):
                 return jsonify({'error': 'Color must have r, g, b values'}), 400
@@ -120,15 +128,82 @@ def register_routes(app, store):
         status['queue_contents'] = store.get_queue_contents()
         return jsonify(status)
 
-    @app.route('/api/queue/clear', methods=['POST'])
+    @app.route('/admin/queue/clear', methods=['POST'])
     def clear_queue():
-        """Clear all pending requests from the queue"""
+        """Cancel every pending request.
+
+        Admin-only: this cancels other people's queued colours, so it is not
+        something a visitor should be able to trigger. Under /admin/* the
+        Worker will not proxy it and X-Admin-Key is required. To remove one
+        person instead, use /admin/clear-current.
+        """
         cleared_count = store.clear_queue()
         return jsonify({
             'status': 'success',
             'message': f'Cleared {cleared_count} requests from queue',
             'cleared_count': cleared_count
         })
+
+    @app.route('/admin/clear-current', methods=['POST'])
+    def clear_current_user():
+        """Pull the currently displayed user off the stream.
+
+        Unlike /admin/queue/clear this touches one person: blanks the overlay,
+        cancels only their pending requests, redacts their name. Requires
+        X-Admin-Key; the Worker's API key is not accepted.
+        """
+        try:
+            data = request.get_json(silent=True) or {}
+            username = data.get('username') or store.get_current_username()
+
+            if not username:
+                # Nothing on screen, or already cleared: pressing twice is safe.
+                return jsonify({
+                    'status': 'success',
+                    'cleared_username': None,
+                    'cancelled_count': 0,
+                    'redacted_count': 0,
+                    'blocked': False,
+                    'bridge_online': store.get_bridge_status()['bridge_online'],
+                    'message': 'Nothing is currently displayed'
+                }), 200
+
+            cancelled_count = store.cancel_pending_for_user(username)
+            redacted_count = store.redact_username(username)
+
+            blocked = bool(data.get('block'))
+            if blocked:
+                store.block_username(username)
+
+            # Last, so the overlay blanks only once the queue is safe.
+            store.request_overlay_clear()
+
+            bridge_online = store.get_bridge_status()['bridge_online']
+            logger.warning(
+                f"Admin cleared the current user: cancelled {cancelled_count}, "
+                f"redacted {redacted_count}, blocked={blocked}"
+            )
+
+            return jsonify({
+                'status': 'success',
+                'cleared_username': username,
+                'cancelled_count': cancelled_count,
+                'redacted_count': redacted_count,
+                'blocked': blocked,
+                'bridge_online': bridge_online,
+                'message': (
+                    f'Cleared {username} from the overlay, '
+                    f'cancelled {cancelled_count} pending requests'
+                )
+            }), 200
+
+        except Exception as e:
+            logger.error(f"Error clearing current user: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': 'Internal server error',
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }), 500
 
     @app.errorhandler(404)
     def not_found(error):

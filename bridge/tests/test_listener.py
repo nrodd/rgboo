@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from ..listener import PendingPoller, PendingWatcher
+from ..listener import OverlayControlWatcher, PendingPoller, PendingWatcher
 from .conftest import make_request
 
 """
@@ -112,3 +112,63 @@ def test_poll_errors_are_contained():
     PendingPoller(store, processor, 1).poll_once()  # does not raise
 
     processor.sync.assert_not_called()
+
+
+"""Test the overlay watcher hands the timestamp to the controller"""
+def test_overlay_snapshot_reaches_the_controller():
+    controller = Mock()
+    watcher = OverlayControlWatcher(Mock(), controller)
+
+    watcher._on_snapshot([FakeDoc("overlay_control", {"clear_requested_at": "T"})], [], None)
+
+    controller.handle.assert_called_once_with("T")
+
+
+"""Test an empty overlay doc is passed through as None rather than raising"""
+def test_empty_overlay_doc_is_safe():
+    controller = Mock()
+    watcher = OverlayControlWatcher(Mock(), controller)
+
+    watcher._on_snapshot([FakeDoc("overlay_control", {})], [], None)
+
+    controller.handle.assert_called_once_with(None)
+
+
+"""Test an error in the overlay callback never escapes into the gRPC thread"""
+def test_overlay_snapshot_errors_are_contained():
+    controller = Mock()
+    controller.handle.side_effect = RuntimeError("boom")
+    watcher = OverlayControlWatcher(Mock(), controller)
+
+    watcher._on_snapshot([FakeDoc("overlay_control", {"clear_requested_at": "T"})], [], None)
+
+
+"""Test the resync poll also re-checks the overlay control doc, so an admin
+clear still lands if the snapshot stream has quietly died"""
+def test_poll_also_checks_overlay_control():
+    store = Mock()
+    store.list_pending.return_value = []
+    controller = Mock()
+
+    PendingPoller(store, Mock(), 1, controller).poll_once()
+
+    controller.check_now.assert_called_once()
+
+
+"""Test the poll still checks the overlay even when listing pending fails"""
+def test_overlay_checked_even_if_pending_listing_fails():
+    store = Mock()
+    store.list_pending.side_effect = RuntimeError("unavailable")
+    controller = Mock()
+
+    PendingPoller(store, Mock(), 1, controller).poll_once()
+
+    controller.check_now.assert_called_once()
+
+
+"""Test a poller with no controller (poll mode without OBS) still works"""
+def test_poller_without_a_controller_is_fine():
+    store = Mock()
+    store.list_pending.return_value = []
+
+    PendingPoller(store, Mock(), 1).poll_once()

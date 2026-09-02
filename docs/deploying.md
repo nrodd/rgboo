@@ -87,6 +87,10 @@ docker buildx build --platform linux/amd64 -f cloud_api/Dockerfile -t "$IMAGE" -
 not pass `--set-env-vars` again unless you mean to replace *all* of them
 (`--update-env-vars` changes one safely).
 
+The admin endpoint needs `ADMIN_KEY` present before it will do anything but
+return 500 — it fails closed on purpose. Wire it once, via Secret Manager:
+[admin-clear-current.md](admin-clear-current.md).
+
 Verify:
 
 ```bash

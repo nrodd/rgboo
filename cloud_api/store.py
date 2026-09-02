@@ -5,18 +5,24 @@ Mirrors the interface of the old in-process ColorQueue
 unchanged, and so tests can swap in a fake/mock store.
 """
 
+import hashlib
 import logging
 import time
 import uuid
 from datetime import datetime, timezone
+
+from typing import Optional
 
 from google.cloud import firestore
 
 from shared.schema import (
     BRIDGE_DOC,
     BRIDGE_STALE_SECONDS,
+    DENYLIST_COLLECTION,
     META_COLLECTION,
+    OVERLAY_CONTROL_DOC,
     PACING_DOC,
+    REDACTED_USERNAME,
     REQUESTS_COLLECTION,
     SLOT_SECONDS,
     STATUS_CANCELLED,
@@ -36,6 +42,8 @@ class RequestStore:
         self._requests = client.collection(REQUESTS_COLLECTION)
         self._pacing_ref = client.collection(META_COLLECTION).document(PACING_DOC)
         self._bridge_ref = client.collection(META_COLLECTION).document(BRIDGE_DOC)
+        self._overlay_ref = client.collection(META_COLLECTION).document(OVERLAY_CONTROL_DOC)
+        self._denylist = client.collection(DENYLIST_COLLECTION)
 
     def add_request(self, username: str, r: int, g: int, b: int) -> dict:
         """Assign the next pacing slot and create a pending request doc."""
@@ -70,6 +78,8 @@ class RequestStore:
             'status': STATUS_PENDING,
             'scheduled_time': scheduled_time,
             'created_at': now,
+            # Explicitly null, never omitted: order_by drops docs missing the
+            # field, which would silently break get_current_username().
             'processed_at': None,
         })
 
@@ -148,6 +158,90 @@ class RequestStore:
             'serial_connected': data.get('serial_connected') if online else None,
             'serial_port': data.get('serial_port') if online else None,
         }
+
+
+    # ------------------------------------------------------------------
+    # Admin: clearing the currently displayed user.
+    # See docs/admin-clear-current.md for the design.
+    # ------------------------------------------------------------------
+
+    def get_current_username(self) -> Optional[str]:
+        """Whoever the OBS overlay is showing, or None.
+
+        The newest processed_at is what viewers see; unprocessed docs hold null,
+        which sorts lowest. None when nothing is displayed or already redacted,
+        which is what makes a repeated clear a no-op.
+        """
+        query = (
+            self._requests
+            .order_by('processed_at', direction=firestore.Query.DESCENDING)
+            .limit(1)
+        )
+        for doc in query.stream():
+            data = doc.to_dict() or {}
+            if data.get('processed_at') is None:
+                return None  # nothing dispatched yet
+            username = data.get('username')
+            if username == REDACTED_USERNAME:
+                return None
+            return username
+        return None
+
+    def cancel_pending_for_user(self, username: str) -> int:
+        """Cancel only this user's pending requests, leaving everyone else's."""
+        docs = list(
+            self._requests
+            .where('username', '==', username)
+            .where('status', '==', STATUS_PENDING)
+            .stream()
+        )
+        if not docs:
+            return 0
+
+        batch = self._client.batch()
+        for doc in docs:
+            batch.update(doc.reference, {'status': STATUS_CANCELLED})
+        batch.commit()
+
+        logger.info(f"Cancelled {len(docs)} pending request(s) for '{username}'")
+        return len(docs)
+
+    def redact_username(self, username: str) -> int:
+        """Overwrite the name on this user's docs so the log stops carrying it."""
+        docs = list(self._requests.where('username', '==', username).stream())
+        if not docs:
+            return 0
+
+        batch = self._client.batch()
+        for doc in docs:
+            batch.update(doc.reference, {'username': REDACTED_USERNAME})
+        batch.commit()
+
+        logger.info(f"Redacted username on {len(docs)} document(s)")
+        return len(docs)
+
+    def request_overlay_clear(self) -> None:
+        """Ask the bridge to blank the overlay.
+
+        The cloud cannot reach the home machine, so this is a command doc the
+        bridge watches. Written only here; the bridge only reads it.
+        """
+        self._overlay_ref.set({'clear_requested_at': firestore.SERVER_TIMESTAMP})
+        logger.info("Requested overlay clear")
+
+    @staticmethod
+    def _denylist_id(username: str) -> str:
+        """Hash, so the offensive string is never stored after redaction."""
+        return hashlib.sha256(username.strip().lower().encode('utf-8')).hexdigest()
+
+    def block_username(self, username: str) -> None:
+        self._denylist.document(self._denylist_id(username)).set(
+            {'blocked_at': firestore.SERVER_TIMESTAMP}
+        )
+        logger.info("Added a username to the denylist")
+
+    def is_blocked(self, username: str) -> bool:
+        return self._denylist.document(self._denylist_id(username)).get().exists
 
     def _pending_count(self) -> int:
         docs = self._requests.where('status', '==', STATUS_PENDING).select([]).stream()

@@ -23,8 +23,7 @@ class HeartbeatWriter:
         self._thread: Optional[threading.Thread] = None
 
     def start(self) -> None:
-        # Beat once up front so the cloud API sees the bridge immediately
-        # rather than after a full interval.
+        # Beat immediately, rather than after a full interval.
         self.beat_once()
         self._thread = threading.Thread(target=self._loop, name='heartbeat', daemon=True)
         self._thread.start()
@@ -40,8 +39,7 @@ class HeartbeatWriter:
                 serial_port=self._serial_controller.port,
             )
         except Exception as e:
-            # A failed heartbeat just makes the bridge look offline for a
-            # while; never worth taking down the dispatch loop.
+            # A failed beat only looks like downtime; never kill dispatch.
             logger.error(f"Failed to write heartbeat: {e}")
 
     def _loop(self) -> None:

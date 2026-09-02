@@ -114,7 +114,7 @@ sequenceDiagram
   participant E as ESP32
 
   Note over BR: already holding a request,<br/>waiting for its slot
-  A->>FS: POST /api/queue/clear<br/>pending -> cancelled
+  A->>FS: POST /admin/queue/clear<br/>pending -> cancelled
   A->>FS: reset meta/pacing
   Note over BR: the slot arrives
   BR->>FS: re-read before writing serial
@@ -127,7 +127,7 @@ still changed — the bridge would already be holding the request.
 
 ## Data model
 
-Two collections. No schema migrations, no joins.
+Three collections plus two control documents. No schema migrations, no joins.
 
 **`requests/{auto-id}`** — one document per colour request, and the request log:
 
@@ -145,9 +145,19 @@ and advances.
 every 60s; a heartbeat older than 120s means offline, which is how the cloud
 answers "is the hardware alive?" without being able to reach it.
 
+**`meta/overlay_control`** — `clear_requested_at`. Written only by the API,
+watched only by the bridge: the channel an admin clear travels down, since the
+cloud cannot call the home machine. See
+[admin-clear-current.md](admin-clear-current.md).
+
+**`denylist/{sha256(name)}`** — blocked usernames, keyed by hash so a redacted
+name is never stored in readable form.
+
 ## API
 
-All routes require `X-Api-Key` except `GET /`.
+`GET /` is open. `/api/*` requires `X-Api-Key`. `/admin/*` requires
+`X-Admin-Key` and does **not** accept `X-Api-Key` — the Worker adds that header
+to everything it proxies, so it identifies the Worker, not a person.
 
 | Route | Does |
 |---|---|
@@ -155,7 +165,8 @@ All routes require `X-Api-Key` except `GET /`.
 | `POST /api/color` | Validate → assign slot → create pending doc |
 | `GET /api/status` | Queue size, next free slot, hardware state |
 | `GET /api/queue` | Pending requests in slot order |
-| `POST /api/queue/clear` | Cancel all pending, reset the pacing clock |
+| `POST /admin/queue/clear` | Cancel **all** pending. **`X-Admin-Key`** |
+| `POST /admin/clear-current` | Pull one user off the overlay. **`X-Admin-Key`, not `X-Api-Key`** |
 
 ## Design decisions
 
@@ -182,7 +193,7 @@ All routes require `X-Api-Key` except `GET /`.
 
 ## Security
 
-- **Secret:** `API_KEY` (Worker → API) and the bridge's service-account key. Neither is in the repo; the API key lives only in the Cloud Run config, the bridge key only on the home machine at `chmod 600`.
+- **Secret:** `API_KEY` (Worker → API), `ADMIN_KEY` (admin actions, and deliberately *not* accepted on `/api/*`), and the bridge's service-account key. Neither is in the repo; the API key lives only in the Cloud Run config, the bridge key only on the home machine at `chmod 600`.
 - **Not secret:** `ALLOWED_ORIGINS` and the upstream URL. CORS is announced in every response — it constrains what *other websites* can do in a browser, and stops nothing else.
 - **Deliberately open:** anyone can `POST /api/color` through rgboo.com; it is a public community project. Abuse is limited by the 20s pacing and the profanity filter, not by auth.
 - **Deploy identity:** GitHub Actions authenticates by Workload Identity Federation, pinned to this repository. No key is stored in GitHub, and the identity can only push images and deploy Cloud Run.

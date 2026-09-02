@@ -35,7 +35,7 @@ def test_enqueue_via_api_and_status(client):
 
 """Test queue cleared"""
 def test_clear_queue(client):
-    resp = client.post('/api/queue/clear')
+    resp = client.post('/admin/queue/clear')
     assert resp.status_code == 200
     body = resp.get_json()
     assert body.get('status') == 'success'

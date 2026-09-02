@@ -8,7 +8,7 @@ instead of an in-process queue.Queue:
     than from queue.get(), and is ordered by scheduled_time rather than
     by insertion (a snapshot can deliver docs in any order).
   * The doc is re-read immediately before the serial write, so a request
-    cancelled by POST /api/queue/clear while it waited is skipped. This
+    cancelled by POST /admin/queue/clear while it waited is skipped. This
     is the mechanism that makes queue-clear actually stop the LEDs.
   * Requests are marked done/failed in Firestore, which both replaces
     the old SQLite log and stops them being re-delivered.
@@ -42,8 +42,7 @@ class ColorProcessor:
         self._serial_controller = serial_controller
         self._obs_update_callback = obs_update_callback
         self._idle_wait = idle_wait_seconds
-        # Cap on a single wait, so a far-future slot is still re-evaluated
-        # periodically (e.g. after the queue is cleared out from under us).
+        # Cap on one wait, so a far-future slot is re-evaluated periodically.
         self._max_wait = max_wait_seconds
         self._now = clock
 
@@ -93,8 +92,8 @@ class ColorProcessor:
             try:
                 self._tick()
             except Exception as e:
-                # Same defensive posture as the original worker loop: one
-                # bad request must not kill the daemon.
+                # As in the original worker loop: one bad request must not
+                # kill the daemon.
                 logger.error(f"Error in bridge processing loop: {e}")
         logger.info("Bridge processing loop stopped")
 

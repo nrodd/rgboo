@@ -51,9 +51,8 @@ def start_obs_server(app, socketio, host: str, port: int) -> threading.Thread:
                 port=port,
                 debug=False,
                 use_reloader=False,
-                # Werkzeug refuses to serve non-debug without this. It is
-                # the same local-only dev server the middleware ran, and
-                # the page is reachable from this machine only.
+                # Werkzeug needs this outside debug. Same local-only server
+                # the middleware ran; reachable from this machine only.
                 allow_unsafe_werkzeug=True,
             )
         except TypeError:

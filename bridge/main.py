@@ -19,8 +19,9 @@ from google.cloud import firestore
 from .config import Config
 from .dry_run import DryRunSerialController
 from .heartbeat import HeartbeatWriter
-from .listener import PendingPoller, PendingWatcher
+from .listener import OverlayControlWatcher, PendingPoller, PendingWatcher
 from .obs_server import create_obs_app, make_obs_callback, start_obs_server
+from .overlay_control import OverlayController
 from .processor import ColorProcessor
 from .store import BridgeStore
 
@@ -109,15 +110,23 @@ def main(argv=None) -> int:
 
     processor = ColorProcessor(store, serial_controller, obs_callback)
 
-    # In listener mode the poller still runs, slowly, as a safety net for a
-    # silently dead snapshot stream.
+    # Admin clears arrive as a doc; primed so none is replayed at boot.
+    overlay_controller = OverlayController(store, obs_callback)
+    overlay_controller.prime()
+
+    # The poller is a slow safety net for a dead stream, overlay doc included.
     watcher = None
+    overlay_watcher = None
     if args.poll:
-        poller = PendingPoller(store, processor, args.poll_interval)
+        poller = PendingPoller(store, processor, args.poll_interval, overlay_controller)
     else:
         watcher = PendingWatcher(store, processor)
         watcher.start()
-        poller = PendingPoller(store, processor, Config.RESYNC_INTERVAL_SECONDS)
+        overlay_watcher = OverlayControlWatcher(store, overlay_controller)
+        overlay_watcher.start()
+        poller = PendingPoller(
+            store, processor, Config.RESYNC_INTERVAL_SECONDS, overlay_controller
+        )
     poller.start()
 
     heartbeat = HeartbeatWriter(store, serial_controller, Config.HEARTBEAT_SECONDS)
@@ -145,6 +154,8 @@ def main(argv=None) -> int:
         poller.stop()
         if watcher is not None:
             watcher.stop()
+        if overlay_watcher is not None:
+            overlay_watcher.stop()
         if not args.dry_run:
             serial_controller.disconnect()
 

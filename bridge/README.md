@@ -100,7 +100,7 @@ bridge picks them back up (overdue ones dispatch immediately). See
 - **`store.py`** is the only module that knows Firestore.
 - **`processor.py`** is the dispatch loop, ported from
   `middleware/color_queue.py:82-138`. It re-reads each doc immediately
-  before the serial write, which is how `POST /api/queue/clear` actually
+  before the serial write, which is how `POST /admin/queue/clear` actually
   stops the LEDs changing.
 - **`listener.py`** feeds the processor, either from an `on_snapshot`
   stream (outbound gRPC, so no inbound port or NAT config) or by polling.
