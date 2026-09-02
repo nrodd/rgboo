@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# One-command local setup for the cloud API and the bridge.
+# One-command local setup for the Firestore emulator, API, bridge, and web app.
 # Safe to re-run: it never overwrites an existing .venv or .env.
 #
 #   ./scripts/setup.sh
@@ -33,11 +33,12 @@ case "$PY_VERSION" in
   *) bad "python3 $PY_VERSION is too old; this needs 3.10+"; exit 1 ;;
 esac
 
-if command -v gcloud >/dev/null 2>&1; then
-  ok "gcloud installed"
+if command -v firebase >/dev/null 2>&1; then
+  ok "Firebase CLI installed (for the local Firestore emulator)"
 else
-  warn "gcloud not found — needed for Firestore credentials"
-  warn "install: https://cloud.google.com/sdk/docs/install"
+  bad "Firebase CLI not found — required for the local Firestore emulator"
+  printf '      install: https://firebase.google.com/docs/cli\n'
+  exit 1
 fi
 
 step "2. Virtualenv"
@@ -61,26 +62,22 @@ step "3. Dependencies"
   pytest
 ok "installed cloud_api, bridge, and pytest"
 
-step "4. Environment file"
+step "4. Web dependencies"
+
+if ! command -v corepack >/dev/null 2>&1; then
+  bad "corepack not found. Install Node.js 22+ and re-run."
+  exit 1
+fi
+corepack yarn --cwd web install --immutable
+ok "installed web dependencies"
+
+step "5. Environment file"
 
 if [ -f .env ]; then
   ok ".env already exists (left untouched)"
 else
   cp .env.example .env
   ok "created .env from .env.example"
-fi
-
-step "5. Google credentials"
-
-if ! command -v gcloud >/dev/null 2>&1; then
-  warn "skipped — gcloud not installed"
-elif gcloud auth application-default print-access-token >/dev/null 2>&1; then
-  ok "application default credentials are present"
-else
-  warn "no application default credentials yet. Run:"
-  printf '      gcloud auth application-default login\n'
-  printf '      gcloud auth application-default set-quota-project rgboo-leds\n'
-  warn "you also need to be in rgboo@googlegroups.com for Firestore access"
 fi
 
 step "6. Smoke test"
@@ -100,10 +97,10 @@ cat <<'NEXT'
 
       ./scripts/dev.sh
 
-  That runs the API on :8080 and the bridge in dry run, together, in this
-  terminal. Ctrl-C stops both.
+  That starts Firestore on :8081, the API on :8080, the bridge in dry run,
+  and the web app on http://127.0.0.1:5173. Open /admin there for the local
+  admin page, or http://127.0.0.1:4000 for the Firestore Emulator UI.
 
-  Remember: there is no local database. Both talk to the real shared
-  Firestore, so use an obvious test username and clean up after yourself.
+  No gcloud login or production Firestore access is used locally.
   Details in docs/local-setup.md.
 NEXT

@@ -40,7 +40,7 @@ test("then it handles profanity error", async ({
   worker: SetupWorker;
 }) => {
   worker.use(
-    http.post("https://rgboo.com/api/color", () => {
+    http.post("*/api/color", () => {
       return HttpResponse.json(
         {
           code: "PROFANITY_DETECTED",
@@ -64,7 +64,7 @@ test("then it handles 400 error", async ({
   worker: SetupWorker;
 }) => {
   worker.use(
-    http.post("https://rgboo.com/api/color", () => {
+    http.post("*/api/color", () => {
       return HttpResponse.json(
         {
           error: "",

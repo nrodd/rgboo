@@ -14,8 +14,6 @@ import os
 import signal
 import sys
 
-from google.cloud import firestore
-
 from .config import Config
 from .dry_run import DryRunSerialController
 from .heartbeat import HeartbeatWriter
@@ -24,6 +22,7 @@ from .obs_server import create_obs_app, make_obs_callback, start_obs_server
 from .overlay_control import OverlayController
 from .processor import ColorProcessor
 from .store import BridgeStore
+from shared.firestore_client import get_firestore_client
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +90,7 @@ def main(argv=None) -> int:
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     )
 
-    if not os.getenv('GOOGLE_APPLICATION_CREDENTIALS'):
+    if not os.getenv('GOOGLE_APPLICATION_CREDENTIALS') and not os.getenv('FIRESTORE_EMULATOR_HOST'):
         # Not fatal -- gcloud application-default credentials work too --
         # but on the home machine it is almost always the missing piece.
         logger.warning(
@@ -99,7 +98,7 @@ def main(argv=None) -> int:
             "application default credentials"
         )
 
-    store = BridgeStore(firestore.Client())
+    store = BridgeStore(get_firestore_client())
     serial_controller = build_serial_controller(args)
 
     obs_callback = None

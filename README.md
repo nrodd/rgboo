@@ -58,12 +58,13 @@ The system consists of three main components working together:
 ## 🧰 Running it locally
 
 ```bash
-./scripts/setup.sh     # venv, dependencies, .env, credential check
-./scripts/dev.sh       # API + bridge together, Ctrl-C stops both
+./scripts/setup.sh     # local emulator, Python/web dependencies, .env
+./scripts/dev.sh       # Firestore + API + bridge + web, Ctrl-C stops all
 ```
 
-**[docs/local-setup.md](docs/local-setup.md)** covers what those do, which
-access you need, and what not to break.
+**[docs/local-setup.md](docs/local-setup.md)** covers the local URLs, including
+the browser admin page and Firestore Emulator UI. Local development never
+uses the shared production Firestore database.
 
 ## 🏗️ Architecture
 
