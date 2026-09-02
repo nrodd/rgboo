@@ -59,7 +59,7 @@ export default {
         : url.pathname.replace(/^\/admin-api/, "/admin");
       const upstream = env.API_UPSTREAM || DEFAULT_API_UPSTREAM;
       const targetUrl = upstream.replace(/\/$/, "") + adminPath + url.search;
-      const headers = new Headers(upstreamHeaders(env));
+      const headers = upstreamHeaders(env);
       return fetch(targetUrl, {
         method: request.method,
         headers,
