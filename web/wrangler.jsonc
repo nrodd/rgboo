@@ -22,7 +22,7 @@
 	 *   new: https://<service>.run.app      (Cloud Run)
 	 */
 	"vars": {
-		"API_UPSTREAM": "https://api.rgboo.com"
+		"API_UPSTREAM": "https://rgboo-api-186324327580.us-east1.run.app"
 	}
 	/**
 	 * Secrets are NOT set here -- they are uploaded with `wrangler secret put`:
