@@ -41,6 +41,47 @@ The system consists of three main components working together:
 - Sends color commands to the middleware API
 - Real-time color preview and control
 
+### ☁️ `cloud_api/`
+**Python Flask API on Cloud Run**
+- The middleware's HTTP half, moved to Google Cloud
+- Validates color requests and paces them one per 20 seconds
+- Stores the queue in Firestore, so it survives restarts
+- Deployed on demand from Actions -> Deploy API
+
+### 🌉 `bridge/`
+**Python daemon on the home machine**
+- The half that cannot move to the cloud: it owns the USB cable
+- Watches Firestore for pending requests and waits for each one's turn
+- Writes colors to the ESP32 and serves the OBS overlay
+- Runs under systemd; updated by pulling on that machine
+
+## 🧰 Running it locally
+
+```bash
+./scripts/setup.sh     # venv, dependencies, .env, credential check
+./scripts/dev.sh       # API + bridge together, Ctrl-C stops both
+```
+
+**[docs/local-setup.md](docs/local-setup.md)** covers what those do, which
+access you need, and what not to break.
+
+## 🏗️ Architecture
+
+The system splits at the queue: the cloud decides *when* each colour runs, and
+a daemon at home does the physical USB write. See
+**[docs/architecture.md](docs/architecture.md)** for diagrams, the data model,
+failure modes, and the security posture.
+
+## 🚀 Deploying
+
+Nothing deploys on merge. The API has a one-click workflow
+(Actions -> **Deploy API**); everything else is a deliberate command.
+
+See **[docs/architecture.md](docs/architecture.md)** for how the system fits
+together, and **[docs/deploying.md](docs/deploying.md)** for shipping each
+component and rolling it back. The migration from the old always-on middleware to GCP is
+described in [docs/gcp-migration-plan.md](docs/gcp-migration-plan.md)
+
 ## 🎭 Getting Started
 
 ### Quick Setup

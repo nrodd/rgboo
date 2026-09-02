@@ -30,6 +30,47 @@ Copy `.env.example` to `.env.local`.
 
 Deployed using Cloudflare Workers.
 
+```
+yarn deploy
+```
+
+## API proxy
+
+`worker/index.js` serves the app and proxies `/api/*` to the middleware,
+adding the credentials that upstream expects. The browser never holds a
+secret — only the Worker does.
+
+Which upstream it targets is the `API_UPSTREAM` var in `wrangler.jsonc`:
+
+| Upstream                     | Reached through          | Credentials                             |
+| ---------------------------- | ------------------------ | --------------------------------------- |
+| `https://api.rgboo.com`      | Cloudflare Tunnel + Access | `CF_ACCESS_ID` + `CF_ACCESS_SECRET`   |
+| `https://<service>.run.app`  | Cloud Run (direct)       | `API_KEY`                               |
+
+Secrets are never committed — upload them with wrangler:
+
+```
+wrangler secret put API_KEY
+wrangler secret put CF_ACCESS_ID
+wrangler secret put CF_ACCESS_SECRET
+```
+
+The Worker sends whichever credentials are configured, so both sets can be
+set at once during the migration: the old middleware ignores `X-Api-Key`,
+and the Cloud Run API ignores the `CF-Access-*` headers. That makes the
+cutover a config change rather than a code change:
+
+```
+# cut over to GCP: set API_UPSTREAM to the Cloud Run URL in wrangler.jsonc
+wrangler secret put API_KEY
+wrangler deploy
+
+# roll back: set API_UPSTREAM back to https://api.rgboo.com
+wrangler deploy
+```
+
+See `docs/gcp-migration-plan.md` for the full migration.
+
 ## Testing
 
 Testing is powered through [Vitest](https://vitest.dev/) using [Playwright](https://playwright.dev/) for browser support. Can be run in headless mode (default) or in a browser. Server is mocked through [Mock Service Worker](https://mswjs.io/).

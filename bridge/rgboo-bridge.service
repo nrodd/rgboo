@@ -1,0 +1,33 @@
+# RGBoo bridge daemon.
+#
+# Install:
+#   sudo cp bridge/rgboo-bridge.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now rgboo-bridge
+#
+# Adjust User, WorkingDirectory, and ExecStart to match the checkout.
+# See bridge/README.md.
+
+[Unit]
+Description=RGBoo bridge (Firestore queue -> USB serial -> ESP32)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rgboo
+# Repo root, not bridge/ -- the daemon imports the shared/ and middleware/
+# packages as siblings.
+WorkingDirectory=/opt/rgboo
+Environment=PYTHONUNBUFFERED=1
+Environment=GOOGLE_APPLICATION_CREDENTIALS=/etc/rgboo/bridge-sa-key.json
+ExecStart=/opt/rgboo/.venv/bin/python -m bridge.main
+# Membership in dialout is what grants access to /dev/ttyUSB*.
+SupplementaryGroups=dialout
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
