@@ -1,10 +1,10 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
-import svgr from "vite-plugin-svgr";
-import path from "path";
+import react from "@vitejs/plugin-react";
 import fs from "fs";
+import path from "path";
+import { defineConfig } from "vite";
+import svgr from "vite-plugin-svgr";
 
 // Remove dev-only assets copied into `dist` (like dev-embed.mp4)
 function removeDevAssetsPlugin() {
@@ -63,4 +63,9 @@ export default defineConfig({
     devAssetsPlugin(),
     removeDevAssetsPlugin(),
   ],
+  server: {
+    watch: {
+      usePolling: true,
+    },
+  },
 });
