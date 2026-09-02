@@ -1,5 +1,5 @@
 import GhLogo from "../assets/github-mark-white.svg?react";
-import YouTubeLogo from "../assets/youtube.svg?url";
+import TwitchLogo from "../assets/twitch-icon.svg?url";
 import { useScreenSize } from "../libs/useScreenSize";
 
 const SM = "28";
@@ -17,7 +17,7 @@ export const Footer = () => {
         className="content-center text-bone pointer-events-auto"
       >
         <img
-          src={YouTubeLogo}
+          src={TwitchLogo}
           className="w-6 md:w-10 object-contain cursor-pointer hover:opacity-80 transition-opacity"
         />
       </a>
