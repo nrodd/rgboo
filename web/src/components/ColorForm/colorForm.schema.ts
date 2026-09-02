@@ -1,7 +1,7 @@
-import { number, object, string} from 'yup';
 import { Profanity } from '@2toad/profanity';
+import { number, object, string } from 'yup';
 
-const twitch_user_req = /^[a-zA-Z0-9_\s]+$/;
+const stream_user_req = /^[a-zA-Z0-9_\s]+$/;
 const special_chars = /[\s_]/;
 
 const profanity = new Profanity({
@@ -15,7 +15,7 @@ export const colorFormSchema = object({
         .min(4, 'Too short!')
         .max(25, 'Too long!')
         .matches(
-            twitch_user_req,
+            stream_user_req,
             'Username can only contain alphanumeric characters'
         )
         .test(

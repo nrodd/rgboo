@@ -1,6 +1,6 @@
 import LogoIcon from "../assets/pumpkin.svg?react";
 import ColorForm from "../components/ColorForm";
-import { TwitchEmbed } from "../components/TwitchEmbed";
+import { StreamEmbed } from "../components/StreamEmbed";
 
 export const MainContent = () => (
   <div className="main-content">
@@ -11,9 +11,9 @@ export const MainContent = () => (
       </h1>
     </div>
     <div>
-      <TwitchEmbed channel="roddzillaaa" />
+      <StreamEmbed />
     </div>
-    <div className="lg:absolute lg:bottom-0 lg:right-0 md:w-auto md:flex-shrink-0 w-full mt-12 mb-12 z-40">
+    <div className="lg:absolute lg:bottom-0 lg:right-0 md:w-auto md:flex-shrink-0 w-full mt-12 mb-16 z-40">
       <ColorForm />
     </div>
   </div>

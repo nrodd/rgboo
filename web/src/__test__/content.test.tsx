@@ -9,7 +9,7 @@ test("then the content is rendered", async () => {
   await expect.element(page.getByTestId("info-button")).toBeInTheDocument();
 
   await expect
-    .element(page.getByTestId("twitch-embed-container"))
+    .element(page.getByTestId("stream-embed-container"))
     .toBeInTheDocument();
 
   await expect
