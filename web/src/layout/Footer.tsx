@@ -14,7 +14,7 @@ export const Footer = () => {
         href="https://twitch.tv/roddzillaaa"
         target="_blank"
         rel="noopener noreferrer"
-        className="content-center text-bone"
+        className="content-center text-bone pointer-events-auto"
       >
         <img
           src={TwitchLogo}
@@ -25,7 +25,7 @@ export const Footer = () => {
         href="https://github.com/nrodd/rgboo"
         target="_blank"
         rel="noopener noreferrer"
-        className="content-center text-bone"
+        className="content-center text-bone pointer-events-auto"
       >
         <GhLogo
           className="github-icon fill-current cursor-pointer hover:opacity-80 transition-opacity"

@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Formik, Form, Field, ErrorMessage } from "formik";
+import { ErrorMessage, Field, Form, Formik } from "formik";
+import { useEffect, useState } from "react";
 import { ColorInput } from "./ColorInput";
 import { colorFormSchema } from "./colorForm.schema";
 
@@ -132,10 +132,7 @@ export const ColorForm = () => {
   };
 
   return (
-    <div
-      data-testid="color-form-container"
-      className="sm:px-6 md:mr-12 md:w-112"
-    >
+    <div data-testid="color-form-container" className="px-6">
       <Formik
         initialValues={{
           username: "",

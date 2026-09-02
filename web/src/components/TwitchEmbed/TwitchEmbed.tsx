@@ -64,7 +64,7 @@ export const TwitchEmbed = ({
       data-testid="twitch-embed-container"
       className={`twitch-embed-container w-full ${className}`}
     >
-      <div className="aspect-video w-full overflow-hidden rounded-lg">
+      <div className="lg:absolute lg:h-screen h-64 w-screen">
         {devEmbed ? (
           <video
             src={devVideoUrl}

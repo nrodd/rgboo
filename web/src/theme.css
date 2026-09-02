@@ -121,10 +121,6 @@
     @apply bg-linear-to-b from-arcana-900 from-30% to-pumpkin-900 to-80% bg-cover bg-center bg-no-repeat bg-fixed h-screen;
   }
 
-  .main-content {
-    @apply flex flex-col justify-center mt-12 mb-auto px-12 gap-8 sm:gap-10;
-  }
-
   .info-icon {
     @apply fixed top-6 text-bone;
   }
@@ -138,7 +134,7 @@
   }
 
   .form-field {
-    @apply text-base md:text-md font-bold text-bone border-1 border-pumpkin-400 rounded-md
+    @apply text-base md:text-md font-bold text-bone border-1 border-pumpkin-400 rounded-md;
   }
 
   .form-button {
@@ -150,7 +146,7 @@
   }
 
   .footer {
-    @apply flex justify-center content-center h-14 md:h-24 mt-8 pt-2 pb-4 space-x-12 md:space-x-8;
+    @apply flex justify-center fixed bottom-0 left-0 right-0 md:h-24 pb-4 space-x-12 md:space-x-8 pointer-events-none;
   }
 }
 
