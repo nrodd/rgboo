@@ -156,10 +156,9 @@ name is never stored in readable form.
 
 ## API
 
-`GET /` is open. `/api/*` requires `X-Api-Key`. `/admin/*` requires a verified
-Cloudflare Access JWT whose email is in the API's `ADMIN_EMAILS` allowlist.
-The Worker exposes these routes to the protected admin page as same-origin
-`/admin-api/*` paths and forwards `Cf-Access-Jwt-Assertion`.
+`GET /` is open. `/api/*` and `/admin/*` require `X-Api-Key`. The Worker
+exposes admin routes to the Cloudflare Access-protected admin page as
+same-origin `/admin-api/*` paths and forwards its existing API credential.
 
 | Route | Does |
 |---|---|
@@ -176,7 +175,7 @@ The Worker exposes these routes to the protected admin page as same-origin
 | Decision | Why |
 |---|---|
 | Firestore, not Pub/Sub | Pending work must be *listable* and *cancellable*. Queue messages are neither. |
-| Cloudflare Access identity, not a browser secret | Human admins authenticate through the existing email allowlist; the API verifies the signed JWT and authorizes the email itself. |
+| Cloudflare Access plus Worker credential | Human admins authenticate through the existing email allowlist; the browser never receives the Worker-to-API key. |
 | Slot assigned by the API, not the bridge | Pacing survives a bridge restart, and callers learn their wait immediately. |
 | Bridge re-reads before the serial write | The only way a cancellation can beat a request the bridge already holds. |
 | Bridge sorts pending locally | Keeps its listener a single-field query, so it needs no composite index. The API sorts server-side and does need one. |
@@ -196,7 +195,7 @@ The Worker exposes these routes to the protected admin page as same-origin
 
 ## Security
 
-- **Secret:** `API_KEY` (Worker → API) and the bridge's service-account key. Admin identity comes from the signed Cloudflare Access JWT; the API stores only its team domain, audience, and allowed email list.
+- **Secret:** `API_KEY` (Worker → API) and the bridge's service-account key. The admin page is protected by Cloudflare Access, while the Worker keeps the API key out of the browser.
 - **Not secret:** `ALLOWED_ORIGINS` and the upstream URL. CORS is announced in every response — it constrains what *other websites* can do in a browser, and stops nothing else.
 - **Deliberately open:** anyone can `POST /api/color` through rgboo.com; it is a public community project. Abuse is limited by the 20s pacing and the profanity filter, not by auth.
 - **Deploy identity:** GitHub Actions authenticates by Workload Identity Federation, pinned to this repository. No key is stored in GitHub, and the identity can only push images and deploy Cloud Run.

@@ -1,9 +1,8 @@
 # Admin: clear the current user
 
-> Authentication note: the original shared `X-Admin-Key` design described
-> below has been superseded. Admin actions are now reached through the
-> Cloudflare Access-protected Worker path `/admin-api/*`; the API validates
-> the forwarded `Cf-Access-Jwt-Assertion` and checks `ADMIN_EMAILS`.
+> Authentication note: admin actions are reached through the
+> Cloudflare Access-protected Worker path `/admin-api/*`. The Worker keeps
+> the API key out of the browser and forwards it to the Cloud API.
 
 ## Why
 

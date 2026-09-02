@@ -1,7 +1,6 @@
 from unittest.mock import Mock
 import datetime
 
-from .. import app as app_module
 from ..app import create_app
 from ..config import Config
 
@@ -28,13 +27,11 @@ def _client(monkeypatch):
 
 
 def test_health_check_does_not_require_api_key(monkeypatch):
-    client = _client(monkeypatch)
-    assert client.get('/').status_code == 200
+    assert _client(monkeypatch).get('/').status_code == 200
 
 
 def test_missing_api_key_is_rejected(monkeypatch):
-    client = _client(monkeypatch)
-    assert client.get('/api/queue').status_code == 401
+    assert _client(monkeypatch).get('/api/queue').status_code == 401
 
 
 def test_correct_api_key_is_accepted(monkeypatch):
@@ -42,49 +39,22 @@ def test_correct_api_key_is_accepted(monkeypatch):
     assert client.get('/api/queue', headers={'X-Api-Key': 'test-secret'}).status_code == 200
 
 
-def test_admin_requires_access_configuration(monkeypatch):
+def test_admin_requires_api_key(monkeypatch):
     client = _client(monkeypatch)
-    monkeypatch.setattr(Config, 'ACCESS_TEAM_DOMAIN', '')
-    monkeypatch.setattr(Config, 'ACCESS_AUDIENCE', None)
-    monkeypatch.setattr(Config, 'ADMIN_EMAILS', set())
-    assert client.get('/admin/status').status_code == 500
-
-
-def test_admin_requires_access_jwt(monkeypatch):
-    client = _client(monkeypatch)
-    monkeypatch.setattr(Config, 'ACCESS_TEAM_DOMAIN', 'https://team.cloudflareaccess.com')
-    monkeypatch.setattr(Config, 'ACCESS_AUDIENCE', 'aud')
-    monkeypatch.setattr(Config, 'ADMIN_EMAILS', {'admin@example.com'})
     assert client.get('/admin/status').status_code == 401
 
 
-def test_valid_access_jwt_allows_an_admin(monkeypatch):
+def test_admin_accepts_worker_api_key(monkeypatch):
     client = _client(monkeypatch)
-    monkeypatch.setattr(Config, 'ACCESS_TEAM_DOMAIN', 'https://team.cloudflareaccess.com')
-    monkeypatch.setattr(Config, 'ACCESS_AUDIENCE', 'aud')
-    monkeypatch.setattr(Config, 'ADMIN_EMAILS', {'admin@example.com'})
-
-    class SigningKey:
-        key = 'public-key'
-
-    class Jwks:
-        def get_signing_key_from_jwt(self, token):
-            return SigningKey()
-
-    monkeypatch.setattr(app_module.jwt, 'PyJWKClient', lambda url: Jwks())
-    monkeypatch.setattr(app_module.jwt, 'decode', lambda *args, **kwargs: {'email': 'admin@example.com'})
-
-    response = client.get('/admin/status', headers={'Cf-Access-Jwt-Assertion': 'signed-token'})
-    assert response.status_code == 200
+    assert client.get('/admin/status', headers={'X-Api-Key': 'test-secret'}).status_code == 200
 
 
-def test_valid_access_jwt_rejects_non_admin(monkeypatch):
+def test_unset_api_key_fails_closed_for_admin(monkeypatch):
     client = _client(monkeypatch)
-    monkeypatch.setattr(Config, 'ACCESS_TEAM_DOMAIN', 'https://team.cloudflareaccess.com')
-    monkeypatch.setattr(Config, 'ACCESS_AUDIENCE', 'aud')
-    monkeypatch.setattr(Config, 'ADMIN_EMAILS', {'admin@example.com'})
-    monkeypatch.setattr(app_module.jwt, 'PyJWKClient', lambda url: Mock(get_signing_key_from_jwt=lambda token: Mock(key='key')))
-    monkeypatch.setattr(app_module.jwt, 'decode', lambda *args, **kwargs: {'email': 'visitor@example.com'})
+    monkeypatch.setattr(Config, 'API_KEY', None)
+    assert client.get('/admin/status').status_code == 500
 
-    response = client.get('/admin/status', headers={'Cf-Access-Jwt-Assertion': 'signed-token'})
-    assert response.status_code == 403
+
+def test_admin_does_not_accept_cloudflare_header_without_api_key(monkeypatch):
+    client = _client(monkeypatch)
+    assert client.get('/admin/status', headers={'Cf-Access-Jwt-Assertion': 'anything'}).status_code == 401

@@ -36,10 +36,9 @@ yarn deploy
 
 ## API proxy
 
-`worker/index.js` serves the app, proxies `/api/*` with the Worker-to-API
-credential, and proxies `/admin-api/*` for the Access-protected admin page.
-The admin browser sends no API secret. Cloudflare Access attaches the signed
-identity JWT, which the Worker forwards and the Cloud API verifies.
+`worker/index.js` serves the app, proxies `/api/*` and `/admin-api/*` with the
+Worker-to-API credential. The admin page is protected by Cloudflare Access;
+the Worker treats its admin requests like the existing API requests.
 
 Which upstream it targets is the `API_UPSTREAM` var in `wrangler.jsonc`:
 
@@ -56,10 +55,8 @@ wrangler secret put CF_ACCESS_ID
 wrangler secret put CF_ACCESS_SECRET
 ```
 
-The admin API uses `Cf-Access-Jwt-Assertion`, not a browser-held key. Configure
-the Cloud API with `ACCESS_TEAM_DOMAIN`, `ACCESS_AUDIENCE`, and the
-comma-separated `ADMIN_EMAILS` allowlist. Protect `/admin` and `/admin-api/*`
-with the same Cloudflare Access application/policy.
+Protect `/admin` and `/admin-api/*` (or the separate `api-admin.rgboo.com`
+hostname) with the Cloudflare Access application/policy.
 
 The Worker sends whichever credentials are configured, so both sets can be
 set at once during the migration: the old middleware ignores `X-Api-Key`,

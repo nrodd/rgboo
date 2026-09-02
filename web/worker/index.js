@@ -3,8 +3,8 @@
  *
  * Serves the static app and proxies /api/* and /admin-api/* to whichever middleware is
  * currently live, adding the credentials that upstream expects. The
- * frontend never holds an API secret. Admin identity comes from the
- * Cloudflare Access JWT attached to requests reaching this Worker.
+ * frontend never holds an API secret. The Worker authenticates both public
+ * and admin API calls to Cloud Run with its API key.
  *
  * Cutover and rollback (see docs/gcp-migration-plan.md) are a config
  * change, not a code change:
@@ -50,18 +50,16 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Admin calls are same-origin from the protected /admin page. Rewrite the
-    // Worker path to the API's existing /admin/* routes and pass through the
-    // signed identity assertion. The API validates it itself.
+    // Admin calls are same-origin from the Cloudflare Access-protected /admin
+    // page. Rewrite the Worker path to the API's existing /admin/* routes and
+    // authenticate them exactly like the public API.
     if (url.pathname.startsWith("/admin-api/")) {
       const adminPath = url.pathname === "/admin-api/health"
         ? "/"
         : url.pathname.replace(/^\/admin-api/, "/admin");
       const upstream = env.API_UPSTREAM || DEFAULT_API_UPSTREAM;
       const targetUrl = upstream.replace(/\/$/, "") + adminPath + url.search;
-      const headers = new Headers({ "Content-Type": "application/json" });
-      const accessJwt = request.headers.get("Cf-Access-Jwt-Assertion");
-      if (accessJwt) headers.set("Cf-Access-Jwt-Assertion", accessJwt);
+      const headers = new Headers(upstreamHeaders(env));
 
       return fetch(targetUrl, {
         method: request.method,

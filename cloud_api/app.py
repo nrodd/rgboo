@@ -1,8 +1,6 @@
 import hmac
+import hmac
 import logging
-from functools import lru_cache
-
-import jwt
 
 from flask import Flask, jsonify, request
 
@@ -35,13 +33,13 @@ def create_app(store=None) -> Flask:
 
     @app.before_request
     def enforce_auth():
-        """Open health check, Cloudflare Access admin identity, or Worker key."""
+        """Open health check or require the Worker API key."""
         # Open, so uptime checks need no secret.
         if request.path == '/':
             return None
 
         if request.path.startswith('/admin/'):
-            return _require_access_admin()
+            return _require(Config.API_KEY, 'X-Api-Key', 'API_KEY')
 
         return _require(Config.API_KEY, 'X-Api-Key', 'API_KEY')
 
@@ -54,42 +52,6 @@ def create_app(store=None) -> Flask:
             return jsonify({'error': 'Unauthorized'}), 401
         return None
 
-    @lru_cache(maxsize=1)
-    def access_jwks():
-        if not Config.ACCESS_TEAM_DOMAIN:
-            return None
-        return jwt.PyJWKClient(
-            f'{Config.ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs'
-        )
-
-    def _require_access_admin():
-        """Validate Cloudflare Access JWT and authorize its email claim."""
-        if not Config.ACCESS_TEAM_DOMAIN or not Config.ACCESS_AUDIENCE or not Config.ADMIN_EMAILS:
-            logger.error('Cloudflare Access admin authentication is not configured')
-            return jsonify({'error': 'Server misconfigured'}), 500
-
-        token = request.headers.get('Cf-Access-Jwt-Assertion')
-        if not token:
-            return jsonify({'error': 'Cloudflare Access authentication required'}), 401
-
-        try:
-            signing_key = access_jwks().get_signing_key_from_jwt(token)
-            claims = jwt.decode(
-                token,
-                signing_key.key,
-                algorithms=['RS256'],
-                audience=Config.ACCESS_AUDIENCE,
-                issuer=Config.ACCESS_TEAM_DOMAIN,
-            )
-        except Exception as error:
-            logger.warning('Invalid Cloudflare Access JWT: %s', error)
-            return jsonify({'error': 'Invalid Cloudflare Access authentication'}), 401
-
-        email = claims.get('email')
-        if not isinstance(email, str) or email.casefold() not in Config.ADMIN_EMAILS:
-            logger.warning('Cloudflare Access user is not an admin')
-            return jsonify({'error': 'Admin access required'}), 403
-        return None
 
     register_routes(app, store)
     return app
