@@ -1,65 +1,102 @@
+/**
+ * Cloudflare Worker for rgboo.com.
+ *
+ * Serves the static app and proxies /api/* and /admin-api/* to whichever middleware is
+ * currently live, adding the credentials that upstream expects. The
+ * frontend never holds an API secret. The Worker authenticates both public
+ * and admin API calls to Cloud Run with its API key.
+ *
+ * Cutover and rollback (see docs/gcp-migration-plan.md) are a config
+ * change, not a code change:
+ *
+ *   to GCP:  set the API_UPSTREAM var to the Cloud Run URL, put the
+ *            API_KEY secret, deploy
+ *   back:    set API_UPSTREAM back to https://api.rgboo.com, deploy
+ *
+ * Credentials are sent when configured, so both sets can coexist during
+ * the migration: the old middleware ignores X-Api-Key, and the Cloud Run
+ * API ignores the CF-Access headers.
+ */
+
+const DEFAULT_API_UPSTREAM = "https://api.rgboo.com";
+
+const ALLOWED_ORIGINS = ["https://rgboo.com"];
+
+/** The origin to echo back, or null when it isn't one we allow. */
+function allowedOrigin(request) {
+  const origin = request.headers.get("Origin");
+  return origin && ALLOWED_ORIGINS.includes(origin) ? origin : null;
+}
+
+/** Credentials for the upstream currently in API_UPSTREAM. */
+function upstreamHeaders(env) {
+  const headers = { "Content-Type": "application/json" };
+
+  // Cloud Run: a shared secret checked in-app.
+  if (env.API_KEY) {
+    headers["X-Api-Key"] = env.API_KEY;
+  }
+
+  // Cloudflare Tunnel + Access: service token for the home machine.
+  if (env.CF_ACCESS_ID && env.CF_ACCESS_SECRET) {
+    headers["CF-Access-Client-Id"] = env.CF_ACCESS_ID;
+    headers["CF-Access-Client-Secret"] = env.CF_ACCESS_SECRET;
+  }
+
+  return headers;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    const allowedOrigins = ["https://rgboo.com", "http://localhost:5173"];
-
+    // Admin calls are same-origin from the Cloudflare Access-protected /admin
+    // page. Rewrite the Worker path to the API's existing /admin/* routes and
+    // authenticate them exactly like the public API.
+    if (url.pathname.startsWith("/admin-api/")) {
+      const adminPath = url.pathname === "/admin-api/health"
+        ? "/"
+        : url.pathname.replace(/^\/admin-api/, "/admin");
+      const upstream = env.API_UPSTREAM || DEFAULT_API_UPSTREAM;
+      const targetUrl = upstream.replace(/\/$/, "") + adminPath + url.search;
+      const headers = upstreamHeaders(env);
+      return fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body: request.method !== "GET" && request.method !== "HEAD"
+          ? await request.text()
+          : undefined,
+      });
+    }
 
     // Handle API requests
     if (url.pathname.startsWith("/api/")) {
-      const targetUrl = "https://api.rgboo.com" + url.pathname;
+      const upstream = env.API_UPSTREAM || DEFAULT_API_UPSTREAM;
+      const targetUrl = upstream.replace(/\/$/, "") + url.pathname + url.search;
 
       // Handle CORS preflight
       if (request.method === "OPTIONS") {
         return new Response(null, {
           status: 204,
           headers: {
-            "Access-Control-Allow-Origin": request.headers.get("Origin") && allowedOrigins.includes(request.headers.get("Origin")) ? request.headers.get("Origin") : "",
+            "Access-Control-Allow-Origin": allowedOrigin(request) ?? "",
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type",
           },
         });
       }
 
-      // Debug: Log environment variables (remove after testing)
-      console.log('CF_ACCESS_ID exists:', !!env.CF_ACCESS_ID);
-      console.log('CF_ACCESS_SECRET exists:', !!env.CF_ACCESS_SECRET);
-      console.log('Target URL:', targetUrl);
-      
-      // Log first few chars of credentials (for debugging - remove in production)
-      console.log('CF_ACCESS_ID starts with:', env.CF_ACCESS_ID?.substring(0, 8) + '...');
-      console.log('CF_ACCESS_SECRET starts with:', env.CF_ACCESS_SECRET?.substring(0, 8) + '...');
-      
       // Forward request to API
       const apiResp = await fetch(targetUrl, {
         method: request.method,
-        headers: {
-          "Content-Type": "application/json",
-          "CF-Access-Client-Id": env.CF_ACCESS_ID,
-          "CF-Access-Client-Secret": env.CF_ACCESS_SECRET,
-        },
+        headers: upstreamHeaders(env),
         body: request.method !== "GET" ? await request.text() : undefined,
       });
 
-      console.log('API Response status:', apiResp.status);
-      console.log('API Response ok:', apiResp.ok);
-      
-      // Log response headers to see what Cloudflare Access is returning
-      const responseHeaders = {};
-      for (const [key, value] of apiResp.headers.entries()) {
-        responseHeaders[key] = value;
-      }
-      console.log('API Response headers:', responseHeaders);
-      
-      // Clone response to read body for logging without consuming it
-      const responseClone = apiResp.clone();
-      const responseText = await responseClone.text();
-      console.log('API Response body (first 500 chars):', responseText.substring(0, 500));
-
       // Clone headers + add CORS
       const newHeaders = new Headers(apiResp.headers);
-      const origin = request.headers.get("Origin");
-      if (origin && allowedOrigins.includes(origin)) {
+      const origin = allowedOrigin(request);
+      if (origin) {
         newHeaders.set("Access-Control-Allow-Origin", origin);
       }
 
@@ -71,5 +108,5 @@ export default {
 
     // Default: return 404 for non-API routes
     return new Response("Not found", { status: 404 });
-  }
+  },
 };

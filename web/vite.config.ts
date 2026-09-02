@@ -6,6 +6,15 @@ import path from "path";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
 
+const localApiTarget = process.env.RGBOO_API_URL || "http://127.0.0.1:8080";
+const localApiKey = process.env.RGBOO_API_KEY || "local-api-secret";
+
+const localApiProxy = {
+  target: localApiTarget,
+  changeOrigin: true,
+  headers: { "X-Api-Key": localApiKey },
+};
+
 // Remove dev-only assets copied into `dist` (like dev-embed.mp4)
 function removeDevAssetsPlugin() {
   return {
@@ -54,18 +63,32 @@ function devAssetsPlugin() {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
-    cloudflare(),
+    // The Worker owns production routing. Locally, Vite serves the SPA and
+    // the proxy below recreates the Worker-to-API boundary, including auth.
+    ...(command === "build" ? [cloudflare()] : []),
     tailwindcss(),
     svgr(),
     devAssetsPlugin(),
     removeDevAssetsPlugin(),
   ],
   server: {
+    host: "127.0.0.1",
+    port: 5173,
+    strictPort: true,
+    proxy: {
+      "/api": localApiProxy,
+      "/admin-api": {
+        ...localApiProxy,
+        rewrite: (path: string) => path === "/admin-api/health"
+          ? "/"
+          : path.replace(/^\/admin-api/, "/admin"),
+      },
+    },
     watch: {
       usePolling: true,
     },
   },
-});
+}));

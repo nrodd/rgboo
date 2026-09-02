@@ -2,7 +2,7 @@ import { setupWorker } from "msw/browser";
 import { http, HttpResponse } from "msw";
 
 const handlers = [
-  http.post("https://rgboo.com/api/color", () => {
+  http.post("*/api/color", () => {
     return HttpResponse.json(
       {
         queue_position: 1,

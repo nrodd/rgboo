@@ -1,0 +1,5 @@
+Flask==2.3.3
+Flask-SocketIO==5.3.4
+pyserial==3.5
+google-cloud-firestore>=2.11,<3.0
+python-dotenv==1.0.0

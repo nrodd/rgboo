@@ -50,6 +50,9 @@ Thumbs.db
 logs/
 middleware/middleware.log
 
+# SQLite request log (retired by the GCP migration; see docs/gcp-migration-plan.md)
+middleware/requests.db
+
 # Environment variables
 .env
 .env.local
@@ -59,6 +62,9 @@ middleware/middleware.log
 *.tmp
 *.temp
 .cache/
+
+# Firestore emulator state, written by scripts/dev.sh on shutdown.
+.firebase/
 
 # Dependencies
 node_modules/

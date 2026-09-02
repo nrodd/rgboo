@@ -14,6 +14,8 @@ jobs:
       firmware: ${{ steps.changes.outputs.firmware }}
       middleware: ${{ steps.changes.outputs.middleware }}
       web: ${{ steps.changes.outputs.web }}
+      cloud_api: ${{ steps.changes.outputs.cloud_api }}
+      bridge: ${{ steps.changes.outputs.bridge }}
     # https://github.com/dorny/paths-filter
     steps:
       - id: changes
@@ -26,6 +28,15 @@ jobs:
             - 'middleware/**'
             web:
             - 'web/**'
+            cloud_api:
+            - 'cloud_api/**'
+            - 'shared/**'
+            bridge:
+            - 'bridge/**'
+            - 'shared/**'
+            # The bridge reuses these two from middleware/ unchanged.
+            - 'middleware/obs.py'
+            - 'middleware/templates/**'
 
   build-firmware:
     name: "👻 build firmware"
@@ -69,6 +80,38 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
       - run: pytest tests -q
+
+  build-cloud-api:
+    name: "☁️ build cloud_api"
+    needs: [changes]
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.cloud_api == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r cloud_api/requirements.txt
+          pip install pytest
+      - run: pytest cloud_api/tests -q
+
+  build-bridge:
+    name: "🌉 build bridge"
+    needs: [changes]
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.bridge == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r bridge/requirements.txt
+          pip install pytest
+      - run: pytest bridge/tests -q
 
   build-web:
     name: "🕸️ build web"

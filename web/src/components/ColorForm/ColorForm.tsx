@@ -70,7 +70,9 @@ export const ColorForm = () => {
     setMessage({ type: "", text: "", eta: null });
 
     try {
-      const response = await fetch("https://rgboo.com/api/color", {
+      // A relative URL goes through the Cloudflare Worker in production and
+      // Vite's local authenticated proxy during `scripts/dev.sh`.
+      const response = await fetch("/api/color", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
