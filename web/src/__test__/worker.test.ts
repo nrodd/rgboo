@@ -229,7 +229,7 @@ test("when the path is not an API route then it is not proxied", async () => {
 
 test("when an admin path is requested then it rewrites and forwards the Worker API key", async () => {
   const spy = stubUpstream();
-  const request = new Request("https://rgboo.com/admin-api/status");
+  const request = new Request("https://api-admin.rgboo.com/admin/status");
 
   await worker.fetch(request, { API_UPSTREAM: NEW_UPSTREAM, API_KEY: "worker-secret" });
 

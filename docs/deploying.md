@@ -87,10 +87,9 @@ docker buildx build --platform linux/amd64 -f cloud_api/Dockerfile -t "$IMAGE" -
 not pass `--set-env-vars` again unless you mean to replace *all* of them
 (`--update-env-vars` changes one safely).
 
-The admin endpoint requires a verified Cloudflare Access JWT and fails closed
-unless `ACCESS_TEAM_DOMAIN`, `ACCESS_AUDIENCE`, and `ADMIN_EMAILS` are
-configured on Cloud Run. The Worker must be behind the matching Access
-application and forward `Cf-Access-Jwt-Assertion` to the API.
+The admin page and the `api-admin.rgboo.com` hostname must be protected by the
+Cloudflare Access email allowlist. The Worker proxies that hostname to Cloud
+Run and forwards the existing `X-Api-Key`; no admin key belongs in the browser.
 
 Verify:
 

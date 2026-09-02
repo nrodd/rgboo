@@ -156,9 +156,9 @@ name is never stored in readable form.
 
 ## API
 
-`GET /` is open. `/api/*` and `/admin/*` require `X-Api-Key`. The Worker
-exposes admin routes to the Cloudflare Access-protected admin page as
-same-origin `/admin-api/*` paths and forwards its existing API credential.
+`GET /` is open. `/api/*` and `/admin/*` require `X-Api-Key`. The separate
+`api-admin.rgboo.com` hostname is Cloudflare Access-protected and the Worker
+forwards its requests with the existing API credential.
 
 | Route | Does |
 |---|---|
@@ -166,9 +166,9 @@ same-origin `/admin-api/*` paths and forwards its existing API credential.
 | `POST /api/color` | Validate → assign slot → create pending doc |
 | `GET /api/status` | Queue size, next free slot, hardware state |
 | `GET /api/queue` | Pending requests in slot order |
-| `POST /admin/queue/clear` | Cancel **all** pending. **Cloudflare Access JWT** |
-| `POST /admin/queue/remove` | Cancel one request by ID. **Cloudflare Access JWT** |
-| `POST /admin/clear-current` | Pull one user off the overlay. **Cloudflare Access JWT** |
+| `POST /admin/queue/clear` | Cancel **all** pending. **Worker `X-Api-Key`** |
+| `POST /admin/queue/remove` | Cancel one request by ID. **Worker `X-Api-Key`** |
+| `POST /admin/clear-current` | Pull one user off the overlay. **Worker `X-Api-Key`** |
 
 ## Design decisions
 

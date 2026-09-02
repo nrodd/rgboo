@@ -1,7 +1,7 @@
 # Admin: clear the current user
 
 > Authentication note: admin actions are reached through the
-> Cloudflare Access-protected Worker path `/admin-api/*`. The Worker keeps
+> Cloudflare Access-protected hostname `api-admin.rgboo.com`. The Worker keeps
 > the API key out of the browser and forwards it to the Cloud API.
 
 ## Why
