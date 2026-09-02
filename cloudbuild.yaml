@@ -1,0 +1,23 @@
+# Builds the Cloud Run image for cloud_api/.
+#
+# Why this file exists: cloud_api/Dockerfile copies BOTH cloud_api/ and
+# shared/, so the build context has to be the repo root. That rules out
+# `gcloud run deploy --source cloud_api/`, which would use cloud_api/ as
+# the context and fail on `COPY shared ./shared`.
+#
+# Usage (see docs/gcp-setup.md):
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_IMAGE=<region>-docker.pkg.dev/<project>/rgboo/rgboo-api:<tag> .
+#
+# .gcloudignore keeps the upload small -- without it this would ship
+# ~400MB of web/node_modules to Cloud Build.
+
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args: ["build", "-f", "cloud_api/Dockerfile", "-t", "${_IMAGE}", "."]
+
+images:
+  - "${_IMAGE}"
+
+options:
+  logging: CLOUD_LOGGING_ONLY

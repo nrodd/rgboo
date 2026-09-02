@@ -1,0 +1,5 @@
+Flask==2.3.3
+gunicorn==21.2.0
+google-cloud-firestore>=2.11,<3.0
+better-profanity==0.7.0
+python-dotenv==1.0.0
