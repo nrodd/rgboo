@@ -156,9 +156,10 @@ name is never stored in readable form.
 
 ## API
 
-`GET /` is open. `/api/*` requires `X-Api-Key`. `/admin/*` requires
-`X-Admin-Key` and does **not** accept `X-Api-Key` — the Worker adds that header
-to everything it proxies, so it identifies the Worker, not a person.
+`GET /` is open. `/api/*` requires `X-Api-Key`. `/admin/*` requires a verified
+Cloudflare Access JWT whose email is in the API's `ADMIN_EMAILS` allowlist.
+The Worker exposes these routes to the protected admin page as same-origin
+`/admin-api/*` paths and forwards `Cf-Access-Jwt-Assertion`.
 
 | Route | Does |
 |---|---|
@@ -166,15 +167,16 @@ to everything it proxies, so it identifies the Worker, not a person.
 | `POST /api/color` | Validate → assign slot → create pending doc |
 | `GET /api/status` | Queue size, next free slot, hardware state |
 | `GET /api/queue` | Pending requests in slot order |
-| `POST /admin/queue/clear` | Cancel **all** pending. **`X-Admin-Key`** |
-| `POST /admin/clear-current` | Pull one user off the overlay. **`X-Admin-Key`, not `X-Api-Key`** |
+| `POST /admin/queue/clear` | Cancel **all** pending. **Cloudflare Access JWT** |
+| `POST /admin/queue/remove` | Cancel one request by ID. **Cloudflare Access JWT** |
+| `POST /admin/clear-current` | Pull one user off the overlay. **Cloudflare Access JWT** |
 
 ## Design decisions
 
 | Decision | Why |
 |---|---|
 | Firestore, not Pub/Sub | Pending work must be *listable* and *cancellable*. Queue messages are neither. |
-| Shared secret, not Cloud IAM | Only the Worker calls the API. A header compare is the whole threat model. |
+| Cloudflare Access identity, not a browser secret | Human admins authenticate through the existing email allowlist; the API verifies the signed JWT and authorizes the email itself. |
 | Slot assigned by the API, not the bridge | Pacing survives a bridge restart, and callers learn their wait immediately. |
 | Bridge re-reads before the serial write | The only way a cancellation can beat a request the bridge already holds. |
 | Bridge sorts pending locally | Keeps its listener a single-field query, so it needs no composite index. The API sorts server-side and does need one. |
@@ -194,7 +196,7 @@ to everything it proxies, so it identifies the Worker, not a person.
 
 ## Security
 
-- **Secret:** `API_KEY` (Worker → API), `ADMIN_KEY` (admin actions, and deliberately *not* accepted on `/api/*`), and the bridge's service-account key. Neither is in the repo; the API key lives only in the Cloud Run config, the bridge key only on the home machine at `chmod 600`.
+- **Secret:** `API_KEY` (Worker → API) and the bridge's service-account key. Admin identity comes from the signed Cloudflare Access JWT; the API stores only its team domain, audience, and allowed email list.
 - **Not secret:** `ALLOWED_ORIGINS` and the upstream URL. CORS is announced in every response — it constrains what *other websites* can do in a browser, and stops nothing else.
 - **Deliberately open:** anyone can `POST /api/color` through rgboo.com; it is a public community project. Abuse is limited by the 20s pacing and the profanity filter, not by auth.
 - **Deploy identity:** GitHub Actions authenticates by Workload Identity Federation, pinned to this repository. No key is stored in GitHub, and the identity can only push images and deploy Cloud Run.

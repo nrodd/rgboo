@@ -1,9 +1,10 @@
 /**
  * Cloudflare Worker for rgboo.com.
  *
- * Serves the static app and proxies /api/* to whichever middleware is
+ * Serves the static app and proxies /api/* and /admin-api/* to whichever middleware is
  * currently live, adding the credentials that upstream expects. The
- * frontend never holds a secret; this Worker is the only thing that does.
+ * frontend never holds an API secret. Admin identity comes from the
+ * Cloudflare Access JWT attached to requests reaching this Worker.
  *
  * Cutover and rollback (see docs/gcp-migration-plan.md) are a config
  * change, not a code change:
@@ -48,6 +49,28 @@ function upstreamHeaders(env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    // Admin calls are same-origin from the protected /admin page. Rewrite the
+    // Worker path to the API's existing /admin/* routes and pass through the
+    // signed identity assertion. The API validates it itself.
+    if (url.pathname.startsWith("/admin-api/")) {
+      const adminPath = url.pathname === "/admin-api/health"
+        ? "/"
+        : url.pathname.replace(/^\/admin-api/, "/admin");
+      const upstream = env.API_UPSTREAM || DEFAULT_API_UPSTREAM;
+      const targetUrl = upstream.replace(/\/$/, "") + adminPath + url.search;
+      const headers = new Headers({ "Content-Type": "application/json" });
+      const accessJwt = request.headers.get("Cf-Access-Jwt-Assertion");
+      if (accessJwt) headers.set("Cf-Access-Jwt-Assertion", accessJwt);
+
+      return fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body: request.method !== "GET" && request.method !== "HEAD"
+          ? await request.text()
+          : undefined,
+      });
+    }
 
     // Handle API requests
     if (url.pathname.startsWith("/api/")) {

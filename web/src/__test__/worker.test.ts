@@ -226,3 +226,15 @@ test("when the path is not an API route then it is not proxied", async () => {
   expect(response.status).toBe(404);
   expect(spy).not.toHaveBeenCalled();
 });
+
+test("when an admin path is requested then it rewrites and forwards the Access JWT", async () => {
+  const spy = stubUpstream();
+  const request = new Request("https://rgboo.com/admin-api/status", {
+    headers: { "Cf-Access-Jwt-Assertion": "signed-token" },
+  });
+
+  await worker.fetch(request, { API_UPSTREAM: NEW_UPSTREAM });
+
+  expect(spy.mock.calls[0][0]).toBe(`${NEW_UPSTREAM}/admin/status`);
+  expect(sentHeaders(spy)["Cf-Access-Jwt-Assertion"]).toBe("signed-token");
+});

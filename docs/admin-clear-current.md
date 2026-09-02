@@ -1,5 +1,10 @@
 # Admin: clear the current user
 
+> Authentication note: the original shared `X-Admin-Key` design described
+> below has been superseded. Admin actions are now reached through the
+> Cloudflare Access-protected Worker path `/admin-api/*`; the API validates
+> the forwarded `Cf-Access-Jwt-Assertion` and checks `ADMIN_EMAILS`.
+
 ## Why
 
 `better_profanity` catches the obvious stuff, but creative spelling, leetspeak,

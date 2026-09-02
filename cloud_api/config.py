@@ -16,10 +16,14 @@ class Config:
     # Shared secret the Cloudflare Worker sends as X-Api-Key.
     API_KEY = os.getenv('API_KEY')
 
-    # Higher-privilege secret for /admin/*. Not API_KEY: the Worker sends that
-    # on everything it proxies, so it identifies the Worker, not a person.
-    # Set from Secret Manager -- see docs/admin-clear-current.md.
-    ADMIN_KEY = os.getenv('ADMIN_KEY')
+    # Cloudflare Access identity used for /admin/* authorization.
+    ACCESS_TEAM_DOMAIN = os.getenv('ACCESS_TEAM_DOMAIN', '').rstrip('/')
+    ACCESS_AUDIENCE = os.getenv('ACCESS_AUDIENCE')
+    ADMIN_EMAILS = {
+        email.strip().casefold()
+        for email in os.getenv('ADMIN_EMAILS', '').split(',')
+        if email.strip()
+    }
 
     # Cloud Run injects PORT automatically; default matches its convention.
     PORT = int(os.getenv('PORT', 8080))
