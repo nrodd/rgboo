@@ -20,7 +20,7 @@
 
 const DEFAULT_API_UPSTREAM = "https://api.rgboo.com";
 
-const ALLOWED_ORIGINS = ["https://rgboo.com", "http://localhost:5173"];
+const ALLOWED_ORIGINS = ["https://rgboo.com"];
 
 /** The origin to echo back, or null when it isn't one we allow. */
 function allowedOrigin(request) {

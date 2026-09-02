@@ -172,10 +172,10 @@ test("when the upstream returns an error status then it is passed through", asyn
 test("when the origin is allowed then the proxied response carries CORS headers", async () => {
   stubUpstream();
 
-  const response = await worker.fetch(colorRequest("http://localhost:5173"), {});
+  const response = await worker.fetch(colorRequest("https://rgboo.com"), {});
 
   expect(response.headers.get("Access-Control-Allow-Origin")).toBe(
-    "http://localhost:5173",
+    "https://rgboo.com",
   );
 });
 
