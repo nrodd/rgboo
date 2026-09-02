@@ -13,8 +13,9 @@ It also serves the OBS browser source on `:5001`, reusing
 `middleware/obs.py` and its template unchanged, so the OBS scene needs no
 edits at cutover.
 
-New here? `docs/local-setup.md` covers running the bridge on a laptop in dry
-run, which is what you want unless the ESP32 is plugged into your machine.
+New here? [`docs/local-setup.md`](../docs/local-setup.md) starts the complete
+emulator-backed stack and runs this bridge in dry-run mode, which is what you
+want unless the ESP32 is plugged into your machine.
 
 ## Install
 

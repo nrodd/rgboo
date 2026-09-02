@@ -18,6 +18,105 @@
 }
 
 @layer components {
+  .admin-shell {
+    @apply bg-[radial-gradient(circle_at_15%_-5%,rgba(227,104,16,0.22),transparent_30%),radial-gradient(circle_at_90%_10%,rgba(100,65,164,0.2),transparent_26%),linear-gradient(145deg,#100718_0%,#1c0c18_55%,#120a15_100%)];
+  }
+
+  .admin-secondary-button {
+    background: rgb(227 104 16 / 10%);
+    border: 1px solid rgb(227 104 16 / 40%);
+    border-radius: 0.75rem;
+    color: var(--color-pumpkin-400);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 700;
+    padding: 0.75rem 1rem;
+    transition: 200ms;
+  }
+
+  .admin-secondary-button:hover {
+    background: var(--color-pumpkin-400);
+    border-color: var(--color-pumpkin-400);
+    color: var(--color-arcana-900);
+  }
+
+  .admin-secondary-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .admin-quiet-button {
+    align-items: center;
+    background: rgb(255 255 255 / 5%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 0.75rem;
+    color: rgb(235 219 190 / 80%);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.875rem;
+    font-weight: 700;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    transition: 200ms;
+  }
+
+  .admin-quiet-button:hover {
+    background: rgb(255 255 255 / 10%);
+    border-color: rgb(255 255 255 / 25%);
+    color: white;
+  }
+
+  .admin-quiet-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .admin-danger-button {
+    background: rgb(248 113 113 / 10%);
+    border: 1px solid rgb(248 113 113 / 30%);
+    border-radius: 0.75rem;
+    color: #fecaca;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 700;
+    padding: 0.75rem 1rem;
+    transition: 200ms;
+  }
+
+  .admin-danger-button:hover {
+    background: rgb(248 113 113 / 20%);
+    border-color: rgb(248 113 113 / 60%);
+  }
+
+  .admin-danger-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
+  .admin-remove-button {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    color: rgb(235 219 190 / 45%);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.5rem 0.75rem;
+    transition: 200ms;
+  }
+
+  .admin-remove-button:hover {
+    background: rgb(248 113 113 / 10%);
+    border-color: rgb(248 113 113 / 30%);
+    color: #fecaca;
+  }
+
+  .admin-remove-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+  }
+
   .bg-gradient {
     @apply bg-linear-to-b from-arcana-900 from-30% to-pumpkin-900 to-80% bg-cover bg-center bg-no-repeat bg-fixed h-screen;
   }

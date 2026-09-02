@@ -63,5 +63,8 @@ middleware/requests.db
 *.temp
 .cache/
 
+# Firestore emulator state, written by scripts/dev.sh on shutdown.
+.firebase/
+
 # Dependencies
 node_modules/

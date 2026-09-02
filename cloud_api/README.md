@@ -8,18 +8,17 @@ for the full design; this is just the how-to-run.
 New here? `docs/local-setup.md` is the full walkthrough, including access and
 credentials. The short version:
 
-Run from the repo root, so `shared/` resolves:
+Run the complete local stack from the repo root:
 
 ```
-python -m venv .venv && source .venv/bin/activate
-pip install -r cloud_api/requirements.txt
-export API_KEY=local-api-secret
-export GOOGLE_APPLICATION_CREDENTIALS=/path/to/a/service-account-key.json
-python -m cloud_api.app
+./scripts/setup.sh
+./scripts/dev.sh
 ```
 
-This talks to a real Firestore database (Phase 4 of the migration plan
-creates one) -- there's no local emulator wired up here.
+This starts Firestore Emulator Suite and forces both the API and bridge to use
+it. No Google credentials or production project access is needed. See
+[`docs/local-setup.md`](../docs/local-setup.md) for the local browser and
+admin URLs.
 
 ## Poking at it by hand
 
