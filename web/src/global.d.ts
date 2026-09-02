@@ -26,7 +26,7 @@ declare module "*?react" {
 
 declare global {
   interface Window {
-    Twitch?: any;
+    Stream?: any;
   }
 }
 

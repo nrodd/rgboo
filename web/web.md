@@ -1,6 +1,6 @@
 # 🕸️ web
 
-Cloudflare workers deployed web app that call allows someone to submit a color and name to the middleware. The twitch stream will also be displayed on here.
+Cloudflare workers deployed web app that call allows someone to submit a color and name to the middleware. The video stream will also be displayed on here.
 
 ## Setup
 
@@ -19,7 +19,7 @@ Copy `.env.example` to `.env.local`.
 - Color selection form with RGB picker
 - Username input with profanity filtering
 - Real-time queue position and wait time display
-- Embedded Twitch stream viewer
+- Embedded video stream viewer
 
 ## Technical Stack
 
