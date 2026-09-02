@@ -40,3 +40,32 @@ def test_clear_queue(client):
     body = resp.get_json()
     assert body.get('status') == 'success'
     assert 'cleared_count' in body
+
+
+def test_admin_status_returns_current_and_first_ten(client, mock_store):
+    mock_store.get_current_username.return_value = 'On Screen'
+    mock_store.get_queue_contents.return_value = [
+        {'username': 'Next', 'queue_position': 1}
+    ]
+    response = client.get('/admin/status')
+
+    assert response.status_code == 200
+    assert response.get_json()['current_username'] == 'On Screen'
+    assert response.get_json()['queue'][0]['username'] == 'Next'
+    mock_store.get_queue_contents.assert_called_once_with(limit=10)
+
+
+def test_remove_queue_user_requires_username(client, mock_store):
+    response = client.post('/admin/queue/remove', json={})
+
+    assert response.status_code == 400
+    mock_store.cancel_request.assert_not_called()
+
+
+def test_remove_queue_request_cancels_one_request(client, mock_store):
+    mock_store.cancel_request.return_value = 1
+    response = client.post('/admin/queue/remove', json={'request_id': 'request-123'})
+
+    assert response.status_code == 200
+    assert response.get_json()['cancelled_count'] == 1
+    mock_store.cancel_request.assert_called_once_with('request-123')
