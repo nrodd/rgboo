@@ -109,22 +109,40 @@ class RequestStore:
             'estimated_wait_for_new_request': int((next_available - now).total_seconds()) + SLOT_SECONDS,
         }
 
-    def get_queue_contents(self) -> list:
+    def get_queue_contents(self, limit: Optional[int] = None) -> list:
         """List pending requests, ordered by scheduled_time."""
         now = datetime.now(timezone.utc)
         query = self._requests.where('status', '==', STATUS_PENDING).order_by('scheduled_time')
 
         contents = []
-        for position, doc in enumerate(query.stream(), start=1):
+        stream = query.limit(limit).stream() if limit else query.stream()
+        for position, doc in enumerate(stream, start=1):
             data = doc.to_dict()
             scheduled_time = data['scheduled_time']
             contents.append({
+                'request_id': data['request_id'],
                 'username': data['username'],
                 'scheduled_time': scheduled_time.isoformat(),
                 'queue_position': position,
                 'estimated_wait_seconds': max(0, int((scheduled_time - now).total_seconds())),
             })
         return contents
+
+    def cancel_request(self, request_id: str) -> int:
+        """Cancel one pending request by its unique request ID."""
+        docs = list(
+            self._requests
+            .where('request_id', '==', request_id)
+            .where('status', '==', STATUS_PENDING)
+            .limit(1)
+            .stream()
+        )
+        if not docs:
+            return 0
+
+        docs[0].reference.update({'status': STATUS_CANCELLED})
+        logger.info(f"Cancelled pending request '{request_id}'")
+        return 1
 
     def clear_queue(self) -> int:
         """Cancel all pending requests and reset the pacing clock."""

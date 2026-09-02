@@ -36,9 +36,9 @@ yarn deploy
 
 ## API proxy
 
-`worker/index.js` serves the app and proxies `/api/*` to the middleware,
-adding the credentials that upstream expects. The browser never holds a
-secret — only the Worker does.
+`worker/index.js` serves the app and proxies `/api/*` and `/admin-api/*` with
+the Worker-to-API credential. Protect `/admin` and `/admin-api/*` with
+Cloudflare Access; the admin browser never receives the key.
 
 Which upstream it targets is the `API_UPSTREAM` var in `wrangler.jsonc`:
 
@@ -54,6 +54,9 @@ wrangler secret put API_KEY
 wrangler secret put CF_ACCESS_ID
 wrangler secret put CF_ACCESS_SECRET
 ```
+
+Protect `/admin` and `/admin-api/*` with the Cloudflare Access
+application/policy.
 
 The Worker sends whichever credentials are configured, so both sets can be
 set at once during the migration: the old middleware ignores `X-Api-Key`,

@@ -1,4 +1,5 @@
 import hmac
+import hmac
 import logging
 
 from flask import Flask, jsonify, request
@@ -32,29 +33,25 @@ def create_app(store=None) -> Flask:
 
     @app.before_request
     def enforce_auth():
-        """Open health check, admin key, or the Worker key.
-
-        /admin/* does not accept API_KEY: the Worker sends that on everything
-        it proxies, so it means "came via rgboo.com", not "is an admin".
-        """
+        """Open health check or require the Worker API key."""
         # Open, so uptime checks need no secret.
         if request.path == '/':
             return None
 
         if request.path.startswith('/admin/'):
-            return _require(Config.ADMIN_KEY, 'X-Admin-Key', 'ADMIN_KEY')
+            return _require(Config.API_KEY, 'X-Api-Key', 'API_KEY')
 
         return _require(Config.API_KEY, 'X-Api-Key', 'API_KEY')
 
     def _require(configured, header, name):
-        """Constant-time header check. Fails closed when unconfigured."""
+        """Require a configured shared secret for non-admin API traffic."""
         if not configured:
-            # Fail closed: never fall through, never accept the other key.
             logger.error(f"{name} is not configured; rejecting request")
             return jsonify({'error': 'Server misconfigured'}), 500
         if not hmac.compare_digest(request.headers.get(header, ''), configured):
             return jsonify({'error': 'Unauthorized'}), 401
         return None
+
 
     register_routes(app, store)
     return app

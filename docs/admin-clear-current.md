@@ -1,5 +1,9 @@
 # Admin: clear the current user
 
+> Authentication note: admin actions are reached through the
+> Cloudflare Access-protected Worker path `/admin-api/*`. The Worker keeps
+> the API key out of the browser and forwards it to the Cloud API.
+
 ## Why
 
 `better_profanity` catches the obvious stuff, but creative spelling, leetspeak,

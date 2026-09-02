@@ -87,9 +87,9 @@ docker buildx build --platform linux/amd64 -f cloud_api/Dockerfile -t "$IMAGE" -
 not pass `--set-env-vars` again unless you mean to replace *all* of them
 (`--update-env-vars` changes one safely).
 
-The admin endpoint needs `ADMIN_KEY` present before it will do anything but
-return 500 — it fails closed on purpose. Wire it once, via Secret Manager:
-[admin-clear-current.md](admin-clear-current.md).
+The admin page and `/admin-api/*` path must be protected by the Cloudflare
+Access email allowlist. The Worker proxies that path to Cloud Run and forwards
+the existing `X-Api-Key`; no admin key belongs in the browser.
 
 Verify:
 

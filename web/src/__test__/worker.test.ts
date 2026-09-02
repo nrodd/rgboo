@@ -172,10 +172,10 @@ test("when the upstream returns an error status then it is passed through", asyn
 test("when the origin is allowed then the proxied response carries CORS headers", async () => {
   stubUpstream();
 
-  const response = await worker.fetch(colorRequest("http://localhost:5173"), {});
+  const response = await worker.fetch(colorRequest("https://rgboo.com"), {});
 
   expect(response.headers.get("Access-Control-Allow-Origin")).toBe(
-    "http://localhost:5173",
+    "https://rgboo.com",
   );
 });
 
@@ -225,4 +225,14 @@ test("when the path is not an API route then it is not proxied", async () => {
 
   expect(response.status).toBe(404);
   expect(spy).not.toHaveBeenCalled();
+});
+
+test("when an admin path is requested then it rewrites and forwards the Worker API key", async () => {
+  const spy = stubUpstream();
+  const request = new Request("https://rgboo.com/admin-api/status");
+
+  await worker.fetch(request, { API_UPSTREAM: NEW_UPSTREAM, API_KEY: "worker-secret" });
+
+  expect(spy.mock.calls[0][0]).toBe(`${NEW_UPSTREAM}/admin/status`);
+  expect(sentHeaders(spy)["X-Api-Key"]).toBe("worker-secret");
 });

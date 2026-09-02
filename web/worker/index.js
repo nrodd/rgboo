@@ -1,9 +1,10 @@
 /**
  * Cloudflare Worker for rgboo.com.
  *
- * Serves the static app and proxies /api/* to whichever middleware is
+ * Serves the static app and proxies /api/* and /admin-api/* to whichever middleware is
  * currently live, adding the credentials that upstream expects. The
- * frontend never holds a secret; this Worker is the only thing that does.
+ * frontend never holds an API secret. The Worker authenticates both public
+ * and admin API calls to Cloud Run with its API key.
  *
  * Cutover and rollback (see docs/gcp-migration-plan.md) are a config
  * change, not a code change:
@@ -19,7 +20,7 @@
 
 const DEFAULT_API_UPSTREAM = "https://api.rgboo.com";
 
-const ALLOWED_ORIGINS = ["https://rgboo.com", "http://localhost:5173"];
+const ALLOWED_ORIGINS = ["https://rgboo.com"];
 
 /** The origin to echo back, or null when it isn't one we allow. */
 function allowedOrigin(request) {
@@ -48,6 +49,25 @@ function upstreamHeaders(env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+
+    // Admin calls are same-origin from the Cloudflare Access-protected /admin
+    // page. Rewrite the Worker path to the API's existing /admin/* routes and
+    // authenticate them exactly like the public API.
+    if (url.pathname.startsWith("/admin-api/")) {
+      const adminPath = url.pathname === "/admin-api/health"
+        ? "/"
+        : url.pathname.replace(/^\/admin-api/, "/admin");
+      const upstream = env.API_UPSTREAM || DEFAULT_API_UPSTREAM;
+      const targetUrl = upstream.replace(/\/$/, "") + adminPath + url.search;
+      const headers = upstreamHeaders(env);
+      return fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body: request.method !== "GET" && request.method !== "HEAD"
+          ? await request.text()
+          : undefined,
+      });
+    }
 
     // Handle API requests
     if (url.pathname.startsWith("/api/")) {
