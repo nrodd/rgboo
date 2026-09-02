@@ -5,12 +5,15 @@ for the full design; this is just the how-to-run.
 
 ## Local development
 
+New here? `docs/local-setup.md` is the full walkthrough, including access and
+credentials. The short version:
+
 Run from the repo root, so `shared/` resolves:
 
 ```
 python -m venv .venv && source .venv/bin/activate
 pip install -r cloud_api/requirements.txt
-export API_KEY=dev-secret
+export API_KEY=local-api-secret
 export GOOGLE_APPLICATION_CREDENTIALS=/path/to/a/service-account-key.json
 python -m cloud_api.app
 ```
@@ -39,7 +42,7 @@ Build context must be the repo root, since the image also needs `shared/`:
 
 ```
 docker build -f cloud_api/Dockerfile -t rgboo-api .
-docker run -p 8080:8080 -e API_KEY=dev-secret rgboo-api
+docker run -p 8080:8080 -e API_KEY=local-api-secret rgboo-api
 ```
 
 (Needs `GOOGLE_APPLICATION_CREDENTIALS` / ADC to actually reach Firestore.)

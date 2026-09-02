@@ -4,7 +4,8 @@ RGBoo lets anyone on the internet set the colour of a physical LED strip, one
 person at a time. This describes the GCP-based system: what runs where, how a
 request becomes light, and why the pieces are split the way they are.
 
-Related: [gcp-migration-plan.md](gcp-migration-plan.md) (how we got here),
+Related: [local-setup.md](local-setup.md) (running it yourself),
+[gcp-migration-plan.md](gcp-migration-plan.md) (how we got here),
 [gcp-setup.md](gcp-setup.md) (provisioning), [deploying.md](deploying.md) (shipping changes).
 
 ## The constraint that shapes everything

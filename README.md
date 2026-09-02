@@ -55,6 +55,16 @@ The system consists of three main components working together:
 - Writes colors to the ESP32 and serves the OBS overlay
 - Runs under systemd; updated by pulling on that machine
 
+## 🧰 Running it locally
+
+```bash
+./scripts/setup.sh     # venv, dependencies, .env, credential check
+./scripts/dev.sh       # API + bridge together, Ctrl-C stops both
+```
+
+**[docs/local-setup.md](docs/local-setup.md)** covers what those do, which
+access you need, and what not to break.
+
 ## 🏗️ Architecture
 
 The system splits at the queue: the cloud decides *when* each colour runs, and

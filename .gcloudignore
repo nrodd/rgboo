@@ -26,9 +26,12 @@ __pycache__/
 venv/
 .pytest_cache/
 
-# Local databases and logs
+# Local databases, logs, and developer environment files
 *.db
 *.log
+.env
+.env.*
+!.env.example
 
 # The bridge runs on the home machine, not in the image
 bridge/

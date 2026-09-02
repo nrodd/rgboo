@@ -13,6 +13,9 @@ It also serves the OBS browser source on `:5001`, reusing
 `middleware/obs.py` and its template unchanged, so the OBS scene needs no
 edits at cutover.
 
+New here? `docs/local-setup.md` covers running the bridge on a laptop in dry
+run, which is what you want unless the ESP32 is plugged into your machine.
+
 ## Install
 
 Run everything from the **repo root** -- the daemon imports `shared/` and
