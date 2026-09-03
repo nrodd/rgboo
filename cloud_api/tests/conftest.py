@@ -26,6 +26,7 @@ def mock_store():
         'estimated_wait_for_new_request': 20
     }
     store.get_queue_contents.return_value = []
+    store.get_queue_size.return_value = 0
     store.clear_queue.return_value = 0
     store.get_bridge_status.return_value = {
         'bridge_online': False,
