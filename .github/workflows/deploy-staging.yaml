@@ -1,0 +1,44 @@
+name: Deploy staging
+
+# Auto-deploys `main` to the staging Worker (rgboo-staging) at staging.rgboo.com
+# on every push that touches web/. Production is the separate top-level `rgboo`
+# Worker, deployed by hand -- nothing here ever touches it.
+#
+# Unlike the API deploy (Workload Identity Federation), Cloudflare needs a stored
+# token. Add two repo secrets before this can run -- see docs/deploying.md #5:
+#   CLOUDFLARE_API_TOKEN   scoped to Workers Scripts:Edit on the rgboo account
+#   CLOUDFLARE_ACCOUNT_ID
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/deploy-staging.yaml"
+  workflow_dispatch:
+
+# A newer push supersedes an in-flight staging deploy.
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    name: "🚧 deploy staging"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "./web"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: corepack yarn install --immutable
+      - run: corepack yarn playwright install
+      # Direct pushes to main skip PR checks, so run the same suite here before
+      # anything reaches staging.
+      - run: corepack yarn test
+      - run: corepack yarn deploy:staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
