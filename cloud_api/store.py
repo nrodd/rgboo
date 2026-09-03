@@ -261,6 +261,12 @@ class RequestStore:
     def is_blocked(self, username: str) -> bool:
         return self._denylist.document(self._denylist_id(username)).get().exists
 
+    def get_queue_size(self) -> int:
+        """Number of pending requests. One aggregated read, not one per doc."""
+        return self._pending_count()
+
     def _pending_count(self) -> int:
-        docs = self._requests.where('status', '==', STATUS_PENDING).select([]).stream()
-        return sum(1 for _ in docs)
+        # count() is a server-side aggregation: it bills a single read for the
+        # whole tally instead of streaming every pending doc back to count them.
+        result = self._requests.where('status', '==', STATUS_PENDING).count().get()
+        return int(result[0][0].value)
