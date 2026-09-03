@@ -30,9 +30,15 @@
 	 * Production stays the top-level worker above (see-you-next-october) and is
 	 * untouched by staging deploys -- this is a separate worker, `rgboo-staging`.
 	 *
-	 * Deploy:  wrangler deploy --env staging
-	 * Secrets are per-worker, so seed them once:
-	 *   wrangler secret put API_KEY --env staging   # (and CF_ACCESS_* if used)
+	 * Deploy with `yarn deploy:staging`. The @cloudflare/vite-plugin picks the
+	 * environment at BUILD time from CLOUDFLARE_ENV, so `wrangler deploy --env
+	 * staging` does NOT work -- it silently ships the top-level (production)
+	 * worker instead. Secrets are a direct wrangler call and do take --env:
+	 *   wrangler secret put API_KEY --env staging   (and CF_ACCESS_* if used)
+	 *
+	 * workers_dev/preview_urls are off on purpose: a *.workers.dev or preview
+	 * URL sits in front of Cloudflare Access, so leaving them on would hand out
+	 * an ungated backdoor to staging. It's reachable only at staging.rgboo.com.
 	 *
 	 * API_UPSTREAM points at the SAME Cloud Run API as prod, so submissions on
 	 * staging drive the real LEDs and share the prod queue. Point this at a
@@ -42,6 +48,8 @@
 	"env": {
 		"staging": {
 			"name": "rgboo-staging",
+			"workers_dev": false,
+			"preview_urls": false,
 			"vars": {
 				"API_UPSTREAM": "https://rgboo-api-186324327580.us-east1.run.app"
 			},

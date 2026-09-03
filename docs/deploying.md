@@ -243,19 +243,33 @@ While production is pinned to `see-you-next-october`, the `main` branch runs at
 `env.staging` block in [web/wrangler.jsonc](../web/wrangler.jsonc). Production is
 the top-level worker (`rgboo`) and is never touched by a staging deploy.
 
-Standing up staging is three things — the worker (in this repo) and two pieces
-of Cloudflare dashboard config that only need doing once.
+Standing up staging is three things — the worker (in this repo), one CI secret,
+and one piece of Cloudflare dashboard config, each done once.
+
+> **Deploy staging with `yarn deploy:staging`, never `wrangler deploy --env
+> staging`.** The `@cloudflare/vite-plugin` selects the environment at *build*
+> time from the `CLOUDFLARE_ENV` variable, so the `--env` flag on `deploy` is
+> ignored and silently ships the top-level **production** worker instead. The
+> `deploy:staging` script sets `CLOUDFLARE_ENV=staging` on the build for you.
+> (Secrets are a plain wrangler call and *do* honour `--env staging`.)
 
 ### a. The worker
 
 ```bash
 cd web
-wrangler deploy --env staging          # first deploy creates rgboo-staging + DNS
-wrangler secret put API_KEY --env staging   # secrets are per-worker; seed once
+yarn deploy:staging                          # CLOUDFLARE_ENV=staging build, then wrangler deploy
+wrangler secret put API_KEY --env staging    # same shared key as prod (read it from Cloud Run, §3)
 ```
 
 `custom_domain: true` on the route makes Cloudflare create the `staging.rgboo.com`
-DNS record and cert automatically, since rgboo.com is already on Cloudflare.
+DNS record and cert automatically, since rgboo.com is already on Cloudflare. The
+staging worker has `workers_dev` and `preview_urls` turned off so it's reachable
+only at that gated hostname — a `*.workers.dev` URL would sit in front of Access
+and bypass the login wall.
+
+`API_KEY` is the one Cloud Run shared secret; the same value guards both the
+public and admin API (the admin difference is Access, not a second key). Read the
+current value with the command in [§3](#3-web--cloudflare).
 
 ### b. Gate it — Cloudflare Access
 
@@ -270,14 +284,20 @@ staging from hardware, deploy a second Cloud Run service against a separate
 Firestore database (the bridge only watches prod's database) and point the
 staging `API_UPSTREAM` there instead.
 
-### c. Auto-deploy on push to `main` — Workers Builds
+### c. Auto-deploy on push to `main`
 
-Connect the `rgboo-staging` worker to the repo in **Workers & Pages → the worker
-→ Settings → Builds**: watch branch `main`, deploy command `wrangler deploy
---env staging`. Cloudflare pulls from GitHub, so this needs **no** GitHub repo
-secret (which is why it's Workers Builds and not a GitHub Action here — see the
-web-app note below). Leave the production `rgboo` worker unconnected so pushes
-never reach it.
+[deploy-staging.yaml](../.github/workflows/deploy-staging.yaml) builds and
+deploys `rgboo-staging` on every push to `main` that touches `web/`. It only
+needs two repo secrets (**Settings → Secrets and variables → Actions**):
+
+| Secret | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | A token scoped to **Workers Scripts:Edit** on the rgboo account |
+| `CLOUDFLARE_ACCOUNT_ID` | The rgboo Cloudflare account ID |
+
+Unlike the API deploy, there's no Workload Identity path for Cloudflare, so this
+token has to be stored. It can push workers and nothing else. The workflow never
+targets the production `rgboo` worker.
 
 ### Promoting `main` to production
 
@@ -286,12 +306,12 @@ worker by hand — one command from a `main` checkout:
 
 ```bash
 cd web
-yarn build && wrangler deploy          # no --env => prod worker `rgboo`
+yarn deploy          # no CLOUDFLARE_ENV => top-level prod worker `rgboo`
 ```
 
 Roll back from the Cloudflare dashboard (Workers → rgboo → Deployments → roll
-back), or redeploy `see-you-next-october`. Once you're done with staging, remove
-its Access policy and disconnect its Workers Build.
+back), or `wrangler rollback <version-id>`. Once you're done with staging, remove
+its Access policy and disable the staging workflow.
 
 ---
 
@@ -301,8 +321,10 @@ its Access policy and disconnect its Workers Build.
 access — the entire reason it exists. The most a workflow could do is have the
 machine poll for a new commit and restart itself.
 
-**The web app has no button yet.** It needs a Cloudflare API token as a GitHub
-secret, and setting repository secrets requires admin on `nrodd/rgboo`.
+**Staging auto-deploys; production is deliberately by hand.** Pushes to `main`
+ship staging automatically ([§5c](#c-auto-deploy-on-push-to-main)), but the
+production `rgboo` worker only moves when someone runs `yarn deploy` — so cutover
+from the countdown to `main` stays a deliberate choice.
 
 **Nothing deploys on merge, deliberately.** Through Phases 5 and 6, choosing
 the moment production changes is the point — the cutover and its rollback
