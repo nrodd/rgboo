@@ -23,7 +23,33 @@
 	 */
 	"vars": {
 		"API_UPSTREAM": "https://rgboo-api-186324327580.us-east1.run.app"
-	}
+	},
+	/**
+	 * Staging: the `main` branch, served at staging.rgboo.com and gated behind
+	 * Cloudflare Access (email allowlist) so only invited users reach it.
+	 * Production stays the top-level worker above (see-you-next-october) and is
+	 * untouched by staging deploys -- this is a separate worker, `rgboo-staging`.
+	 *
+	 * Deploy:  wrangler deploy --env staging
+	 * Secrets are per-worker, so seed them once:
+	 *   wrangler secret put API_KEY --env staging   # (and CF_ACCESS_* if used)
+	 *
+	 * API_UPSTREAM points at the SAME Cloud Run API as prod, so submissions on
+	 * staging drive the real LEDs and share the prod queue. Point this at a
+	 * separate staging API/Firestore if you want staging isolated from hardware.
+	 * See docs/deploying.md section 5.
+	 */
+	"env": {
+		"staging": {
+			"name": "rgboo-staging",
+			"vars": {
+				"API_UPSTREAM": "https://rgboo-api-186324327580.us-east1.run.app"
+			},
+			"routes": [
+				{ "pattern": "staging.rgboo.com", "custom_domain": true }
+			]
+		}
+	},
 	/**
 	 * Secrets are NOT set here -- they are uploaded with `wrangler secret put`:
 	 *   wrangler secret put API_KEY           # Cloud Run shared secret
