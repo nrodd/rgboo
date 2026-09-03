@@ -15,6 +15,7 @@ fits together is [architecture.md](architecture.md).
 | `bridge/`, `shared/` | The home machine | [2](#2-bridge--home-machine) |
 | `web/` (app or Worker) | Cloudflare | [3](#3-web--cloudflare) |
 | `firmware/` | ESP32 over USB | [4](#4-firmware--esp32) |
+| `main` (preview) | staging.rgboo.com | [5](#5-staging-environment) |
 
 A change to `cloud_api/` alone needs no bridge action — the two share only
 Firestore document fields, not code. Order matters only when a change spans
@@ -231,6 +232,66 @@ pio device monitor
 
 Stop the bridge (or the old middleware) first — whatever owns the serial port
 blocks the upload.
+
+---
+
+## 5. Staging environment
+
+While production is pinned to `see-you-next-october`, the `main` branch runs at
+**staging.rgboo.com**, gated to invited users and auto-deployed on every push to
+`main`. It's a second Cloudflare Worker, `rgboo-staging`, defined by the
+`env.staging` block in [web/wrangler.jsonc](../web/wrangler.jsonc). Production is
+the top-level worker (`rgboo`) and is never touched by a staging deploy.
+
+Standing up staging is three things — the worker (in this repo) and two pieces
+of Cloudflare dashboard config that only need doing once.
+
+### a. The worker
+
+```bash
+cd web
+wrangler deploy --env staging          # first deploy creates rgboo-staging + DNS
+wrangler secret put API_KEY --env staging   # secrets are per-worker; seed once
+```
+
+`custom_domain: true` on the route makes Cloudflare create the `staging.rgboo.com`
+DNS record and cert automatically, since rgboo.com is already on Cloudflare.
+
+### b. Gate it — Cloudflare Access
+
+The same email-allowlist mechanism that protects `/admin`, applied to the whole
+hostname. In **Zero Trust → Access → Applications**, add a self-hosted app for
+`staging.rgboo.com` with an allow policy listing the permitted emails. Visitors
+hit an email-OTP login before the site loads. Free up to 50 users.
+
+Note: `API_UPSTREAM` points at the **production** Cloud Run API, so anything
+submitted on staging drives the real LEDs and shares the prod queue. To isolate
+staging from hardware, deploy a second Cloud Run service against a separate
+Firestore database (the bridge only watches prod's database) and point the
+staging `API_UPSTREAM` there instead.
+
+### c. Auto-deploy on push to `main` — Workers Builds
+
+Connect the `rgboo-staging` worker to the repo in **Workers & Pages → the worker
+→ Settings → Builds**: watch branch `main`, deploy command `wrangler deploy
+--env staging`. Cloudflare pulls from GitHub, so this needs **no** GitHub repo
+secret (which is why it's Workers Builds and not a GitHub Action here — see the
+web-app note below). Leave the production `rgboo` worker unconnected so pushes
+never reach it.
+
+### Promoting `main` to production
+
+When it's time to make `main` the real site, deploy it to the top-level (prod)
+worker by hand — one command from a `main` checkout:
+
+```bash
+cd web
+yarn build && wrangler deploy          # no --env => prod worker `rgboo`
+```
+
+Roll back from the Cloudflare dashboard (Workers → rgboo → Deployments → roll
+back), or redeploy `see-you-next-october`. Once you're done with staging, remove
+its Access policy and disconnect its Workers Build.
 
 ---
 
