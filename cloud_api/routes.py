@@ -134,7 +134,9 @@ def register_routes(app, store):
         return jsonify({
             'current_username': store.get_current_username(),
             'queue': store.get_queue_contents(limit=10),
-            'queue_size': store.get_queue_status()['queue_size'],
+            # get_queue_size() alone; the full status also reads the pacing and
+            # bridge docs, which this poll-heavy endpoint doesn't need.
+            'queue_size': store.get_queue_size(),
         })
 
     @app.route('/admin/queue/remove', methods=['POST'])

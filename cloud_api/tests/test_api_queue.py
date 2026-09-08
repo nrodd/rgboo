@@ -47,12 +47,19 @@ def test_admin_status_returns_current_and_first_ten(client, mock_store):
     mock_store.get_queue_contents.return_value = [
         {'username': 'Next', 'queue_position': 1}
     ]
+    mock_store.get_queue_size.return_value = 4
     response = client.get('/admin/status')
 
     assert response.status_code == 200
-    assert response.get_json()['current_username'] == 'On Screen'
-    assert response.get_json()['queue'][0]['username'] == 'Next'
+    body = response.get_json()
+    assert body['current_username'] == 'On Screen'
+    assert body['queue'][0]['username'] == 'Next'
+    assert body['queue_size'] == 4
     mock_store.get_queue_contents.assert_called_once_with(limit=10)
+    # This poll-heavy endpoint takes the aggregated count, not the full status
+    # (which would also read the pacing and bridge docs every poll).
+    mock_store.get_queue_size.assert_called_once_with()
+    mock_store.get_queue_status.assert_not_called()
 
 
 def test_remove_queue_user_requires_username(client, mock_store):
