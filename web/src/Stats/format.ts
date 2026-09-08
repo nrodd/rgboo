@@ -18,10 +18,6 @@ const parseDay = (iso: string) => {
   return new Date(year, month - 1, day);
 };
 
-/** "Sep 8" -- for axis ticks. */
-export const formatDayShort = (iso: string) =>
-  parseDay(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-
 /** "Tue, Sep 8" -- for tooltips and table rows. */
 export const formatDayLong = (iso: string) =>
   parseDay(iso).toLocaleDateString(undefined, {

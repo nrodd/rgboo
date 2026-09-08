@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ColorRow, Swatch } from "../stats-api";
 import { formatCount, formatShare, pluralise } from "../format";
 
@@ -51,7 +51,6 @@ type Props = {
 export const ColorMosaic = ({ swatches, colors, total, isRefreshing }: Props) => {
   const { cells, scaled } = useMemo(() => toCells(swatches, total), [swatches, total]);
   const [hover, setHover] = useState<(Cell & { x: number; y: number }) | null>(null);
-  const mosaicRef = useRef<HTMLDivElement>(null);
 
   // One delegated listener rather than a handler per square: at a few
   // thousand cells, per-cell handlers are the expensive part.
@@ -89,7 +88,6 @@ export const ColorMosaic = ({ swatches, colors, total, isRefreshing }: Props) =>
       ) : (
         <>
           <div
-            ref={mosaicRef}
             className={`stats-mosaic ${isRefreshing ? "opacity-60" : ""}`}
             role="img"
             aria-label={`A mosaic of ${pluralise(total, "colour")} picked by the community, arranged by hue. The full breakdown is in the table below.`}
@@ -140,7 +138,7 @@ const FamilyBar = ({ colors }: { colors: ColorRow[] }) => {
   if (!colors.length) return null;
 
   return (
-    <div className="border-t border-white/10 px-6 py-5">
+    <div className="stats-family-row px-6 py-5">
       <div className="stats-family-bar">
         {colors.map((color) => (
           <span

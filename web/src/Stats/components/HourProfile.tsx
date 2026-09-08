@@ -1,15 +1,15 @@
 import type { HourSlot } from "../stats-api";
-import { formatHour, pluralise } from "../format";
+import { formatCount, formatHour, pluralise } from "../format";
 
 /**
  * When the stream is busy: submissions by hour of day, across the window.
  *
  * Pure magnitude, so it is drawn in one accent colour rather than in the
  * audience's hues. That separation is the point -- "when" and "which
- * colour" were previously fighting over the same channel in one grid.
+ * colour" used to fight over the same channel in one grid.
  */
 
-/** Trim the dead hours, padded by one, the way the old grid did its rows. */
+/** Trim the dead hours, padded by one either side. */
 const activeWindow = (hours: HourSlot[]) => {
   const used = hours.filter((slot) => slot.n > 0);
   if (!used.length) return hours;
@@ -35,24 +35,39 @@ export const HourProfile = ({ hours }: { hours: HourSlot[] }) => {
         <p className="stats-note px-6 pb-6">No colours in this window yet.</p>
       ) : (
         <div className="overflow-x-auto px-6 pb-6">
-          <ul className="stats-hours">
-            {shown.map((slot) => (
-              <li key={slot.h} className="stats-hour-col">
-                <div
-                  className="stats-hour-bar"
-                  style={{ height: `${Math.max(2, (slot.n / peak) * 100)}%` }}
-                  title={`${formatHour(slot.h)}: ${pluralise(slot.n, "colour")}`}
-                  aria-hidden="true"
-                />
-                <span className="stats-hour-label">
-                  {slot.h % 3 === 0 ? formatHour(slot.h).replace(" ", "") : ""}
-                </span>
-                <span className="sr-only">
-                  {formatHour(slot.h)}: {pluralise(slot.n, "colour")}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="stats-hour-chart">
+            <ul className="stats-hours">
+              {shown.map((slot) => (
+                <li key={slot.h} className="stats-hour-col">
+                  <span
+                    className="stats-hour-bar"
+                    style={{ height: `${(slot.n / peak) * 100}%` }}
+                    title={`${formatHour(slot.h)}: ${pluralise(slot.n, "colour")}`}
+                  >
+                    {/* Only the peak is direct-labelled, and it sits out of
+                        flow so it cannot alter the bar it labels. A number on
+                        every bar is chaos and goes unread; the rest are in
+                        the tooltip and the table. */}
+                    {slot.n === peak && (
+                      <span className="stats-hour-value">{formatCount(slot.n)}</span>
+                    )}
+                  </span>
+                  <span className="sr-only">
+                    {formatHour(slot.h)}: {pluralise(slot.n, "colour")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {/* Every hour is labelled, not every third: a label on some bars
+                and not others reads as arbitrary rather than as an axis. */}
+            <ul className="stats-hour-axis" aria-hidden="true">
+              {shown.map((slot) => (
+                <li key={slot.h} className="stats-hour-label">
+                  {formatHour(slot.h)}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </section>

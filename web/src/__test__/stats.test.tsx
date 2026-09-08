@@ -32,7 +32,6 @@ const statsBody = {
     avg_per_active_day: 74,
     busiest_day: { date: "2026-10-31", count: 120 },
     busiest_hour: { hour: 20, count: 96 },
-    peak_color_day: 80,
     hours,
     colors: [
       { key: "1", label: "orange", hex: "#e36810", count: 90, share: 0.608 },
@@ -167,7 +166,7 @@ test("reports an empty window honestly", async ({ worker }: { worker: SetupWorke
     ...statsBody,
     totals: {
       count: 0, active_days: 0, avg_per_active_day: 0,
-      busiest_day: null, busiest_hour: null, peak_color_day: 0,
+      busiest_day: null, busiest_hour: null,
       hours: Array.from({ length: 24 }, (_, h) => ({ h, n: 0 })),
       colors: [],
       swatches: [],

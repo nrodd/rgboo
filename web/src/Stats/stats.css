@@ -172,65 +172,83 @@
     min-width: 2px;
   }
 
+  .stats-hour-chart {
+    min-width: max-content;
+    width: 100%;
+  }
+
   .stats-hours {
     align-items: flex-end;
+    /* A continuous hairline baseline, so a one-pick hour reads as a short
+       bar standing on an axis rather than as a stray mark. */
+    border-bottom: 1px solid rgb(255 255 255 / 12%);
     display: flex;
     gap: 4px;
-    height: 8rem;
-    min-width: max-content;
+    height: 9rem;
+    /* Headroom for the peak's value label. It is positioned above the bar
+       it labels, and the scrolling wrapper clips anything that leaves this
+       box (overflow-x:auto computes overflow-y to auto as well). */
+    padding-top: 1.5rem;
   }
 
   .stats-hour-col {
     align-items: center;
     display: flex;
+    /* Grow to fill a wide card, but never below a width that fits its
+       label -- past that the container scrolls instead. */
+    flex: 1 1 0;
     flex-direction: column;
-    height: 100%;
     justify-content: flex-end;
-    width: 26px;
+    height: 100%;
+    min-width: 44px;
   }
 
   .stats-hour-bar {
-    /* One accent colour: this chart is pure magnitude, so it must not
-       borrow the audience's hues. */
     background: linear-gradient(to top, var(--color-pumpkin-400), #ffaf5c);
     border-radius: 3px 3px 0 0;
+    display: block;
+    /* Keeps the quietest hour visible instead of collapsing it to nothing. */
+    min-height: 3px;
+    position: relative;
+    /* Without this the one bar carrying a value label overflows the column
+       and is the only bar flex shrinks -- so the peak renders shorter than
+       the runner-up, which is exactly backwards. */
+    flex-shrink: 0;
     width: 100%;
+  }
+
+  .stats-hour-value {
+    bottom: 100%;
+    color: var(--color-pumpkin-400);
+    font-size: 0.65rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    left: 50%;
+    /* Out of flow, so labelling a bar never changes its height. */
+    position: absolute;
+    padding-bottom: 0.3rem;
+    transform: translateX(-50%);
+  }
+
+  .stats-hour-axis {
+    display: flex;
+    gap: 4px;
+    padding-top: 0.5rem;
   }
 
   .stats-hour-label {
     color: rgb(235 219 190 / 40%);
-    font-size: 0.58rem;
+    flex: 1 1 0;
+    font-size: 0.6rem;
     font-variant-numeric: tabular-nums;
     font-weight: 700;
-    padding-top: 0.4rem;
+    min-width: 44px;
+    text-align: center;
     white-space: nowrap;
   }
 
-
-
-  .stats-tooltip {
-    background: #170c1d;
-    border: 1px solid rgb(255 255 255 / 12%);
-    border-radius: 0.85rem;
-    box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
-    padding: 0.7rem 0.9rem;
-    pointer-events: none;
-    position: fixed;
-    transform: translate(-50%, calc(-100% - 10px));
-    white-space: nowrap;
-    z-index: 60;
-  }
-
-  .stats-swatch {
-    box-shadow: 0 0 0 1px rgb(255 255 255 / 20%);
-    flex-shrink: 0;
-  }
-
-  .stats-track {
-    background: rgb(255 255 255 / 8%);
-    border-radius: 9999px;
-    height: 0.5rem;
-    overflow: hidden;
+  .stats-family-row {
+    border-top: 1px solid rgb(255 255 255 / 10%);
   }
 
   .stats-th {

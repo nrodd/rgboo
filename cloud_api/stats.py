@@ -183,10 +183,6 @@ class StatsStore:
         active_days = 0
         busiest_day = None
         updated_at = None
-        # The busiest single (colour, day) cell -- the top of the grid's
-        # intensity scale. Not the busiest *day*, which sums every colour
-        # and would leave every cell pale.
-        peak_cell = 0
 
         for day in dates:
             day_id = day.isoformat()
@@ -223,7 +219,6 @@ class StatsStore:
                 for key, bucket in day_buckets.items()
                 if int(bucket.get('n', 0)) > 0
             }
-            peak_cell = max(peak_cell, max(colors.values(), default=0))
             grid.append({'date': day_id, 'count': day_count, 'colors': colors})
 
         peak_hour = max(hour_totals) if total_count else 0
@@ -247,13 +242,12 @@ class StatsStore:
                 'avg_per_active_day': avg,
                 'busiest_day': busiest_day if total_count else None,
                 'busiest_hour': busiest_hour,
-                'peak_color_day': peak_cell,
                 # Hour-of-day profile for the whole range. Pure magnitude, so
                 # the page draws it in one accent colour, not in hues.
                 'hours': [{'h': hour, 'n': hour_totals[hour]} for hour in range(24)],
                 # The 14 coarse families, busiest first. Only the summary
                 # bar uses these now; the mosaic shows colours unbinned.
-                'colors': buckets.rank_buckets(range_buckets, None),
+                'colors': buckets.rank_buckets(range_buckets),
                 # Every colour picked, ordered so the mosaic reads as a
                 # spectrum. `n` is how many times, which is how many cells
                 # it gets -- popularity becomes band width, with nothing

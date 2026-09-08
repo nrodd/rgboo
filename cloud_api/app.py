@@ -1,5 +1,4 @@
 import hmac
-import hmac
 import logging
 
 from flask import Flask, jsonify, request

@@ -142,16 +142,16 @@ def test_rank_buckets_orders_by_count_with_shares():
     ranked = rank_buckets({
         "0": {"n": 3, "r": 765, "g": 0, "b": 0},
         "8": {"n": 9, "r": 0, "g": 0, "b": 2295},
-    }, limit=5)
+    })
     assert [entry["label"] for entry in ranked] == ["blue", "red"]
     assert ranked[0]["share"] == 0.75
     assert ranked[0]["hex"] == "#0000ff"
 
 
-def test_rank_buckets_respects_the_limit_and_handles_empty():
+def test_rank_buckets_returns_every_populated_bin_and_handles_empty():
     many = {str(index): {"n": index + 1, "r": 0, "g": 0, "b": 0} for index in range(10)}
-    assert len(rank_buckets(many, limit=3)) == 3
-    assert rank_buckets({}, limit=3) == []
+    assert len(rank_buckets(many)) == 10
+    assert rank_buckets({}) == []
 
 
 def test_accumulate_groups_by_local_day_and_hour():

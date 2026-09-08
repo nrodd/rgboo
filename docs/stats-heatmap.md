@@ -173,7 +173,6 @@ Empty hours are omitted rather than sent as zeroes, which keeps a month around
     "count": 1163, "active_days": 21, "avg_per_active_day": 55.4,
     "busiest_day": { "date": "2026-09-06", "count": 191 },
     "busiest_hour": { "hour": 21, "count": 280 },
-    "peak_color_day": 127,
     "hours": [{ "h": 0, "n": 0 }, "... all 24, for the hour profile"],
     "colors": [
       { "key": "1", "label": "orange", "hex": "#ef8213", "count": 293, "share": 0.2519 }
@@ -189,8 +188,9 @@ Empty hours are omitted rather than sent as zeroes, which keeps a month around
 ```
 
 `totals.swatches` is the mosaic, already in spectrum order, and its counts sum
-to `totals.count`. `totals.colors` is the summary bar beneath it. A month of
-1,163 picks came to 740 distinct colours and a 26 KB payload.
+to `totals.count`. `totals.colors` is the summary bar beneath it, and
+`totals.hours` is the hour-of-day chart. A month of 1,163 picks came to 740
+distinct colours and a 26 KB payload.
 
 ## The page
 
@@ -231,6 +231,12 @@ at all: every shade shows as itself.
   a few thousand cells the per-cell handlers are the expensive part.
 - **A hairline ring on every square**, so a near-black pick reads as a square
   rather than as a gap in the mosaic.
+
+The hour chart beside it labels **every** bar rather than every third: a label
+on some bars and not others reads as arbitrary rather than as an axis. Only the
+peak carries a value, and that label is positioned out of flow — as a flex item
+it overflowed its column and was the one bar the browser shrank, which made the
+peak render shorter than the runner-up.
 
 The mosaic drops the calendar entirely. `grid` still carries per-day, per-family
 counts, and the table view under the chart is where both the numbers and the

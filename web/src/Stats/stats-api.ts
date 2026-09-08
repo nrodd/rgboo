@@ -34,8 +34,6 @@ export type StatsTotals = {
   avg_per_active_day: number;
   busiest_day: { date: string; count: number } | null;
   busiest_hour: { hour: number; count: number } | null;
-  /** Busiest single colour-on-a-day cell: the top of the grid's scale. */
-  peak_color_day: number;
   hours: HourSlot[];
   colors: ColorRow[];
   /** Every colour picked, already ordered so it reads as a spectrum. */

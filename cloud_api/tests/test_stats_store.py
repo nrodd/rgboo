@@ -250,7 +250,6 @@ def test_read_range_covers_days_with_no_document(client, store):
     assert payload['totals']['busiest_hour'] is None
     assert payload['totals']['colors'] == []
     assert payload['totals']['swatches'] == []
-    assert payload['totals']['peak_color_day'] == 0
     assert all(day['colors'] == {} for day in payload['grid'])
 
 
@@ -283,21 +282,6 @@ def test_read_range_reports_the_busiest_day_and_hour(client, store):
 
     assert totals['busiest_day'] == {'date': yesterday, 'count': 9}
     assert totals['busiest_hour'] == {'hour': 20, 'count': 11}
-
-
-def test_peak_color_day_is_the_busiest_single_cell_not_the_busiest_day(client, store):
-    """It sets the grid's scale, so it must be a cell, not a day total."""
-    seed_day(client, _today(), {
-        '20': {'n': 30, 'buckets': {
-            '0': {'n': 18, 'r': 4590, 'g': 0, 'b': 0},
-            '8': {'n': 12, 'r': 0, 'g': 0, 'b': 3060},
-        }},
-    })
-
-    totals = store.read_range(1)['totals']
-
-    assert totals['busiest_day']['count'] == 30
-    assert totals['peak_color_day'] == 18
 
 
 def test_read_range_averages_over_active_days_only(client, store):
