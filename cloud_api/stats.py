@@ -40,9 +40,6 @@ CACHE_TTL_SECONDS = 300
 # Firestore caps a batch at 500 writes.
 _BATCH_LIMIT = 400
 
-# How many entries the top-colours list carries.
-_TOP_COLORS = 6
-
 
 class StatsStore:
     """Reads and rebuilds the stats_daily aggregates."""
@@ -167,13 +164,24 @@ class StatsStore:
         return found
 
     def _build(self, dates: list, found: dict) -> dict:
+        """Shape the aggregates into the colour x day grid the page draws.
+
+        One row per colour family, one column per day. Deliberately *not*
+        each hour's single winning colour: that discarded most of a busy
+        hour and let a cell flip shade on a near-tie. Every bin a day saw
+        is reported with its own count.
+        """
         grid = []
-        totals = {}
+        range_buckets: dict = {}
         hour_totals = [0] * 24
         total_count = 0
         active_days = 0
         busiest_day = None
         updated_at = None
+        # The busiest single (colour, day) cell -- the top of the grid's
+        # intensity scale. Not the busiest *day*, which sums every colour
+        # and would leave every cell pale.
+        peak_cell = 0
 
         for day in dates:
             day_id = day.isoformat()
@@ -189,30 +197,28 @@ class StatsStore:
             if stamp is not None and (updated_at is None or stamp > updated_at):
                 updated_at = stamp
 
-            hours = []
+            # Hours collapse two ways: into the range's hour-of-day profile,
+            # and into this day's per-colour totals.
+            day_buckets: dict = {}
             for hour_key, hour in (data.get('hours') or {}).items():
-                index = int(hour_key)
                 count = int(hour.get('n', 0))
                 if count <= 0:
                     continue
-                hour_totals[index] += count
-                buckets.merge_buckets(totals, hour.get('buckets') or {})
+                hour_totals[int(hour_key)] += count
+                buckets.merge_buckets(day_buckets, hour.get('buckets') or {})
 
-                cell = {'h': index, 'n': count}
-                top = buckets.dominant(hour.get('buckets') or {})
-                if top:
-                    cell['hex'] = buckets.bucket_hex(top[1])
-                    cell['label'] = buckets.bucket_label(top[0])
-                hours.append(cell)
+            buckets.merge_buckets(range_buckets, day_buckets)
+            colors = {
+                key: int(bucket['n'])
+                for key, bucket in day_buckets.items()
+                if int(bucket.get('n', 0)) > 0
+            }
+            peak_cell = max(peak_cell, max(colors.values(), default=0))
+            grid.append({'date': day_id, 'count': day_count, 'colors': colors})
 
-            # Sorted so the client can render straight through without
-            # caring what order Firestore returned the map keys in.
-            hours.sort(key=lambda cell: cell['h'])
-            grid.append({'date': day_id, 'count': day_count, 'hours': hours})
-
-        peak = max(hour_totals) if total_count else 0
+        peak_hour = max(hour_totals) if total_count else 0
         busiest_hour = (
-            {'hour': hour_totals.index(peak), 'count': peak} if peak else None
+            {'hour': hour_totals.index(peak_hour), 'count': peak_hour} if peak_hour else None
         )
         # Averaged over days that actually had a stream, not over the whole
         # window -- a month with three busy nights isn't a 12-per-day month.
@@ -231,10 +237,14 @@ class StatsStore:
                 'avg_per_active_day': avg,
                 'busiest_day': busiest_day if total_count else None,
                 'busiest_hour': busiest_hour,
-                'peak_hour_count': max(
-                    (cell['n'] for day in grid for cell in day['hours']), default=0
-                ),
-                'top_colors': buckets.rank_buckets(totals, _TOP_COLORS),
+                'peak_color_day': peak_cell,
+                # Hour-of-day profile for the whole range. Pure magnitude, so
+                # the page draws it in one accent colour, not in hues.
+                'hours': [{'h': hour, 'n': hour_totals[hour]} for hour in range(24)],
+                # Every colour family seen, busiest first: this is the grid's
+                # row order, and the ranking the page states in text rather
+                # than asking anyone to compare two hues by brightness.
+                'colors': buckets.rank_buckets(range_buckets, None),
             },
             'grid': grid,
         }

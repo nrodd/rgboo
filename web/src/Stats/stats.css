@@ -139,7 +139,7 @@
     color: var(--color-pumpkin-400);
   }
 
-  .stats-heatmap {
+  .stats-trends {
     --cell: 22px;
     align-items: center;
     display: grid;
@@ -151,6 +151,65 @@
        the content overflows, so horizontal scrolling still starts at the
        left edge. */
     margin-inline: auto;
+  }
+
+  .stats-trend-name {
+    align-items: center;
+    color: rgb(235 219 190 / 75%);
+    display: flex;
+    font-size: 0.72rem;
+    font-weight: 700;
+    gap: 0.45rem;
+    padding-right: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .stats-trend-swatch {
+    border-radius: 4px;
+    height: 12px;
+    width: 12px;
+  }
+
+  .stats-trend-total {
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    padding-left: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .stats-hours {
+    align-items: flex-end;
+    display: flex;
+    gap: 4px;
+    height: 8rem;
+    min-width: max-content;
+  }
+
+  .stats-hour-col {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    justify-content: flex-end;
+    width: 26px;
+  }
+
+  .stats-hour-bar {
+    /* One accent colour: this chart is pure magnitude, so it must not
+       borrow the audience's hues. */
+    background: linear-gradient(to top, var(--color-pumpkin-400), #ffaf5c);
+    border-radius: 3px 3px 0 0;
+    width: 100%;
+  }
+
+  .stats-hour-label {
+    color: rgb(235 219 190 / 40%);
+    font-size: 0.58rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    padding-top: 0.4rem;
+    white-space: nowrap;
   }
 
   .stats-cell {
@@ -174,16 +233,6 @@
   .stats-cell:hover,
   .stats-cell:focus-visible {
     outline-color: var(--color-bone);
-  }
-
-  .stats-hour-tick {
-    color: rgb(235 219 190 / 40%);
-    font-size: 0.65rem;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-    padding-right: 0.6rem;
-    text-align: right;
-    white-space: nowrap;
   }
 
   .stats-day-tick {
@@ -249,13 +298,13 @@
 }
 
 @media (max-width: 640px) {
-  .stats-heatmap {
+  .stats-trends {
     --cell: 14px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stats-heatmap,
+  .stats-trends,
   .stats-cell {
     transition: none;
   }

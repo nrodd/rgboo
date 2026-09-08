@@ -6,7 +6,18 @@ import { SetupWorker } from "msw/browser";
 import { MemoryRouter } from "react-router-dom";
 import { test } from "./setup/test-extend";
 import Stats from "../Stats";
-import { hexToRgba, intensityFor, formatHour, INTENSITY_STEPS } from "../Stats/format";
+import {
+  hexToRgba,
+  intensityFor,
+  formatHour,
+  rampHex,
+  INTENSITY_STEPS,
+} from "../Stats/format";
+
+const hours = Array.from({ length: 24 }, (_, h) => ({
+  h,
+  n: h === 20 ? 96 : h === 21 ? 52 : 0,
+}));
 
 const statsBody = {
   timezone: "America/New_York",
@@ -21,27 +32,18 @@ const statsBody = {
     avg_per_active_day: 74,
     busiest_day: { date: "2026-10-31", count: 120 },
     busiest_hour: { hour: 20, count: 96 },
-    peak_hour_count: 80,
-    top_colors: [
+    peak_color_day: 80,
+    hours,
+    colors: [
       { key: "1", label: "orange", hex: "#e36810", count: 90, share: 0.608 },
-      { key: "9", label: "violet", hex: "#6441a4", count: 58, share: 0.392 },
+      { key: "9", label: "violet", hex: "#6441a4", count: 40, share: 0.27 },
+      { key: "dark", label: "near black", hex: "#101014", count: 18, share: 0.122 },
     ],
   },
   grid: [
-    { date: "2026-10-29", count: 0, hours: [] },
-    {
-      date: "2026-10-30",
-      count: 28,
-      hours: [{ h: 21, n: 28, hex: "#6441a4", label: "violet" }],
-    },
-    {
-      date: "2026-10-31",
-      count: 120,
-      hours: [
-        { h: 20, n: 80, hex: "#e36810", label: "orange" },
-        { h: 21, n: 40, hex: "#101010", label: "near black" },
-      ],
-    },
+    { date: "2026-10-29", count: 0, colors: {} },
+    { date: "2026-10-30", count: 28, colors: { "9": 28 } },
+    { date: "2026-10-31", count: 120, colors: { "1": 80, "9": 12, dark: 18 } },
   ],
 };
 
@@ -58,40 +60,64 @@ test("shows the headline totals", async ({ worker }: { worker: SetupWorker }) =>
   await expect.element(summary.getByText("148")).toBeInTheDocument();
   await expect.element(summary.getByText("Busiest night")).toBeInTheDocument();
   await expect.element(summary.getByText("120")).toBeInTheDocument();
-  // The peak hour reads as a time, not as "20". Scoped to the tiles, since
-  // "8 PM" is also a legitimate row label on the grid.
+  // The peak hour reads as a time, not as "20".
   await expect.element(summary.getByText("8 PM")).toBeInTheDocument();
 });
 
-test("labels every heatmap cell, busy or empty", async ({ worker }: { worker: SetupWorker }) => {
+test("gives every colour its own row, busiest first", async ({ worker }: { worker: SetupWorker }) => {
   mockStats(worker);
   renderStats();
 
-  await expect
-    .element(page.getByRole("gridcell", { name: /Oct 31 8 PM, 80 colours, mostly orange/ }))
-    .toBeInTheDocument();
-  // An hour nobody used must say so, rather than being an unlabelled square.
-  await expect
-    .element(page.getByRole("gridcell", { name: /Oct 29 7 PM, no colours/ }))
-    .toBeInTheDocument();
-  // Rows nobody ever used are dropped, and the header says which.
-  await expect.element(page.getByText(/Hours with no colours all window/)).toBeInTheDocument();
-  await expect
-    .element(page.getByRole("gridcell", { name: /3 AM/ }))
-    .not.toBeInTheDocument();
+  const rows = page.getByRole("rowheader");
+  await expect.element(rows.nth(0)).toHaveTextContent("orange");
+  await expect.element(rows.nth(1)).toHaveTextContent("violet");
+  await expect.element(rows.nth(2)).toHaveTextContent("near black");
 });
 
-test("hovering a cell reveals the count and the colour", async ({ worker }: { worker: SetupWorker }) => {
+test("states each colour's ranking as text, not only as shade", async ({ worker }: { worker: SetupWorker }) => {
+  // The point of the redesign: nobody should have to compare two hues by
+  // brightness to learn which was used more.
   mockStats(worker);
   renderStats();
 
-  const cell = page.getByRole("gridcell", { name: /Oct 30 9 PM, 28 colours/ });
+  // Scoped to the grid: "90" also appears in the "Last 90 days" button.
+  const grid = page.getByRole("grid");
+  await expect.element(grid.getByText("90")).toBeInTheDocument();
+  await expect.element(grid.getByText(/· 61%/)).toBeInTheDocument();
+});
+
+test("labels every cell, including colours a day never saw", async ({ worker }: { worker: SetupWorker }) => {
+  mockStats(worker);
+  renderStats();
+
+  await expect
+    .element(page.getByRole("gridcell", { name: /orange, Sat, Oct 31, 80 colours/ }))
+    .toBeInTheDocument();
+  await expect
+    .element(page.getByRole("gridcell", { name: /orange, Thu, Oct 29, none/ }))
+    .toBeInTheDocument();
+});
+
+test("hovering a cell reveals the count and which colour it is", async ({ worker }: { worker: SetupWorker }) => {
+  mockStats(worker);
+  renderStats();
+
+  const cell = page.getByRole("gridcell", { name: /violet, Fri, Oct 30, 28 colours/ });
   await expect.element(cell).toBeInTheDocument();
   await cell.hover();
 
-  await expect.element(page.getByRole("tooltip")).toBeInTheDocument();
-  await expect.element(page.getByText("28 colours")).toBeInTheDocument();
-  await expect.element(page.getByText(/mostly violet/)).toBeInTheDocument();
+  const tip = page.getByRole("tooltip");
+  await expect.element(tip).toBeInTheDocument();
+  await expect.element(tip).toHaveTextContent("28 colours");
+  await expect.element(tip).toHaveTextContent("violet");
+});
+
+test("shows when the stream is busy, separately from which colour", async ({ worker }: { worker: SetupWorker }) => {
+  mockStats(worker);
+  renderStats();
+
+  await expect.element(page.getByText("Busiest hours")).toBeInTheDocument();
+  await expect.element(page.getByText("8 PM: 96 colours")).toBeInTheDocument();
 });
 
 test("changing the range refetches for that window", async ({ worker }: { worker: SetupWorker }) => {
@@ -103,7 +129,7 @@ test("changing the range refetches for that window", async ({ worker }: { worker
   }));
   renderStats();
 
-  await expect.element(page.getByText("148")).toBeInTheDocument();
+  await expect.element(page.getByLabelText("Summary").getByText("148")).toBeInTheDocument();
   await page.getByRole("button", { name: "Last 7 days" }).click();
 
   await expect.poll(() => requested).toContain("7");
@@ -115,20 +141,11 @@ test("the table view exposes the same numbers without hovering", async ({ worker
 
   await page.getByRole("button", { name: "Show table" }).click();
 
-  await expect.element(page.getByRole("table")).toBeInTheDocument();
   const table = page.getByRole("table");
-  await expect.element(table.getByText(/8 PM: 80 colours \(orange\)/)).toBeInTheDocument();
+  await expect.element(table.getByText(/orange: 80 colours/)).toBeInTheDocument();
+  await expect.element(table.getByText(/near black: 18 colours/)).toBeInTheDocument();
   // A day with nothing on it is omitted rather than listed as a zero row.
-  // Scoped to the table: "Oct 29" is still a legitimate axis tick on the grid.
   await expect.element(table.getByText(/Oct 29/)).not.toBeInTheDocument();
-});
-
-test("ranks the most-picked colours with their share", async ({ worker }: { worker: SetupWorker }) => {
-  mockStats(worker);
-  renderStats();
-
-  await expect.element(page.getByText("orange")).toBeInTheDocument();
-  await expect.element(page.getByText(/90 · 61%/)).toBeInTheDocument();
 });
 
 test("surfaces an API failure instead of an empty page", async ({ worker }: { worker: SetupWorker }) => {
@@ -144,15 +161,17 @@ test("reports an empty window honestly", async ({ worker }: { worker: SetupWorke
     ...statsBody,
     totals: {
       count: 0, active_days: 0, avg_per_active_day: 0,
-      busiest_day: null, busiest_hour: null, peak_hour_count: 0, top_colors: [],
+      busiest_day: null, busiest_hour: null, peak_color_day: 0,
+      hours: Array.from({ length: 24 }, (_, h) => ({ h, n: 0 })),
+      colors: [],
     },
-    grid: [{ date: "2026-10-29", count: 0, hours: [] }],
+    grid: [{ date: "2026-10-29", count: 0, colors: {} }],
   });
   renderStats();
 
   await expect.element(page.getByText(/Nothing has lit up/)).toBeInTheDocument();
   await expect.element(page.getByText("No activity in this window yet")).toBeInTheDocument();
-  await expect.element(page.getByText("No colours in this window yet.")).toBeInTheDocument();
+  await expect.element(page.getByText("No colours in this window yet.").first()).toBeInTheDocument();
 });
 
 describe("formatting", () => {
@@ -167,12 +186,24 @@ describe("formatting", () => {
     expect(intensityFor(0, 80)).toBe(0);
     expect(intensityFor(80, 80)).toBe(top);
     expect(intensityFor(1, 80)).toBe(INTENSITY_STEPS[0]);
-    // A single-colour hour still clears the empty-cell wash.
     expect(intensityFor(1, 1)).toBe(top);
   });
 
   it("composites a hex over the surface rather than fading the whole cell", () => {
     expect(hexToRgba("#e36810", 0.4)).toBe("rgba(227, 104, 16, 0.4)");
     expect(hexToRgba("#fff", 1)).toBe("rgba(255, 255, 255, 1)");
+  });
+
+  it("lifts a near-black row to something visible on the dark card", () => {
+    // Without this the whole "near black" row renders as an empty row,
+    // whatever its counts are.
+    const lifted = rampHex("#101014");
+    expect(lifted).not.toBe("#101014");
+    expect(Number.parseInt(lifted.slice(1, 3), 16)).toBeGreaterThan(0x10);
+  });
+
+  it("leaves an already-light colour alone", () => {
+    expect(rampHex("#e36810")).toBe("#e36810");
+    expect(rampHex("#ffffff")).toBe("#ffffff");
   });
 });

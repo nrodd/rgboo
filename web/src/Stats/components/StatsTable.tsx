@@ -1,14 +1,13 @@
-import type { StatsDay } from "../stats-api";
-import { formatCount, formatDayLong, formatHour, pluralise } from "../format";
+import type { ColorRow, StatsDay } from "../stats-api";
+import { formatCount, formatDayLong, pluralise } from "../format";
 
 /**
- * The heatmap's table twin.
+ * The grid's table twin.
  *
- * The grid encodes two things in one square (which colour, how many), which
- * is only fair to a reader who can also get the numbers without hovering.
- * Every value in the heatmap is reachable here.
+ * The grid encodes a count as depth of colour, which is an ordinal read at
+ * best. Every value in it is reachable here as a number, without hovering.
  */
-export const StatsTable = ({ grid }: { grid: StatsDay[] }) => {
+export const StatsTable = ({ grid, colors }: { grid: StatsDay[]; colors: ColorRow[] }) => {
   const active = grid.filter((day) => day.count > 0);
 
   if (!active.length) {
@@ -23,13 +22,13 @@ export const StatsTable = ({ grid }: { grid: StatsDay[] }) => {
     <div className="overflow-x-auto px-6 pb-6">
       <table className="w-full min-w-[34rem] border-collapse text-left">
         <caption className="sr-only">
-          Colours displayed per hour, for every day with activity
+          Colours displayed per family, for every day with activity
         </caption>
         <thead>
           <tr className="stats-card-head">
             <th scope="col" className="stats-th">Night</th>
             <th scope="col" className="stats-th">Total</th>
-            <th scope="col" className="stats-th">By hour</th>
+            <th scope="col" className="stats-th">By colour</th>
           </tr>
         </thead>
         <tbody>
@@ -41,21 +40,22 @@ export const StatsTable = ({ grid }: { grid: StatsDay[] }) => {
               <td className="stats-td stats-muted tabular-nums">{formatCount(day.count)}</td>
               <td className="stats-td stats-muted">
                 <ul className="flex flex-wrap gap-x-4 gap-y-1">
-                  {day.hours.map((cell) => (
-                    <li key={cell.h} className="flex items-center gap-1.5">
-                      {cell.hex && (
+                  {/* Ordered by the range ranking, so every row reads the
+                      same way and the busiest colour is always first. */}
+                  {colors
+                    .filter((color) => (day.colors[color.key] ?? 0) > 0)
+                    .map((color) => (
+                      <li key={color.key} className="flex items-center gap-1.5">
                         <span
                           aria-hidden="true"
                           className="stats-swatch h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: cell.hex }}
+                          style={{ backgroundColor: color.hex ?? "transparent" }}
                         />
-                      )}
-                      <span className="tabular-nums">
-                        {formatHour(cell.h)}: {pluralise(cell.n, "colour")}
-                        {cell.label ? ` (${cell.label})` : ""}
-                      </span>
-                    </li>
-                  ))}
+                        <span className="tabular-nums">
+                          {color.label}: {pluralise(day.colors[color.key], "colour")}
+                        </span>
+                      </li>
+                    ))}
                 </ul>
               </td>
             </tr>

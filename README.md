@@ -74,8 +74,8 @@ a daemon at home does the physical USB write. See
 failure modes, and the security posture.
 
 **[docs/stats-heatmap.md](docs/stats-heatmap.md)** covers the `/stats` page: the
-day x hour colour heatmap, how its aggregates are rebuilt, and why that is an
-offline command rather than a scheduled job.
+colour x day grid, how its aggregates are rebuilt, and why that is an offline
+command rather than a scheduled job.
 
 ## 🚀 Deploying
 

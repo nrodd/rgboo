@@ -6,8 +6,8 @@ import { RANGE_PRESETS } from "./stats-api";
 import { useStats } from "./useStats";
 import { formatUpdatedAt } from "./format";
 import { StatTiles } from "./components/StatTiles";
-import { ColorHeatmap } from "./components/ColorHeatmap";
-import { TopColors } from "./components/TopColors";
+import { ColorTrends } from "./components/ColorTrends";
+import { HourProfile } from "./components/HourProfile";
 import { StatsTable } from "./components/StatsTable";
 
 const Stats = () => {
@@ -64,12 +64,14 @@ const Stats = () => {
               <StatTiles totals={stats.totals} days={stats.days} />
             </section>
 
-            <ColorHeatmap
+            <ColorTrends
               grid={stats.grid}
-              peak={stats.totals.peak_hour_count}
-              timezone={stats.timezone}
+              colors={stats.totals.colors}
+              peak={stats.totals.peak_color_day}
               isRefreshing={isRefreshing}
             />
+
+            <HourProfile hours={stats.totals.hours} />
 
             <section className="stats-card">
               <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-5">
@@ -88,10 +90,8 @@ const Stats = () => {
                   {showTable ? "Hide table" : "Show table"}
                 </button>
               </div>
-              {showTable && <StatsTable grid={stats.grid} />}
+              {showTable && <StatsTable grid={stats.grid} colors={stats.totals.colors} />}
             </section>
-
-            <TopColors colors={stats.totals.top_colors} />
 
             <p className="stats-faint pb-4 text-[0.7rem] leading-relaxed">
               Counts only colours that actually reached the LEDs — cancelled and

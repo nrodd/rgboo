@@ -1,8 +1,8 @@
-# Colour stats and the day × hour heatmap
+# Colour stats and the colour × day grid
 
 A public page at `/stats` showing what the LED strip has actually been doing:
-a grid with one square per hour, painted with the colour most people picked in
-that hour, plus the headline numbers around it.
+a grid with one row per colour family and one square per day, plus an
+hour-of-day profile and the headline numbers around them.
 
 Related: [architecture.md](architecture.md) (the system this reads from),
 [deploying.md](deploying.md) (shipping it).
@@ -93,8 +93,9 @@ hue — `dark` (lightness < 0.10) and `neutral` (saturation < 0.15) — which wo
 otherwise smear randomly across all twelve, since hue is numerically unstable
 down there.
 
-The heatmap cell shows the **busiest bin's** mean colour. Ties break on the bin
-key, so identical data always renders the same shade.
+Each bin becomes a **row** of the grid, and the mean colour of the bin is the
+row's shade. Every bin a day saw is reported with its own count -- the grid is
+not a "winner takes the square" summary.
 
 ### Firestore setup
 
@@ -153,49 +154,82 @@ Empty hours are omitted rather than sent as zeroes, which keeps a month around
 {
   "timezone": "America/New_York",
   "days": 30,
-  "start_date": "2026-10-02", "end_date": "2026-10-31",
-  "updated_at": "2026-10-31T22:05:00+00:00",
+  "start_date": "2026-08-10", "end_date": "2026-09-08",
+  "updated_at": "2026-09-08T04:54:00+00:00",
   "totals": {
-    "count": 2059, "active_days": 21, "avg_per_active_day": 98.0,
-    "busiest_day": { "date": "2026-10-31", "count": 404 },
-    "busiest_hour": { "hour": 20, "count": 427 },
-    "peak_hour_count": 86,
-    "top_colors": [
-      { "key": "9", "label": "violet", "hex": "#6441a4", "count": 607, "share": 0.2948 }
+    "count": 1163, "active_days": 21, "avg_per_active_day": 55.4,
+    "busiest_day": { "date": "2026-09-06", "count": 191 },
+    "busiest_hour": { "hour": 21, "count": 280 },
+    "peak_color_day": 127,
+    "hours": [{ "h": 0, "n": 0 }, "... all 24, for the hour profile"],
+    "colors": [
+      { "key": "1", "label": "orange", "hex": "#ef8213", "count": 303, "share": 0.2606 }
     ]
   },
   "grid": [
-    { "date": "2026-10-02", "count": 140,
-      "hours": [{ "h": 20, "n": 43, "hex": "#101014", "label": "near black" }] }
+    { "date": "2026-09-06", "count": 191, "colors": { "1": 127, "9": 29, "dark": 21 } }
   ]
 }
 ```
 
+`totals.colors` is the grid's row order. `peak_color_day` is the busiest single
+*(colour, day)* cell, which sets the top of the grid's intensity scale -- not
+`busiest_day`, which sums every colour and would leave every cell pale.
+
 ## The page
 
-Not linked from anywhere yet — the plan is to collect a month of data first,
+Not linked from anywhere yet -- the plan is to collect a month of data first,
 then publish it by adding a link to `web/src/layout/Footer.tsx`. Until then it
 is reachable at `/stats` and nowhere else.
 
-A few decisions the grid forced:
+## The chart, and the one it replaced
 
-- **Two things share one square** — which colour (hue) and how many (alpha).
-  That is only fair to a reader who can also get the numbers without a mouse,
-  so every cell carries an `aria-label`, a hover *and* focus tooltip, and the
-  card below it holds a table with every value.
-- **Alpha is four discrete steps, not a continuous ramp.** A continuous alpha
-  isn't perceivable cell to cell.
-- **Empty hours must not look like dark colours.** A cell of `#0a0a0a` and an
-  hour when nobody submitted would otherwise be the same square. Populated
-  cells carry a faint inset ring; empty ones don't. Alpha is composited into
-  the background colour rather than applied as CSS `opacity`, so the ring stays
-  at full strength however quiet the hour was.
-- **Rows nobody ever uses are trimmed.** A stream that only runs in the evening
-  leaves two thirds of a 24-row grid permanently blank, squashing the data into
-  a strip. The grid shows the active band padded by an hour either side, and
-  the header names the hours it left out.
-- **Arrow keys move a single tab stop** through the grid. 720 tab stops would
-  make the rest of the page unreachable.
+The first version of this page was a **day x hour** grid: each cell painted
+with that hour's most-picked colour, dimmed by how many colours came in.
+
+That encoding cannot work, and it is worth writing down why. Brightness carried
+the count -- but brightness is also an intrinsic property of a colour the
+audience chose, and nobody controls that. The two meanings collided and the
+scale ran backwards: a cell of three near-black submissions rendered *darker*
+than a cell of two white ones. Measured on real data, the busiest near-black
+cell came out less than a third as bright as the quietest pale one.
+
+No fix keeps that layout, because luminance cannot carry volume while the data
+is itself luminance. The volume encoding had to move.
+
+**Colour x day** is where it moved to. One row per colour family, one column
+per day:
+
+- A row is a **single fixed hue**, so light-to-dark inside it means only "more
+  of this colour". That is the one arrangement where a sequential ramp is
+  honest -- it is the "sequential = one hue" rule, applied per row.
+- **Nothing asks the reader to compare two hues by brightness.** The ranking is
+  the row order, stated again as a count and a share in text at the end of each
+  row.
+- **Every colour is shown, not each hour's winner.** An hour with fifty
+  submissions across six families used to render as a single square; now all
+  six appear in their own rows.
+- **Volume over time moved out** into a separate hour-of-day bar chart, drawn
+  in one accent colour because it is pure magnitude and must not borrow the
+  audience's hues.
+
+Two details the grid needs in order to stay truthful:
+
+- **A square-root intensity ramp.** Nightly counts are heavily skewed -- one
+  big night can be ten times a normal one. Under linear normalisation that
+  single cell takes the top step and everything else collapses into the bottom
+  one, so the grid degenerates into present/absent. A square root spreads the
+  middle out while staying monotonic.
+- **A lightness floor, on the ramp only.** The "near black" family averages to
+  something like `#111016`, indistinguishable from the card behind it; its row
+  would render as empty whatever the counts. The ramp scales all three channels
+  up to a minimum lightness, which leaves the ratios -- and so the hue -- alone.
+  The row-header swatch and the tooltip still show the true measured colour, so
+  nothing is misstated; the dark row is drawn in a legible proxy of itself.
+
+The rest carries over unchanged: every cell has an `aria-label`, a hover *and*
+focus tooltip, arrow keys rove a single tab stop through the grid, and the card
+below holds a table with every value.
 
 Styles live in `web/src/Stats/stats.css`, imported by `Stats.tsx` so the page's
 chrome travels with its components rather than accumulating in the global

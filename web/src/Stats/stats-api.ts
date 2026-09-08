@@ -6,22 +6,8 @@
  * like the colour form. Nothing here is admin-only.
  */
 
-/** One populated hour. Empty hours are omitted by the API, not sent as zeroes. */
-export type StatsCell = {
-  h: number;
-  n: number;
-  /** Mean of the most-submitted hue bin that hour. Absent only if n is 0. */
-  hex?: string;
-  label?: string;
-};
-
-export type StatsDay = {
-  date: string;
-  count: number;
-  hours: StatsCell[];
-};
-
-export type TopColor = {
+/** One colour family, ranked across the whole window. It is a grid row. */
+export type ColorRow = {
   key: string;
   label: string;
   hex: string | null;
@@ -29,14 +15,26 @@ export type TopColor = {
   share: number;
 };
 
+export type StatsDay = {
+  date: string;
+  count: number;
+  /** Colour-bin key -> how many that day. Bins with none are omitted. */
+  colors: Record<string, number>;
+};
+
+/** Total submissions in this hour of day, summed across the window. */
+export type HourSlot = { h: number; n: number };
+
 export type StatsTotals = {
   count: number;
   active_days: number;
   avg_per_active_day: number;
   busiest_day: { date: string; count: number } | null;
   busiest_hour: { hour: number; count: number } | null;
-  peak_hour_count: number;
-  top_colors: TopColor[];
+  /** Busiest single colour-on-a-day cell: the top of the grid's scale. */
+  peak_color_day: number;
+  hours: HourSlot[];
+  colors: ColorRow[];
 };
 
 export type StatsResponse = {

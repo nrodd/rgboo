@@ -170,7 +170,7 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 | `POST /api/color` | Validate → assign slot → create pending doc |
 | `GET /api/status` | Queue size, next free slot, hardware state |
 | `GET /api/queue` | Pending requests in slot order |
-| `GET /api/stats` | 30-day colour aggregates for the heatmap page. Cacheable |
+| `GET /api/stats` | 30-day colour aggregates for the stats page. Cacheable |
 | `POST /admin/queue/clear` | Cancel **all** pending. **Worker `X-Api-Key`** |
 | `POST /admin/queue/remove` | Cancel one request by ID. **Worker `X-Api-Key`** |
 | `POST /admin/clear-current` | Pull one user off the overlay. **Worker `X-Api-Key`** |

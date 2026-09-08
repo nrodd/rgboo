@@ -157,8 +157,12 @@ def _tie_break(key: str):
         return (-1, key)
 
 
-def rank_buckets(buckets: dict, limit: int) -> list:
-    """The `limit` busiest bins, as the API's top_colors entries."""
+def rank_buckets(buckets: dict, limit: Optional[int]) -> list:
+    """The busiest bins first, as the API's colour rows.
+
+    `limit` of None returns every populated bin, which is what the colour x
+    day grid wants: one row per colour family the audience actually used.
+    """
     total = sum(int(bucket.get("n", 0)) for bucket in buckets.values())
     if not total:
         return []
@@ -176,7 +180,7 @@ def rank_buckets(buckets: dict, limit: int) -> list:
             "count": int(bucket["n"]),
             "share": round(int(bucket["n"]) / total, 4),
         }
-        for key, bucket in ordered[:limit]
+        for key, bucket in (ordered if limit is None else ordered[:limit])
     ]
 
 
