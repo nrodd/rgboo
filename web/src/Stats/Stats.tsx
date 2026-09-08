@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import "./stats.css";
 import LogoIcon from "../assets/pumpkin.svg?react";
 import { RANGE_PRESETS } from "./stats-api";
 import { useStats } from "./useStats";

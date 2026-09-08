@@ -197,11 +197,14 @@ A few decisions the grid forced:
 - **Arrow keys move a single tab stop** through the grid. 720 tab stops would
   make the rest of the page unreachable.
 
-Styles live in `theme.css` as raw CSS rather than `@apply`, for two reasons
-this theme forces: `--color-*: initial` deletes Tailwind's default palette, so
+Styles live in `web/src/Stats/stats.css`, imported by `Stats.tsx` so the page's
+chrome travels with its components rather than accumulating in the global
+`theme.css`. They are raw CSS rather than `@apply`, for two reasons this theme
+forces: `--color-*: initial` deletes Tailwind's default palette, so
 `white`/`black`/`red` utilities generate no CSS at all; and `--text-sm`/`base`/
 `md` are deliberately oversized for the colour form, which makes those
-utilities unusable for dense UI.
+utilities unusable for dense UI. The rules stay in the `components` layer that
+`theme.css` declares, so Tailwind utilities in JSX still win over them.
 
 ## Failure modes
 
