@@ -86,11 +86,17 @@ export default {
         });
       }
 
-      // Forward request to API
+      // Forward request to API. /api/stats is the one cacheable route:
+      // aggregates only change when scripts/rollup_stats.py is run, so the
+      // edge can absorb repeat views. Everything else here is live queue
+      // state and must never be cached.
       const apiResp = await fetch(targetUrl, {
         method: request.method,
         headers: upstreamHeaders(env),
         body: request.method !== "GET" ? await request.text() : undefined,
+        ...(url.pathname === "/api/stats" && request.method === "GET"
+          ? { cf: { cacheTtl: 300, cacheEverything: true } }
+          : {}),
       });
 
       // Clone headers + add CORS

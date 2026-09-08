@@ -41,10 +41,34 @@ def mock_store():
 
 
 @pytest.fixture()
-def app(mock_store):
+def mock_stats():
+    stats = Mock()
+    stats.read_range.return_value = {
+        'timezone': 'America/New_York',
+        'days': 30,
+        'start_date': '2026-08-10',
+        'end_date': '2026-09-08',
+        'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'updated_at': None,
+        'totals': {
+            'count': 0,
+            'active_days': 0,
+            'avg_per_active_day': 0,
+            'busiest_day': None,
+            'busiest_hour': None,
+            'peak_hour_count': 0,
+            'top_colors': [],
+        },
+        'grid': [],
+    }
+    return stats
+
+
+@pytest.fixture()
+def app(mock_store, mock_stats):
     app = Flask(__name__)
     app.testing = True
-    register_routes(app, mock_store)
+    register_routes(app, mock_store, mock_stats)
     return app
 
 
