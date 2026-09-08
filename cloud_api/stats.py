@@ -81,6 +81,10 @@ class StatsStore:
                 'date': day_id,
                 'count': day['count'],
                 'hours': day['hours'],
+                # Every distinct colour that day, rounded to SWATCH_STEP and
+                # counted. This is what the mosaic draws: no binning into
+                # families, just the colours people actually picked.
+                'swatches': day['swatches'],
                 'timezone': STATS_TIMEZONE,
                 'updated_at': firestore.SERVER_TIMESTAMP,
             })
@@ -173,6 +177,7 @@ class StatsStore:
         """
         grid = []
         range_buckets: dict = {}
+        range_swatches: dict = {}
         hour_totals = [0] * 24
         total_count = 0
         active_days = 0
@@ -206,6 +211,11 @@ class StatsStore:
                     continue
                 hour_totals[int(hour_key)] += count
                 buckets.merge_buckets(day_buckets, hour.get('buckets') or {})
+
+            for key, n in (data.get('swatches') or {}).items():
+                count = int(n)
+                if count > 0:
+                    range_swatches[key] = range_swatches.get(key, 0) + count
 
             buckets.merge_buckets(range_buckets, day_buckets)
             colors = {
@@ -241,10 +251,17 @@ class StatsStore:
                 # Hour-of-day profile for the whole range. Pure magnitude, so
                 # the page draws it in one accent colour, not in hues.
                 'hours': [{'h': hour, 'n': hour_totals[hour]} for hour in range(24)],
-                # Every colour family seen, busiest first: this is the grid's
-                # row order, and the ranking the page states in text rather
-                # than asking anyone to compare two hues by brightness.
+                # The 14 coarse families, busiest first. Only the summary
+                # bar uses these now; the mosaic shows colours unbinned.
                 'colors': buckets.rank_buckets(range_buckets, None),
+                # Every colour picked, ordered so the mosaic reads as a
+                # spectrum. `n` is how many times, which is how many cells
+                # it gets -- popularity becomes band width, with nothing
+                # encoded on top of the colour itself.
+                'swatches': [
+                    {'hex': f'#{key}', 'n': range_swatches[key]}
+                    for key in sorted(range_swatches, key=buckets.swatch_sort_key)
+                ],
             },
             'grid': grid,
         }

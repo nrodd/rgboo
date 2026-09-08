@@ -2,10 +2,10 @@ import type { ColorRow, StatsDay } from "../stats-api";
 import { formatCount, formatDayLong, pluralise } from "../format";
 
 /**
- * The grid's table twin.
+ * The mosaic's table twin.
  *
- * The grid encodes a count as depth of colour, which is an ordinal read at
- * best. Every value in it is reachable here as a number, without hovering.
+ * The mosaic shows popularity as area, which is a glance rather than a
+ * number, and it drops the calendar entirely. Both come back here.
  */
 export const StatsTable = ({ grid, colors }: { grid: StatsDay[]; colors: ColorRow[] }) => {
   const active = grid.filter((day) => day.count > 0);

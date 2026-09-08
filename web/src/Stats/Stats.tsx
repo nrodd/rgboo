@@ -6,7 +6,7 @@ import { RANGE_PRESETS } from "./stats-api";
 import { useStats } from "./useStats";
 import { formatUpdatedAt } from "./format";
 import { StatTiles } from "./components/StatTiles";
-import { ColorTrends } from "./components/ColorTrends";
+import { ColorMosaic } from "./components/ColorMosaic";
 import { HourProfile } from "./components/HourProfile";
 import { StatsTable } from "./components/StatsTable";
 
@@ -64,10 +64,10 @@ const Stats = () => {
               <StatTiles totals={stats.totals} days={stats.days} />
             </section>
 
-            <ColorTrends
-              grid={stats.grid}
+            <ColorMosaic
+              swatches={stats.totals.swatches}
               colors={stats.totals.colors}
-              peak={stats.totals.peak_color_day}
+              total={stats.totals.count}
               isRefreshing={isRefreshing}
             />
 
@@ -78,7 +78,7 @@ const Stats = () => {
                 <div>
                   <p className="stats-eyebrow">Every number</p>
                   <h2 className="stats-heading mt-1">
-                    The data behind the grid
+                    The data behind the picture
                   </h2>
                 </div>
                 <button

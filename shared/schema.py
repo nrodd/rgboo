@@ -55,12 +55,16 @@ HUE_BUCKET_LABELS = (
     "blue", "violet", "magenta", "rose",
 )
 
-# Colours with too little saturation or lightness have no meaningful hue,
+# Colours with too little colourfulness or lightness have no meaningful hue,
 # so they get their own bins instead of being scattered across all twelve.
 BUCKET_DARK = "dark"
 BUCKET_NEUTRAL = "neutral"
 DARK_LIGHTNESS_MAX = 0.10
-NEUTRAL_SATURATION_MAX = 0.15
+# Chroma (max channel minus min), not HLS saturation. Saturation divides by
+# a term that vanishes at the extremes, so it reports 1.0 for #fff8f8 -- a
+# near-white -- and would file it as a fully saturated red. Chroma reports
+# 0.03 for the same colour, which is what the eye says.
+NEUTRAL_CHROMA_MAX = 0.10
 
 # Guard rails for GET /api/stats?days=
 STATS_MIN_DAYS = 1

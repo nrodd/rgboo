@@ -59,6 +59,7 @@ def mock_stats():
             'peak_color_day': 0,
             'hours': [{'h': hour, 'n': 0} for hour in range(24)],
             'colors': [],
+            'swatches': [],
         },
         'grid': [],
     }

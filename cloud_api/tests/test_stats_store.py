@@ -48,6 +48,27 @@ def daily(client):
 # rollup
 # ---------------------------------------------------------------------------
 
+def test_rollup_records_each_distinct_colour_and_its_count(client, store):
+    """The mosaic needs the colours themselves, not just family totals."""
+    client.seed(REQUESTS_COLLECTION, 'a', request_doc(utc(2026, 9, 8, 16), 255, 0, 0))
+    client.seed(REQUESTS_COLLECTION, 'b', request_doc(utc(2026, 9, 8, 17), 255, 0, 0))
+    client.seed(REQUESTS_COLLECTION, 'c', request_doc(utc(2026, 9, 8, 18), 0, 0, 255))
+
+    store.rollup(date(2026, 9, 8), date(2026, 9, 8))
+
+    assert daily(client)['2026-09-08']['swatches'] == {'ff0000': 2, '0000ff': 1}
+
+
+def test_rollup_rounds_imperceptibly_close_colours_together(client, store):
+    """Bounds the per-day map without changing what anyone sees."""
+    client.seed(REQUESTS_COLLECTION, 'a', request_doc(utc(2026, 9, 8, 16), 227, 104, 16))
+    client.seed(REQUESTS_COLLECTION, 'b', request_doc(utc(2026, 9, 8, 17), 226, 105, 17))
+
+    store.rollup(date(2026, 9, 8), date(2026, 9, 8))
+
+    assert daily(client)['2026-09-08']['swatches'] == {'e06810': 2}
+
+
 def test_rollup_writes_one_document_per_active_day(client, store):
     client.seed(REQUESTS_COLLECTION, 'a', request_doc(utc(2026, 9, 7, 23), 255, 0, 0))
     client.seed(REQUESTS_COLLECTION, 'b', request_doc(utc(2026, 9, 7, 23, 5), 250, 4, 4))
@@ -149,14 +170,43 @@ def test_rollup_batches_a_long_range(client, store):
 # read_range
 # ---------------------------------------------------------------------------
 
-def seed_day(client, day_id, hours, count=None, updated_at=None):
+def seed_day(client, day_id, hours, count=None, updated_at=None, swatches=None):
     total = count if count is not None else sum(hour['n'] for hour in hours.values())
     client.seed(STATS_DAILY_COLLECTION, day_id, {
         'date': day_id,
         'count': total,
         'hours': hours,
+        'swatches': swatches or {},
         'updated_at': updated_at or utc(2026, 9, 8, 12),
     })
+
+
+def test_read_range_returns_swatches_ordered_as_a_spectrum(client, store):
+    today = _today()
+    seed_day(
+        client, today,
+        {'20': {'n': 4, 'buckets': {'0': {'n': 4, 'r': 1020, 'g': 0, 'b': 0}}}},
+        count=4,
+        swatches={'0000ff': 1, '000000': 1, 'ff0000': 2, 'f8f8f8': 1},
+    )
+
+    swatches = store.read_range(1)['totals']['swatches']
+
+    # Chromatic first around the wheel, then neutrals, then near-blacks.
+    assert [s['hex'] for s in swatches] == ['#ff0000', '#0000ff', '#f8f8f8', '#000000']
+    assert swatches[0]['n'] == 2
+
+
+def test_read_range_sums_a_colour_across_days(client, store):
+    today = _today()
+    yesterday = (date.fromisoformat(today) - timedelta(days=1)).isoformat()
+    hours = {'20': {'n': 1, 'buckets': {'0': {'n': 1, 'r': 255, 'g': 0, 'b': 0}}}}
+    seed_day(client, yesterday, hours, swatches={'ff0000': 3})
+    seed_day(client, today, hours, swatches={'ff0000': 5, '0000ff': 1})
+
+    swatches = {s['hex']: s['n'] for s in store.read_range(2)['totals']['swatches']}
+
+    assert swatches == {'#ff0000': 8, '#0000ff': 1}
 
 
 def test_read_range_returns_a_cell_per_colour_per_day(client, store):
@@ -199,6 +249,7 @@ def test_read_range_covers_days_with_no_document(client, store):
     assert payload['totals']['busiest_day'] is None
     assert payload['totals']['busiest_hour'] is None
     assert payload['totals']['colors'] == []
+    assert payload['totals']['swatches'] == []
     assert payload['totals']['peak_color_day'] == 0
     assert all(day['colors'] == {} for day in payload['grid'])
 

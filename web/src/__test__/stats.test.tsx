@@ -39,6 +39,12 @@ const statsBody = {
       { key: "9", label: "violet", hex: "#6441a4", count: 40, share: 0.27 },
       { key: "dark", label: "near black", hex: "#101014", count: 18, share: 0.122 },
     ],
+    swatches: [
+      { hex: "#e06810", n: 60 },
+      { hex: "#f89000", n: 30 },
+      { hex: "#6840a8", n: 40 },
+      { hex: "#101018", n: 18 },
+    ],
   },
   grid: [
     { date: "2026-10-29", count: 0, colors: {} },
@@ -64,52 +70,52 @@ test("shows the headline totals", async ({ worker }: { worker: SetupWorker }) =>
   await expect.element(summary.getByText("8 PM")).toBeInTheDocument();
 });
 
-test("gives every colour its own row, busiest first", async ({ worker }: { worker: SetupWorker }) => {
+test("draws one square per submission, so area is popularity", async ({ worker }: { worker: SetupWorker }) => {
   mockStats(worker);
   renderStats();
 
-  const rows = page.getByRole("rowheader");
-  await expect.element(rows.nth(0)).toHaveTextContent("orange");
-  await expect.element(rows.nth(1)).toHaveTextContent("violet");
-  await expect.element(rows.nth(2)).toHaveTextContent("near black");
+  await expect.element(page.getByText("Every colour picked")).toBeInTheDocument();
+  // 60 + 30 + 40 + 18 squares, nothing binned into families.
+  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(148);
 });
 
-test("states each colour's ranking as text, not only as shade", async ({ worker }: { worker: SetupWorker }) => {
-  // The point of the redesign: nobody should have to compare two hues by
-  // brightness to learn which was used more.
+test("keeps the swatch order the API sent, which is the spectrum", async ({ worker }: { worker: SetupWorker }) => {
   mockStats(worker);
   renderStats();
 
-  // Scoped to the grid: "90" also appears in the "Last 90 days" button.
-  const grid = page.getByRole("grid");
-  await expect.element(grid.getByText("90")).toBeInTheDocument();
-  await expect.element(grid.getByText(/· 61%/)).toBeInTheDocument();
+  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(148);
+  const hexes = Array.from(document.querySelectorAll<HTMLElement>(".stats-chip"))
+    .map((chip) => chip.dataset.hex);
+  // Contiguous runs, in the order given: no re-sorting in the component.
+  expect(hexes[0]).toBe("#e06810");
+  expect(hexes[59]).toBe("#e06810");
+  expect(hexes[60]).toBe("#f89000");
+  expect(hexes[147]).toBe("#101018");
 });
 
-test("labels every cell, including colours a day never saw", async ({ worker }: { worker: SetupWorker }) => {
+test("states an exact family ranking alongside the mosaic", async ({ worker }: { worker: SetupWorker }) => {
+  // Area is a glance, not a number: the bar keeps the precise share.
   mockStats(worker);
   renderStats();
 
-  await expect
-    .element(page.getByRole("gridcell", { name: /orange, Sat, Oct 31, 80 colours/ }))
-    .toBeInTheDocument();
-  await expect
-    .element(page.getByRole("gridcell", { name: /orange, Thu, Oct 29, none/ }))
-    .toBeInTheDocument();
+  await expect.element(page.getByText("61%")).toBeInTheDocument();
+  await expect.element(page.getByText("27%")).toBeInTheDocument();
 });
 
-test("hovering a cell reveals the count and which colour it is", async ({ worker }: { worker: SetupWorker }) => {
+test("hovering a square reveals its colour and how often it was picked", async ({ worker }: { worker: SetupWorker }) => {
   mockStats(worker);
   renderStats();
 
-  const cell = page.getByRole("gridcell", { name: /violet, Fri, Oct 30, 28 colours/ });
-  await expect.element(cell).toBeInTheDocument();
-  await cell.hover();
+  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(148);
+  // Hover a specific square: the mosaic's 2px gaps make the container's
+  // own centre an unreliable target.
+  const chip = document.querySelector<HTMLElement>(".stats-chip")!;
+  await page.elementLocator(chip).hover();
 
   const tip = page.getByRole("tooltip");
   await expect.element(tip).toBeInTheDocument();
-  await expect.element(tip).toHaveTextContent("28 colours");
-  await expect.element(tip).toHaveTextContent("violet");
+  await expect.element(tip).toHaveTextContent("60 picks");
+  await expect.element(tip).toHaveTextContent("#e06810");
 });
 
 test("shows when the stream is busy, separately from which colour", async ({ worker }: { worker: SetupWorker }) => {
@@ -164,6 +170,7 @@ test("reports an empty window honestly", async ({ worker }: { worker: SetupWorke
       busiest_day: null, busiest_hour: null, peak_color_day: 0,
       hours: Array.from({ length: 24 }, (_, h) => ({ h, n: 0 })),
       colors: [],
+      swatches: [],
     },
     grid: [{ date: "2026-10-29", count: 0, colors: {} }],
   });

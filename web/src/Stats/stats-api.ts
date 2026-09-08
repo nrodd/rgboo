@@ -15,6 +15,9 @@ export type ColorRow = {
   share: number;
 };
 
+/** One colour people picked, and how many times, across the window. */
+export type Swatch = { hex: string; n: number };
+
 export type StatsDay = {
   date: string;
   count: number;
@@ -35,6 +38,8 @@ export type StatsTotals = {
   peak_color_day: number;
   hours: HourSlot[];
   colors: ColorRow[];
+  /** Every colour picked, already ordered so it reads as a spectrum. */
+  swatches: Swatch[];
 };
 
 export type StatsResponse = {

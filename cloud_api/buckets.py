@@ -25,7 +25,7 @@ from shared.schema import (
     HUE_BUCKET_COUNT,
     HUE_BUCKET_DEGREES,
     HUE_BUCKET_LABELS,
-    NEUTRAL_SATURATION_MAX,
+    NEUTRAL_CHROMA_MAX,
     STATS_TIMEZONE,
 )
 
@@ -69,6 +69,16 @@ def local_midnight(day: date) -> datetime:
     return datetime(day.year, day.month, day.day, tzinfo=STATS_TZ)
 
 
+def chroma(r: int, g: int, b: int) -> float:
+    """How colourful a colour is, 0 (grey) to 1 (fully saturated).
+
+    Used in place of HLS saturation, which divides by a term that vanishes
+    at the extremes: it reports 1.0 for #fff8f8, a near-white, which would
+    file it as a vivid red.
+    """
+    return (max(r, g, b) - min(r, g, b)) / 255
+
+
 def hue_bucket(r: int, g: int, b: int) -> str:
     """The bin key a colour belongs to.
 
@@ -76,11 +86,11 @@ def hue_bucket(r: int, g: int, b: int) -> str:
     for them, but it is numerically unstable, so they would smear randomly
     across all twelve bins. They get their own keys instead.
     """
-    hue, lightness, saturation = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+    hue, lightness, _ = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
 
     if lightness < DARK_LIGHTNESS_MAX:
         return BUCKET_DARK
-    if saturation < NEUTRAL_SATURATION_MAX:
+    if chroma(r, g, b) < NEUTRAL_CHROMA_MAX:
         return BUCKET_NEUTRAL
 
     degrees = hue * 360
@@ -100,6 +110,44 @@ def bucket_label(key: str) -> str:
         return HUE_BUCKET_LABELS[int(key)]
     except (ValueError, IndexError):
         return "unknown"
+
+
+# Individual colours are stored rounded to this step per channel. Two
+# colours a step apart are indistinguishable on an LED strip, and rounding
+# bounds the per-day map at 32^3 keys however many people submit.
+SWATCH_STEP = 8
+
+
+def swatch_key(r: int, g: int, b: int) -> str:
+    """The map key one submitted colour is counted under."""
+    def snap(value: int) -> int:
+        return max(0, min(255, round(value / SWATCH_STEP) * SWATCH_STEP))
+
+    return "{:02x}{:02x}{:02x}".format(snap(r), snap(g), snap(b))
+
+
+def swatch_rgb(key: str) -> tuple:
+    """Back to (r, g, b) from a swatch key."""
+    return tuple(int(key[index:index + 2], 16) for index in (0, 2, 4))
+
+
+def swatch_sort_key(key: str):
+    """Order swatches so the mosaic reads as a spectrum.
+
+    Chromatic colours first, around the wheel and light-to-dark within a
+    hue; then the neutrals, which have no hue to place them by; then the
+    near-blacks. Sorting is what turns a bag of colours into a picture --
+    a band's width becomes how often that colour was picked, with nothing
+    encoded on top of the data.
+    """
+    r, g, b = swatch_rgb(key)
+    hue, lightness, _ = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+
+    if lightness < DARK_LIGHTNESS_MAX:
+        return (2, 0.0, -lightness)
+    if chroma(r, g, b) < NEUTRAL_CHROMA_MAX:
+        return (1, 0.0, -lightness)
+    return (0, hue, -lightness)
 
 
 def add_sample(buckets: dict, r: int, g: int, b: int) -> dict:
@@ -132,21 +180,6 @@ def bucket_hex(bucket: dict) -> Optional[str]:
         return max(0, min(255, round(int(bucket.get(name, 0)) / count)))
 
     return "#{:02x}{:02x}{:02x}".format(channel("r"), channel("g"), channel("b"))
-
-
-def dominant(buckets: dict) -> Optional[tuple]:
-    """The busiest bin as (key, bucket), or None when there are no samples.
-
-    Ties break on the bin key so the same data always renders the same
-    colour -- a heatmap cell that flickers between two shades on identical
-    input reads as a bug.
-    """
-    populated = [
-        (key, bucket) for key, bucket in buckets.items() if int(bucket.get("n", 0)) > 0
-    ]
-    if not populated:
-        return None
-    return max(populated, key=lambda item: (int(item[1]["n"]), _tie_break(item[0])))
 
 
 def _tie_break(key: str):
@@ -185,16 +218,21 @@ def rank_buckets(buckets: dict, limit: Optional[int]) -> list:
 
 
 def accumulate(samples: Iterable[tuple]) -> dict:
-    """Build day -> hour -> bucket totals from (processed_at, r, g, b) rows.
+    """Build a day's stored aggregate from (processed_at, r, g, b) rows.
 
-    Returns the exact `hours` map a stats_daily document stores, keyed by
-    day, plus a per-day count. Days with no samples are simply absent.
+    Returns the `hours` and `swatches` maps a stats_daily document stores,
+    keyed by day, plus a per-day count. Days with no samples are absent.
     """
     days: dict = {}
     for moment, r, g, b in samples:
-        day = days.setdefault(day_key(moment), {"count": 0, "hours": {}})
+        day = days.setdefault(
+            day_key(moment), {"count": 0, "hours": {}, "swatches": {}}
+        )
         hour = day["hours"].setdefault(hour_key(moment), {"n": 0, "buckets": {}})
         day["count"] += 1
         hour["n"] += 1
         add_sample(hour["buckets"], r, g, b)
+
+        key = swatch_key(r, g, b)
+        day["swatches"][key] = day["swatches"].get(key, 0) + 1
     return days

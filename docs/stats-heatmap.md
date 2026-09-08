@@ -1,8 +1,8 @@
-# Colour stats and the colour × day grid
+# Colour stats and the colour mosaic
 
 A public page at `/stats` showing what the LED strip has actually been doing:
-a grid with one row per colour family and one square per day, plus an
-hour-of-day profile and the headline numbers around them.
+a mosaic of every colour anyone picked, one square per submission, ordered by
+hue — plus an hour-of-day profile and the headline numbers around them.
 
 Related: [architecture.md](architecture.md) (the system this reads from),
 [deploying.md](deploying.md) (shipping it).
@@ -79,6 +79,7 @@ with nothing dispatched.
 | `count` | Dispatched requests that day |
 | `hours` | `"0".."23"` → `{ n, buckets }`, populated hours only |
 | `hours.<h>.buckets` | Hue bin → `{ n, r, g, b }`, the channels as **sums** |
+| `swatches` | Rounded colour → how many times picked. What the mosaic draws |
 | `timezone`, `updated_at` | What the rollup used, and when it ran |
 
 Sums rather than an average, because sums are what a recount can rebuild and
@@ -93,9 +94,16 @@ hue — `dark` (lightness < 0.10) and `neutral` (saturation < 0.15) — which wo
 otherwise smear randomly across all twelve, since hue is numerically unstable
 down there.
 
-Each bin becomes a **row** of the grid, and the mean colour of the bin is the
-row's shade. Every bin a day saw is reported with its own count -- the grid is
-not a "winner takes the square" summary.
+The bins are now only used for the summary bar under the mosaic. The mosaic
+itself is unbinned: `swatches` on each day document counts every distinct
+colour that day, rounded to `SWATCH_STEP` per channel. Two colours a step apart
+are indistinguishable on an LED strip, and the rounding bounds the map at 32³
+keys however many people submit.
+
+Neutrality is decided by **chroma** (max channel minus min), not HLS
+saturation. Saturation divides by a term that vanishes at the extremes, so it
+reports `1.0` for `#fff8f8` — a near-white — which used to file it as a vivid
+red. Chroma reports `0.03` for the same colour, which is what the eye says.
 
 ### Firestore setup
 
@@ -104,9 +112,10 @@ Two things to configure, neither in code:
 1. **Composite index** on `requests`: `status ASC, processed_at ASC` — the
    rollup's range query needs it. (Separate from the existing
    `status, scheduled_time` index.)
-2. **Single-field index exemption** on `stats_daily.hours`. That map holds
-   roughly 1,150 numeric leaves, all auto-indexed by default, which is index
-   write cost for fields nothing ever queries.
+2. **Single-field index exemptions** on `stats_daily.hours` and
+   `stats_daily.swatches`. Between them those maps hold a few thousand numeric
+   leaves, all auto-indexed by default, which is index write cost for fields
+   nothing ever queries.
 
 ```
 gcloud firestore indexes composite create \
@@ -116,6 +125,10 @@ gcloud firestore indexes composite create \
 
 gcloud firestore indexes fields update \
   --collection-group=stats_daily --field-path=hours \
+  --disable-indexes
+
+gcloud firestore indexes fields update \
+  --collection-group=stats_daily --field-path=swatches \
   --disable-indexes
 ```
 
@@ -163,7 +176,10 @@ Empty hours are omitted rather than sent as zeroes, which keeps a month around
     "peak_color_day": 127,
     "hours": [{ "h": 0, "n": 0 }, "... all 24, for the hour profile"],
     "colors": [
-      { "key": "1", "label": "orange", "hex": "#ef8213", "count": 303, "share": 0.2606 }
+      { "key": "1", "label": "orange", "hex": "#ef8213", "count": 293, "share": 0.2519 }
+    ],
+    "swatches": [
+      { "hex": "#d02828", "n": 3 }, "... every colour picked, in spectrum order"
     ]
   },
   "grid": [
@@ -172,9 +188,9 @@ Empty hours are omitted rather than sent as zeroes, which keeps a month around
 }
 ```
 
-`totals.colors` is the grid's row order. `peak_color_day` is the busiest single
-*(colour, day)* cell, which sets the top of the grid's intensity scale -- not
-`busiest_day`, which sums every colour and would leave every cell pale.
+`totals.swatches` is the mosaic, already in spectrum order, and its counts sum
+to `totals.count`. `totals.colors` is the summary bar beneath it. A month of
+1,163 picks came to 740 distinct colours and a 26 KB payload.
 
 ## The page
 
@@ -182,54 +198,43 @@ Not linked from anywhere yet -- the plan is to collect a month of data first,
 then publish it by adding a link to `web/src/layout/Footer.tsx`. Until then it
 is reachable at `/stats` and nowhere else.
 
-## The chart, and the one it replaced
+## The chart, and the two it replaced
 
-The first version of this page was a **day x hour** grid: each cell painted
-with that hour's most-picked colour, dimmed by how many colours came in.
+The first version was a **day × hour** grid, each cell painted with that hour's
+most-picked colour and dimmed by volume. The second was a **colour × day**
+grid, one row per family, each row a single hue deepening with its count.
 
-That encoding cannot work, and it is worth writing down why. Brightness carried
-the count -- but brightness is also an intrinsic property of a colour the
-audience chose, and nobody controls that. The two meanings collided and the
-scale ran backwards: a cell of three near-black submissions rendered *darker*
-than a cell of two white ones. Measured on real data, the busiest near-black
-cell came out less than a third as bright as the quietest pale one.
+Both encoded a count as brightness, and that cannot work here. Brightness is
+*also* an intrinsic property of a colour the audience chose, so the two
+meanings collide. On the first version the scale ran backwards outright:
+measured on real data, a cell of three near-black submissions rendered less
+than a third as bright as a cell of two pale ones. The second version fixed
+that by making each row one fixed hue, but it still paid a row per family —
+which forced the binning down to fourteen coarse names and hid every shade.
 
-No fix keeps that layout, because luminance cannot carry volume while the data
-is itself luminance. The volume encoding had to move.
+The mosaic encodes **nothing**. A colour picked forty times gets forty squares,
+so popularity is simply how much of the picture it occupies, and sorting by hue
+turns the pile into a spectrum. Because it costs no rows, it needs no binning
+at all: every shade shows as itself.
 
-**Colour x day** is where it moved to. One row per colour family, one column
-per day:
+- **Order is the whole design.** Chromatic colours first, around the wheel and
+  light-to-dark within a hue; then the neutrals, which have no hue to place
+  them by; then the near-blacks.
+- **A summary bar keeps the exact numbers.** Area is a glance, not a figure, so
+  a single stacked bar of the fourteen families sits underneath with counts and
+  shares. That is the one place the coarse bins still earn their keep.
+- **Squares are capped at 4,000.** Past that the whole mosaic scales by one
+  factor, which leaves every colour's share of the picture intact, and the
+  caption says so. Colours that would round away keep one square rather than
+  disappearing.
+- **Hover is delegated.** One listener on the container, not one per square: at
+  a few thousand cells the per-cell handlers are the expensive part.
+- **A hairline ring on every square**, so a near-black pick reads as a square
+  rather than as a gap in the mosaic.
 
-- A row is a **single fixed hue**, so light-to-dark inside it means only "more
-  of this colour". That is the one arrangement where a sequential ramp is
-  honest -- it is the "sequential = one hue" rule, applied per row.
-- **Nothing asks the reader to compare two hues by brightness.** The ranking is
-  the row order, stated again as a count and a share in text at the end of each
-  row.
-- **Every colour is shown, not each hour's winner.** An hour with fifty
-  submissions across six families used to render as a single square; now all
-  six appear in their own rows.
-- **Volume over time moved out** into a separate hour-of-day bar chart, drawn
-  in one accent colour because it is pure magnitude and must not borrow the
-  audience's hues.
-
-Two details the grid needs in order to stay truthful:
-
-- **A square-root intensity ramp.** Nightly counts are heavily skewed -- one
-  big night can be ten times a normal one. Under linear normalisation that
-  single cell takes the top step and everything else collapses into the bottom
-  one, so the grid degenerates into present/absent. A square root spreads the
-  middle out while staying monotonic.
-- **A lightness floor, on the ramp only.** The "near black" family averages to
-  something like `#111016`, indistinguishable from the card behind it; its row
-  would render as empty whatever the counts. The ramp scales all three channels
-  up to a minimum lightness, which leaves the ratios -- and so the hue -- alone.
-  The row-header swatch and the tooltip still show the true measured colour, so
-  nothing is misstated; the dark row is drawn in a legible proxy of itself.
-
-The rest carries over unchanged: every cell has an `aria-label`, a hover *and*
-focus tooltip, arrow keys rove a single tab stop through the grid, and the card
-below holds a table with every value.
+The mosaic drops the calendar entirely. `grid` still carries per-day, per-family
+counts, and the table view under the chart is where both the numbers and the
+nights come back.
 
 Styles live in `web/src/Stats/stats.css`, imported by `Stats.tsx` so the page's
 chrome travels with its components rather than accumulating in the global

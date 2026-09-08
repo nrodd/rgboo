@@ -1,4 +1,4 @@
-"""Unit tests for the pure bucketing math behind the colour heatmap."""
+"""Unit tests for the pure bucketing math behind the colour stats."""
 
 from datetime import date, datetime, timezone
 
@@ -11,7 +11,6 @@ from ..buckets import (
     bucket_label,
     day_key,
     day_range,
-    dominant,
     hour_key,
     hue_bucket,
     local_midnight,
@@ -58,6 +57,17 @@ def test_white_and_grey_share_the_neutral_bin():
     assert hue_bucket(255, 255, 255) == "neutral"
     assert hue_bucket(128, 128, 128) == "neutral"
     assert hue_bucket(200, 198, 202) == "neutral"
+
+
+def test_a_barely_tinted_near_white_is_neutral_not_a_vivid_hue():
+    """HLS saturation reports 1.0 here; chroma reports 0.03."""
+    assert hue_bucket(255, 248, 248) == "neutral"
+    assert hue_bucket(248, 255, 250) == "neutral"
+
+
+def test_a_genuinely_dusty_pastel_keeps_its_hue():
+    # The threshold must not swallow real, if muted, colours.
+    assert hue_bucket(224, 176, 176) == "0"
 
 
 def test_a_dark_but_saturated_colour_is_dark_not_neutral():
@@ -119,30 +129,6 @@ def test_bucket_hex_averages_within_a_bin():
 
 def test_bucket_hex_is_none_for_an_empty_bin():
     assert bucket_hex({"n": 0, "r": 0, "g": 0, "b": 0}) is None
-
-
-def test_dominant_picks_the_busiest_bin():
-    buckets = {
-        "0": {"n": 3, "r": 765, "g": 0, "b": 0},
-        "8": {"n": 9, "r": 0, "g": 0, "b": 2295},
-    }
-    key, bucket = dominant(buckets)
-    assert key == "8"
-    assert bucket_hex(bucket) == "#0000ff"
-
-
-def test_dominant_breaks_ties_deterministically():
-    """Identical input must always render the same cell colour."""
-    buckets = {
-        "0": {"n": 4, "r": 1020, "g": 0, "b": 0},
-        "8": {"n": 4, "r": 0, "g": 0, "b": 1020},
-    }
-    assert dominant(buckets)[0] == dominant(dict(reversed(list(buckets.items()))))[0]
-
-
-def test_dominant_is_none_when_nothing_was_submitted():
-    assert dominant({}) is None
-    assert dominant({"0": {"n": 0, "r": 0, "g": 0, "b": 0}}) is None
 
 
 def test_merge_buckets_sums_counts_and_channels():
