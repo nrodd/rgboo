@@ -12,7 +12,6 @@ jobs:
       pull-requests: read
     outputs:
       firmware: ${{ steps.changes.outputs.firmware }}
-      middleware: ${{ steps.changes.outputs.middleware }}
       web: ${{ steps.changes.outputs.web }}
       cloud_api: ${{ steps.changes.outputs.cloud_api }}
       bridge: ${{ steps.changes.outputs.bridge }}
@@ -24,8 +23,6 @@ jobs:
           filters: |
             firmware:
             - 'firmware/**'
-            middleware:
-            - 'middleware/**'
             web:
             - 'web/**'
             cloud_api:
@@ -34,9 +31,6 @@ jobs:
             bridge:
             - 'bridge/**'
             - 'shared/**'
-            # The bridge reuses these two from middleware/ unchanged.
-            - 'middleware/obs.py'
-            - 'middleware/templates/**'
 
   build-firmware:
     name: "👻 build firmware"
@@ -61,25 +55,6 @@ jobs:
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
       - run: pio run
-
-  build-middleware:
-    name: "🧙 build middleware"
-    needs: [changes]
-    runs-on: ubuntu-latest
-    if: ${{ needs.changes.outputs.middleware == 'true' }}
-    defaults:
-      run:
-        working-directory: "./middleware"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-      - run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest
-      - run: pytest tests -q
 
   build-cloud-api:
     name: "☁️ build cloud_api"

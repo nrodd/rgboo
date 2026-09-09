@@ -1,8 +1,7 @@
 """Firestore-backed color-request queue and pacing clock.
 
-Mirrors the interface of the old in-process ColorQueue
-(middleware/color_queue.py) so cloud_api/routes.py ports over almost
-unchanged, and so tests can swap in a fake/mock store.
+A narrow interface over Firestore so cloud_api/routes.py stays free of
+query details, and so tests can swap in a fake/mock store.
 """
 
 import hashlib

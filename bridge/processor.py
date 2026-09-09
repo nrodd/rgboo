@@ -1,8 +1,7 @@
 """The dispatch loop: wait for each request's slot, then drive the LEDs.
 
-Ported from ColorQueue._worker_loop (middleware/color_queue.py:82-138).
-The differences are all consequences of the queue living in Firestore
-instead of an in-process queue.Queue:
+The queue lives in Firestore rather than in one process, and every
+difference below follows from that:
 
   * Work arrives by upsert()/sync() from a listener or poller, rather
     than from queue.get(), and is ordered by scheduled_time rather than
