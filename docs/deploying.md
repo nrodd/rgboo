@@ -127,8 +127,9 @@ git checkout <last-good-sha>
 sudo systemctl restart rgboo-bridge
 ```
 
-If it will not start, `sudo systemctl stop rgboo-bridge` and fall back to the
-old middleware — never both at once, since they want the same USB port.
+If it will not start, `sudo systemctl stop rgboo-bridge` and check out an
+older revision — never run two bridges at once, since they want the same
+USB port.
 
 ---
 
@@ -165,8 +166,7 @@ dashboard (Workers → rgboo → Deployments), which needs no rebuild. Details:
 
 ## 4. Firmware → ESP32
 
-Stop the bridge (or the old middleware) first — whatever owns the serial port
-blocks the upload.
+Stop the bridge first — whatever owns the serial port blocks the upload.
 
 ```bash
 cd firmware

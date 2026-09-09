@@ -1,9 +1,8 @@
 """A SerialController stand-in that logs instead of touching the USB port.
 
-Phase 2/4 of the migration run the bridge on the same machine as the old
-middleware, which still owns the serial device. --dry-run exercises the
-whole path -- Firestore, slot timing, cancellation, OBS, status writes --
-without opening the port and fighting over it.
+--dry-run exercises the whole path -- Firestore, slot timing,
+cancellation, OBS, status writes -- on a machine with no ESP32 attached,
+or without fighting a running bridge for the port.
 """
 
 import logging
@@ -27,8 +26,7 @@ class DryRunSerialController:
 
     def is_connected(self) -> bool:
         # Reported honestly in the heartbeat: no port is open, so the
-        # cloud API shows serial_connected: false while the real
-        # middleware is still the one driving the LEDs.
+        # cloud API shows serial_connected: false.
         return False
 
     def send_color(self, r: int, g: int, b: int) -> Tuple[bool, str]:

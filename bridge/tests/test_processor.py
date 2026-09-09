@@ -6,9 +6,8 @@ from ..processor import ColorProcessor
 from .conftest import make_request
 
 """
-Unit tests for the dispatch loop (bridge/processor.py), ported from
-middleware/color_queue.py's worker loop. Waits are kept tiny so ticks
-return immediately.
+Unit tests for the dispatch loop (bridge/processor.py). Waits are kept
+tiny so ticks return immediately.
 """
 
 

@@ -1,11 +1,8 @@
 """Pure slot-assignment math for pacing color requests.
 
-Ported from the lock-protected calculation in the original in-process
-queue (middleware/color_queue.py: ColorQueue.add_request, lines 41-53).
-Kept here as a pure function, independent of Firestore, so it's trivial
-to unit test. RequestStore.add_request calls it inside a Firestore
-transaction, which is the distributed equivalent of the old
-threading.Lock.
+Kept as a pure function, independent of Firestore, so it's trivial to
+unit test. RequestStore.add_request calls it inside a Firestore
+transaction, which is what serialises concurrent submissions.
 """
 
 from datetime import datetime, timedelta

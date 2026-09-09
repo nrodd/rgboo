@@ -1,26 +1,24 @@
 """The local OBS browser source, served by the bridge on :5001.
 
 Deliberately thin: the routes, SocketIO handlers, local-IP-only check and
-the HTML template are imported from middleware/obs.py and
-middleware/templates/ unchanged, so the OBS scene needs no edits at
-cutover. Phase 6 of the migration moves those two files into bridge/ when
-middleware/ is retired.
+the HTML template live in obs.py and templates/ next door, so the OBS
+scene needs no edits.
 """
 
 import logging
 import threading
 from pathlib import Path
 
-import middleware
 from flask import Flask
 from flask_socketio import SocketIO
-from middleware.obs import setup_obs_routes, update_obs_username
+
+from .obs import setup_obs_routes, update_obs_username
 
 logger = logging.getLogger(__name__)
 
-# Resolved from the middleware package rather than hardcoded, so it keeps
-# working when that directory moves.
-TEMPLATE_DIR = Path(middleware.__file__).resolve().parent / 'templates'
+# Resolved relative to this file rather than the working directory, so the
+# systemd unit finds it whatever it is started from.
+TEMPLATE_DIR = Path(__file__).resolve().parent / 'templates'
 
 
 def create_obs_app(secret_key: str):
@@ -51,8 +49,8 @@ def start_obs_server(app, socketio, host: str, port: int) -> threading.Thread:
                 port=port,
                 debug=False,
                 use_reloader=False,
-                # Werkzeug needs this outside debug. Same local-only server
-                # the middleware ran; reachable from this machine only.
+                # Werkzeug needs this outside debug. Local-only server:
+                # reachable from this machine only.
                 allow_unsafe_werkzeug=True,
             )
         except TypeError:

@@ -4,7 +4,7 @@ Keeping these in one module ensures the Cloud Run API and the bridge agree
 on Firestore collection names, status values, and pacing timing.
 """
 
-# One color change per slot, matching middleware/color_queue.py.
+# One color change per slot.
 SLOT_SECONDS = 20
 
 # The bridge beats every 60s; older than this counts as offline.
@@ -24,7 +24,7 @@ DENYLIST_COLLECTION = "denylist"
 # Also the marker that makes a repeated admin clear a no-op.
 REDACTED_USERNAME = "[redacted]"
 
-# Must match middleware/obs.py, which the bridge reuses unchanged.
+# Must match the initial value in bridge/obs.py.
 DEFAULT_OBS_USERNAME = "Waiting for user..."
 
 STATUS_PENDING = "pending"
