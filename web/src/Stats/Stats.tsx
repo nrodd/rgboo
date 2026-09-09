@@ -8,10 +8,18 @@ import { StatTiles } from "./components/StatTiles";
 import { ColorMosaic } from "./components/ColorMosaic";
 import { HourProfile } from "./components/HourProfile";
 import { StatsTable } from "./components/StatsTable";
+import { ComingSoon } from "./components/ComingSoon";
 
 const Stats = () => {
-  const { stats, error, isLoading, isRefreshing } = useStats();
+  const { stats, isLoading, isRefreshing } = useStats();
   const [showTable, setShowTable] = useState(false);
+
+  // Nothing dispatched yet, the rollup never run, or the aggregates
+  // unreachable: all three leave us with nothing to draw, and a visitor
+  // cannot act on the difference between them. The console keeps the error
+  // for whoever is debugging.
+  const hasData = !!stats && stats.totals.count > 0;
+  const showComingSoon = !isLoading && !hasData;
 
   return (
     <main className="admin-shell min-h-dvh px-5 py-6 text-bone sm:px-8 sm:py-10">
@@ -23,18 +31,15 @@ const Stats = () => {
               RGBoo stats
             </span>
           </Link>
-          <p className="stats-faint text-[0.7rem] font-medium">
-            Updated {formatUpdatedAt(stats?.updated_at ?? null)}
-          </p>
+          {/* Only worth showing once there is something it dates. */}
+          {hasData && (
+            <p className="stats-faint text-[0.7rem] font-medium">
+              Updated {formatUpdatedAt(stats.updated_at)}
+            </p>
+          )}
         </header>
 
-        {error && (
-          <p role="alert" className="stats-alert">
-            {error}
-          </p>
-        )}
-
-        {isLoading && !error && (
+        {isLoading && (
           <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" aria-label="Loading stats">
             {[0, 1, 2, 3].map((item) => (
               <div key={item} className="stats-skeleton animate-pulse" />
@@ -42,7 +47,9 @@ const Stats = () => {
           </section>
         )}
 
-        {stats && (
+        {showComingSoon && <ComingSoon />}
+
+        {hasData && (
           <>
             <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4" aria-label="Summary">
               <StatTiles totals={stats.totals} days={stats.days} />

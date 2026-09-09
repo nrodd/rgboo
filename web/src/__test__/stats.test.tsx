@@ -149,32 +149,50 @@ test("the table view exposes the same numbers without hovering", async ({ worker
   await expect.element(table.getByText(/Oct 29/)).not.toBeInTheDocument();
 });
 
-test("surfaces an API failure instead of an empty page", async ({ worker }: { worker: SetupWorker }) => {
+const emptyBody = {
+  ...statsBody,
+  updated_at: null,
+  totals: {
+    count: 0, active_days: 0, avg_per_active_day: 0,
+    busiest_day: null, busiest_hour: null,
+    hours: Array.from({ length: 24 }, (_, h) => ({ h, n: 0 })),
+    colors: [],
+    sequence: [],
+    sampled: false,
+  },
+  grid: [{ date: "2026-10-29", count: 0, colors: {} }],
+};
+
+test("shows the coming-soon placeholder before there is any data", async ({ worker }: { worker: SetupWorker }) => {
+  mockStats(worker, emptyBody);
+  renderStats();
+
+  await expect.element(page.getByText("Nothing stirs here yet")).toBeInTheDocument();
+  await expect.element(page.getByRole("link", { name: "Go pick a colour" })).toBeInTheDocument();
+  // The dashboard is replaced, not merely emptied: a grid of zeroes and a
+  // flat bar chart read as broken.
+  expect(document.querySelector(".stats-chip")).toBeNull();
+  expect(document.querySelector(".stats-hour-col")).toBeNull();
+  await expect.element(page.getByText(/Updated/)).not.toBeInTheDocument();
+});
+
+test("shows the same placeholder when the stats cannot be fetched", async ({ worker }: { worker: SetupWorker }) => {
+  // A visitor can do nothing about a 503, and cannot tell it apart from
+  // "no data yet" anyway. The error goes to the console instead.
   worker.use(http.get("*/api/stats", () =>
     HttpResponse.json({ error: "Stats are not available" }, { status: 503 })));
   renderStats();
 
-  await expect.element(page.getByRole("alert")).toHaveTextContent("Stats are not available");
+  await expect.element(page.getByText("Nothing stirs here yet")).toBeInTheDocument();
+  expect(document.querySelector('[role="alert"]')).toBeNull();
 });
 
-test("reports an empty window honestly", async ({ worker }: { worker: SetupWorker }) => {
-  mockStats(worker, {
-    ...statsBody,
-    totals: {
-      count: 0, active_days: 0, avg_per_active_day: 0,
-      busiest_day: null, busiest_hour: null,
-      hours: Array.from({ length: 24 }, (_, h) => ({ h, n: 0 })),
-      colors: [],
-      sequence: [],
-      sampled: false,
-    },
-    grid: [{ date: "2026-10-29", count: 0, colors: {} }],
-  });
+test("shows the dashboard, not the placeholder, once data exists", async ({ worker }: { worker: SetupWorker }) => {
+  mockStats(worker);
   renderStats();
 
-  await expect.element(page.getByText(/Nothing has lit up/)).toBeInTheDocument();
-  await expect.element(page.getByText("No activity in this window yet")).toBeInTheDocument();
-  await expect.element(page.getByText("No colours in this window yet.").first()).toBeInTheDocument();
+  await expect.element(page.getByLabelText("Summary")).toBeInTheDocument();
+  expect(document.querySelector(".stats-soon")).toBeNull();
 });
 
 describe("formatting", () => {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchStats, type StatsResponse } from "./stats-api";
 
-export type StatsState = {
+type StatsState = {
   stats: StatsResponse | null;
   error: string;
   /** True only for the very first load, when there is nothing to hold on screen. */
@@ -28,6 +28,11 @@ export const useStats = (): StatsState => {
       hasLoaded.current = true;
     } catch (err) {
       if (signal.aborted) return;
+      // The page shows the coming-soon placeholder rather than an error: a
+      // visitor can do nothing about a failed fetch, and "no data yet" and
+      // "could not reach the data" look identical from their side. The
+      // console is where this stays diagnosable.
+      console.error("Failed to load stats", err);
       setError(err instanceof Error ? err.message : "Unable to load stats");
     } finally {
       if (!signal.aborted) setIsRefreshing(false);

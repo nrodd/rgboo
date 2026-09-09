@@ -206,6 +206,20 @@ Not linked from anywhere yet -- the plan is to collect a month of data first,
 then publish it by adding a link to `web/src/layout/Footer.tsx`. Until then it
 is reachable at `/stats` and nowhere else.
 
+### Before there is anything to show
+
+With no data the page renders a Halloween coming-soon card instead of the
+dashboard, and the same card covers a failed fetch. Three situations reach it:
+nothing dispatched yet, the rollup never run, and the aggregates unreachable. A
+visitor cannot act on the difference, and cannot tell them apart anyway -- while
+a grid of zeroes and a flat bar chart read as something broken rather than as
+something not started.
+
+That means `/stats` shows no error banner. A failed fetch is logged with
+`console.error` instead, which is where it stays useful to whoever is
+debugging. The page flips to the dashboard on its own as soon as
+`totals.count` is above zero.
+
 ## The chart, and the two it replaced
 
 The first version was a **day × hour** grid, each cell painted with that hour's

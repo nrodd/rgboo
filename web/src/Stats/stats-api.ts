@@ -55,7 +55,7 @@ export type StatsResponse = {
  * The only window the page shows. Sent explicitly rather than relying on
  * the API's default, so the two cannot drift apart.
  */
-export const STATS_DAYS = 30;
+const STATS_DAYS = 30;
 
 export const fetchStats = async (): Promise<StatsResponse> => {
   const response = await fetch(`/api/stats?days=${STATS_DAYS}`);

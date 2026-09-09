@@ -74,13 +74,44 @@
     width: 9rem;
   }
 
-  .stats-alert {
-    background: rgb(69 10 10 / 50%);
-    border: 1px solid rgb(248 113 113 / 40%);
-    border-radius: 1rem;
-    color: #fee2e2;
-    font-size: 0.85rem;
-    padding: 1rem 1.25rem;
+
+  .stats-soon {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    padding: 4rem 1.5rem 4.5rem;
+    position: relative;
+    text-align: center;
+  }
+
+  .stats-soon-pumpkin {
+    filter: drop-shadow(0 0 34px rgb(227 104 16 / 35%));
+    height: 5.5rem;
+    margin-bottom: 1.75rem;
+    width: 5.5rem;
+    animation: stats-soon-float 5s ease-in-out infinite;
+  }
+
+  .stats-soon-heading {
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .stats-soon-body {
+    color: rgb(235 219 190 / 60%);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    max-width: 34rem;
+  }
+
+  /* The button is an anchor here, so it needs the bits the class assumes
+     a <button> already has. */
+  .stats-soon-link {
+    display: inline-block;
+    text-decoration: none;
   }
 
   .stats-skeleton {
@@ -273,5 +304,16 @@
 @media (prefers-reduced-motion: reduce) {
   .stats-mosaic {
     transition: none;
+  }
+}
+
+@keyframes stats-soon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-soon-pumpkin {
+    animation: none;
   }
 }
