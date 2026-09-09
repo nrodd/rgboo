@@ -11,13 +11,12 @@ import { StatsTable } from "./components/StatsTable";
 import { ComingSoon } from "./components/ComingSoon";
 
 const Stats = () => {
-  const { stats, isLoading, isRefreshing } = useStats();
+  const { stats, isLoading } = useStats();
   const [showTable, setShowTable] = useState(false);
 
   // Nothing dispatched yet, the rollup never run, or the aggregates
-  // unreachable: all three leave us with nothing to draw, and a visitor
-  // cannot act on the difference between them. The console keeps the error
-  // for whoever is debugging.
+  // unreachable: all three leave nothing to draw and a visitor cannot act on
+  // the difference. Everything below this gate may assume a non-empty window.
   const hasData = !!stats && stats.totals.count > 0;
   const showComingSoon = !isLoading && !hasData;
 
@@ -31,7 +30,6 @@ const Stats = () => {
               RGBoo stats
             </span>
           </Link>
-          {/* Only worth showing once there is something it dates. */}
           {hasData && (
             <p className="stats-faint text-[0.7rem] font-medium">
               Updated {formatUpdatedAt(stats.updated_at)}
@@ -60,7 +58,6 @@ const Stats = () => {
               colors={stats.totals.colors}
               total={stats.totals.count}
               sampled={stats.totals.sampled}
-              isRefreshing={isRefreshing}
             />
 
             <HourProfile hours={stats.totals.hours} />

@@ -266,18 +266,13 @@ nights come back.
 
 Styles live in `web/src/Stats/stats.css`, imported by `Stats.tsx` so the page's
 chrome travels with its components rather than accumulating in the global
-`theme.css`. They are raw CSS rather than `@apply`, for two reasons this theme
-forces: `--color-*: initial` deletes Tailwind's default palette, so
-`white`/`black`/`red` utilities generate no CSS at all; and `--text-sm`/`base`/
-`md` are deliberately oversized for the colour form, which makes those
-utilities unusable for dense UI. The rules stay in the `components` layer that
-`theme.css` declares, so Tailwind utilities in JSX still win over them.
+`theme.css`. Its header explains why they are raw CSS rather than `@apply`.
 
 ## Failure modes
 
 | If this happens | Then |
 |---|---|
-| The rollup has never run | `/api/stats` returns an all-zero window and the page says so. No error. |
+| The rollup has never run | `/api/stats` returns an all-zero window and the page shows the coming-soon card. No error. |
 | A malformed request doc | Logged and skipped; the rest of the rollup completes. |
 | A day has no dispatched colours | No document is written. `count` can only grow, so an empty result always means "nothing ever happened", never "the data went away". |
 | `STATS_TIMEZONE` changes | Existing aggregates are wrong until the rollup is re-run over the full range. |

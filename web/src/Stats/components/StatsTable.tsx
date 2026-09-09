@@ -1,22 +1,10 @@
 import type { ColorRow, StatsDay } from "../stats-api";
 import { formatCount, formatDayLong, pluralise } from "../format";
 
-/**
- * The mosaic's table twin.
- *
- * The mosaic shows popularity as area, which is a glance rather than a
- * number, and it drops the calendar entirely. Both come back here.
- */
+/** The mosaic's table twin: the exact numbers, and the calendar it drops. */
 export const StatsTable = ({ grid, colors }: { grid: StatsDay[]; colors: ColorRow[] }) => {
+  // Days with nothing on them are omitted rather than listed as zero rows.
   const active = grid.filter((day) => day.count > 0);
-
-  if (!active.length) {
-    return (
-      <p className="stats-note px-6 pb-6">
-        No colours were displayed in this window.
-      </p>
-    );
-  }
 
   return (
     <div className="overflow-x-auto px-6 pb-6">

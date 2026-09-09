@@ -4,15 +4,9 @@ import { formatCount, formatShare, pluralise } from "../format";
 /**
  * Every colour people picked, one square per submission, in arrival order.
  *
- * This replaced two grids that both encoded a count as the brightness of a
- * cell. That can never work here: brightness is also an intrinsic property
- * of a colour the audience chose, so the two meanings collide and the scale
- * can run backwards.
- *
- * Nothing is encoded here at all, and nothing is reordered. The mosaic is
- * the month exactly as it happened, read left to right. Popularity is not
- * meant to be read off it -- the family bar underneath carries that, in
- * numbers.
+ * Nothing is encoded and nothing is reordered: the mosaic is the month as it
+ * happened. Popularity is not meant to be read off it -- the family bar
+ * underneath carries that, in numbers. See docs/stats-heatmap.md.
  */
 
 type Props = {
@@ -20,10 +14,9 @@ type Props = {
   colors: ColorRow[];
   total: number;
   sampled: boolean;
-  isRefreshing: boolean;
 };
 
-export const ColorMosaic = ({ sequence, colors, total, sampled, isRefreshing }: Props) => (
+export const ColorMosaic = ({ sequence, colors, total, sampled }: Props) => (
   <section className="stats-card" aria-labelledby="mosaic-heading">
     <div className="stats-card-head px-6 py-5">
       <p className="stats-eyebrow">The month in colour</p>
@@ -36,25 +29,16 @@ export const ColorMosaic = ({ sequence, colors, total, sampled, isRefreshing }: 
       </p>
     </div>
 
-    {sequence.length === 0 ? (
-      <p className="stats-note px-6 py-8">No colours in this window yet.</p>
-    ) : (
-      <>
-        {/* No hover layer: the squares are the record, and every number a
-            reader might want is in the family bar below or the table
-            further down. Nothing here has to be hovered to be reached. */}
-        <div
-          className={`stats-mosaic ${isRefreshing ? "opacity-60" : ""}`}
-          role="img"
-          aria-label={`A mosaic of ${pluralise(total, "colour")} picked by the community, in the order they arrived. The breakdown is in the table below.`}
-        >
-          {sequence.map((hex, index) => (
-            <span key={index} className="stats-chip" style={{ backgroundColor: hex }} />
-          ))}
-        </div>
-        <FamilyBar colors={colors} />
-      </>
-    )}
+    <div
+      className="stats-mosaic"
+      role="img"
+      aria-label={`A mosaic of ${pluralise(total, "colour")} picked by the community, in the order they arrived. The breakdown is in the table below.`}
+    >
+      {sequence.map((hex, index) => (
+        <span key={index} className="stats-chip" style={{ backgroundColor: hex }} />
+      ))}
+    </div>
+    <FamilyBar colors={colors} />
   </section>
 );
 

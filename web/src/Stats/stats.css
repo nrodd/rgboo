@@ -74,7 +74,6 @@
     width: 9rem;
   }
 
-
   .stats-soon {
     align-items: center;
     display: flex;
@@ -147,8 +146,6 @@
     line-height: 1.6;
   }
 
-
-
   .stats-mosaic {
     display: grid;
     /* Squares shrink to fit rather than wrapping into a ragged block, so a
@@ -156,7 +153,6 @@
     grid-template-columns: repeat(auto-fill, minmax(10px, 1fr));
     gap: 2px;
     padding: 1.5rem;
-    transition: opacity 200ms;
   }
 
   .stats-chip {
@@ -298,12 +294,6 @@
   .stats-mosaic {
     grid-template-columns: repeat(auto-fill, minmax(8px, 1fr));
     padding: 1rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stats-mosaic {
-    transition: none;
   }
 }
 

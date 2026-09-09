@@ -57,8 +57,8 @@ export type StatsResponse = {
  */
 const STATS_DAYS = 30;
 
-export const fetchStats = async (): Promise<StatsResponse> => {
-  const response = await fetch(`/api/stats?days=${STATS_DAYS}`);
+export const fetchStats = async (signal?: AbortSignal): Promise<StatsResponse> => {
+  const response = await fetch(`/api/stats?days=${STATS_DAYS}`, { signal });
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || "Unable to load stats");
   return body as StatsResponse;

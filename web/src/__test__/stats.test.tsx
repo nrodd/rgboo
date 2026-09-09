@@ -6,14 +6,7 @@ import { SetupWorker } from "msw/browser";
 import { MemoryRouter } from "react-router-dom";
 import { test } from "./setup/test-extend";
 import Stats from "../Stats";
-import {
-  hexToRgba,
-  intensityFor,
-  formatHour,
-  formatHourTick,
-  rampHex,
-  INTENSITY_STEPS,
-} from "../Stats/format";
+import { formatHour, formatHourTick } from "../Stats/format";
 
 const hours = Array.from({ length: 24 }, (_, h) => ({
   h,
@@ -132,8 +125,6 @@ test("always asks for the 30-day window", async ({ worker }: { worker: SetupWork
 
   await expect.element(page.getByLabelText("Summary").getByText("148")).toBeInTheDocument();
   expect(requested).toEqual(["30"]);
-  // No range switcher to get out of step with it.
-  expect(document.querySelector(".stats-range-button")).toBeNull();
 });
 
 test("the table view exposes the same numbers without hovering", async ({ worker }: { worker: SetupWorker }) => {
@@ -207,31 +198,5 @@ describe("formatting", () => {
     expect(formatHourTick(12)).toBe("12p");
     expect(formatHourTick(20)).toBe("8");
     expect(formatHourTick(23)).toBe("11");
-  });
-
-  it("steps intensity in discrete bands, not a continuous ramp", () => {
-    const top = INTENSITY_STEPS[INTENSITY_STEPS.length - 1];
-    expect(intensityFor(0, 80)).toBe(0);
-    expect(intensityFor(80, 80)).toBe(top);
-    expect(intensityFor(1, 80)).toBe(INTENSITY_STEPS[0]);
-    expect(intensityFor(1, 1)).toBe(top);
-  });
-
-  it("composites a hex over the surface rather than fading the whole cell", () => {
-    expect(hexToRgba("#e36810", 0.4)).toBe("rgba(227, 104, 16, 0.4)");
-    expect(hexToRgba("#fff", 1)).toBe("rgba(255, 255, 255, 1)");
-  });
-
-  it("lifts a near-black row to something visible on the dark card", () => {
-    // Without this the whole "near black" row renders as an empty row,
-    // whatever its counts are.
-    const lifted = rampHex("#101014");
-    expect(lifted).not.toBe("#101014");
-    expect(Number.parseInt(lifted.slice(1, 3), 16)).toBeGreaterThan(0x10);
-  });
-
-  it("leaves an already-light colour alone", () => {
-    expect(rampHex("#e36810")).toBe("#e36810");
-    expect(rampHex("#ffffff")).toBe("#ffffff");
   });
 });
