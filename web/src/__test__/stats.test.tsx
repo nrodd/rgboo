@@ -10,6 +10,7 @@ import {
   hexToRgba,
   intensityFor,
   formatHour,
+  formatHourTick,
   rampHex,
   INTENSITY_STEPS,
 } from "../Stats/format";
@@ -38,12 +39,9 @@ const statsBody = {
       { key: "9", label: "violet", hex: "#6441a4", count: 40, share: 0.27 },
       { key: "dark", label: "near black", hex: "#101014", count: 18, share: 0.122 },
     ],
-    swatches: [
-      { hex: "#e06810", n: 60 },
-      { hex: "#f89000", n: 30 },
-      { hex: "#6840a8", n: 40 },
-      { hex: "#101018", n: 18 },
-    ],
+    // Deliberately not grouped or hue-ordered: this is arrival order.
+    sequence: ["#e06810", "#101018", "#6840a8", "#e06810", "#f89000"],
+    sampled: false,
   },
   grid: [
     { date: "2026-10-29", count: 0, colors: {} },
@@ -69,31 +67,42 @@ test("shows the headline totals", async ({ worker }: { worker: SetupWorker }) =>
   await expect.element(summary.getByText("8 PM")).toBeInTheDocument();
 });
 
-test("draws one square per submission, so area is popularity", async ({ worker }: { worker: SetupWorker }) => {
+test("draws one square per submission", async ({ worker }: { worker: SetupWorker }) => {
   mockStats(worker);
   renderStats();
 
   await expect.element(page.getByText("Every colour picked")).toBeInTheDocument();
-  // 60 + 30 + 40 + 18 squares, nothing binned into families.
-  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(148);
+  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(5);
 });
 
-test("keeps the swatch order the API sent, which is the spectrum", async ({ worker }: { worker: SetupWorker }) => {
+test("keeps arrival order, neither grouping nor sorting the colours", async ({ worker }: { worker: SetupWorker }) => {
   mockStats(worker);
   renderStats();
 
-  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(148);
-  const hexes = Array.from(document.querySelectorAll<HTMLElement>(".stats-chip"))
-    .map((chip) => chip.dataset.hex);
-  // Contiguous runs, in the order given: no re-sorting in the component.
-  expect(hexes[0]).toBe("#e06810");
-  expect(hexes[59]).toBe("#e06810");
-  expect(hexes[60]).toBe("#f89000");
-  expect(hexes[147]).toBe("#101018");
+  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(5);
+  const rgb = Array.from(document.querySelectorAll<HTMLElement>(".stats-chip"))
+    .map((chip) => chip.style.backgroundColor);
+  // The two #e06810 picks stay apart, where they actually happened.
+  expect(rgb).toEqual([
+    "rgb(224, 104, 16)", "rgb(16, 16, 24)", "rgb(104, 64, 168)",
+    "rgb(224, 104, 16)", "rgb(248, 144, 0)",
+  ]);
+});
+
+test("has no hover layer on the squares", async ({ worker }: { worker: SetupWorker }) => {
+  mockStats(worker);
+  renderStats();
+
+  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(5);
+  const chip = document.querySelector<HTMLElement>(".stats-chip")!;
+  await page.elementLocator(chip).hover();
+
+  expect(document.querySelector('[role="tooltip"]')).toBeNull();
+  expect(chip.getAttribute("title")).toBeNull();
 });
 
 test("states an exact family ranking alongside the mosaic", async ({ worker }: { worker: SetupWorker }) => {
-  // Area is a glance, not a number: the bar keeps the precise share.
+  // Arrival order says nothing about which colour won; the bar does.
   mockStats(worker);
   renderStats();
 
@@ -101,28 +110,16 @@ test("states an exact family ranking alongside the mosaic", async ({ worker }: {
   await expect.element(page.getByText("27%")).toBeInTheDocument();
 });
 
-test("hovering a square reveals its colour and how often it was picked", async ({ worker }: { worker: SetupWorker }) => {
-  mockStats(worker);
-  renderStats();
-
-  await expect.poll(() => document.querySelectorAll(".stats-chip").length).toBe(148);
-  // Hover a specific square: the mosaic's 2px gaps make the container's
-  // own centre an unreliable target.
-  const chip = document.querySelector<HTMLElement>(".stats-chip")!;
-  await page.elementLocator(chip).hover();
-
-  const tip = page.getByRole("tooltip");
-  await expect.element(tip).toBeInTheDocument();
-  await expect.element(tip).toHaveTextContent("60 picks");
-  await expect.element(tip).toHaveTextContent("#e06810");
-});
-
-test("shows when the stream is busy, separately from which colour", async ({ worker }: { worker: SetupWorker }) => {
+test("shows all twenty-four hours, busy or not", async ({ worker }: { worker: SetupWorker }) => {
+  // The strip runs around the clock, so a quiet hour is a finding rather
+  // than an absence and must not be trimmed away.
   mockStats(worker);
   renderStats();
 
   await expect.element(page.getByText("Busiest hours")).toBeInTheDocument();
+  await expect.poll(() => document.querySelectorAll(".stats-hour-col").length).toBe(24);
   await expect.element(page.getByText("8 PM: 96 colours")).toBeInTheDocument();
+  await expect.element(page.getByText("3 AM: 0 colours")).toBeInTheDocument();
 });
 
 test("changing the range refetches for that window", async ({ worker }: { worker: SetupWorker }) => {
@@ -169,7 +166,8 @@ test("reports an empty window honestly", async ({ worker }: { worker: SetupWorke
       busiest_day: null, busiest_hour: null,
       hours: Array.from({ length: 24 }, (_, h) => ({ h, n: 0 })),
       colors: [],
-      swatches: [],
+      sequence: [],
+      sampled: false,
     },
     grid: [{ date: "2026-10-29", count: 0, colors: {} }],
   });
@@ -185,6 +183,13 @@ describe("formatting", () => {
     expect(formatHour(0)).toBe("12 AM");
     expect(formatHour(12)).toBe("12 PM");
     expect(formatHour(20)).toBe("8 PM");
+  });
+
+  it("keeps axis ticks narrow enough that all 24 fit", () => {
+    expect(formatHourTick(0)).toBe("12a");
+    expect(formatHourTick(12)).toBe("12p");
+    expect(formatHourTick(20)).toBe("8");
+    expect(formatHourTick(23)).toBe("11");
   });
 
   it("steps intensity in discrete bands, not a continuous ramp", () => {

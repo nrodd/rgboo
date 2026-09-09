@@ -65,9 +65,10 @@ const Stats = () => {
             </section>
 
             <ColorMosaic
-              swatches={stats.totals.swatches}
+              sequence={stats.totals.sequence}
               colors={stats.totals.colors}
               total={stats.totals.count}
+              sampled={stats.totals.sampled}
               isRefreshing={isRefreshing}
             />
 

@@ -1,8 +1,8 @@
 # Colour stats and the colour mosaic
 
 A public page at `/stats` showing what the LED strip has actually been doing:
-a mosaic of every colour anyone picked, one square per submission, ordered by
-hue — plus an hour-of-day profile and the headline numbers around them.
+a mosaic of every colour anyone picked, one square per submission, in the order
+they arrived — plus an hour-of-day profile and the headline numbers around them.
 
 Related: [architecture.md](architecture.md) (the system this reads from),
 [deploying.md](deploying.md) (shipping it).
@@ -79,7 +79,7 @@ with nothing dispatched.
 | `count` | Dispatched requests that day |
 | `hours` | `"0".."23"` → `{ n, buckets }`, populated hours only |
 | `hours.<h>.buckets` | Hue bin → `{ n, r, g, b }`, the channels as **sums** |
-| `swatches` | Rounded colour → how many times picked. What the mosaic draws |
+| `sequence` | Every colour that day, rounded, in dispatch order. The mosaic |
 | `timezone`, `updated_at` | What the rollup used, and when it ran |
 
 Sums rather than an average, because sums are what a recount can rebuild and
@@ -95,10 +95,13 @@ otherwise smear randomly across all twelve, since hue is numerically unstable
 down there.
 
 The bins are now only used for the summary bar under the mosaic. The mosaic
-itself is unbinned: `swatches` on each day document counts every distinct
-colour that day, rounded to `SWATCH_STEP` per channel. Two colours a step apart
-are indistinguishable on an LED strip, and the rounding bounds the map at 32³
-keys however many people submit.
+itself is unbinned: `sequence` on each day document lists every colour that day
+in dispatch order, rounded to `SWATCH_STEP` per channel. Two colours a step
+apart are indistinguishable on an LED strip, and the rounding keeps the stored
+list compact.
+
+A list rather than a frequency map, because arrival order is exactly what a
+count throws away, and order is what the mosaic draws.
 
 Neutrality is decided by **chroma** (max channel minus min), not HLS
 saturation. Saturation divides by a term that vanishes at the extremes, so it
@@ -113,7 +116,7 @@ Two things to configure, neither in code:
    rollup's range query needs it. (Separate from the existing
    `status, scheduled_time` index.)
 2. **Single-field index exemptions** on `stats_daily.hours` and
-   `stats_daily.swatches`. Between them those maps hold a few thousand numeric
+   `stats_daily.sequence`. Between them those maps hold a few thousand numeric
    leaves, all auto-indexed by default, which is index write cost for fields
    nothing ever queries.
 
@@ -128,7 +131,7 @@ gcloud firestore indexes fields update \
   --disable-indexes
 
 gcloud firestore indexes fields update \
-  --collection-group=stats_daily --field-path=swatches \
+  --collection-group=stats_daily --field-path=sequence \
   --disable-indexes
 ```
 
@@ -177,9 +180,8 @@ Empty hours are omitted rather than sent as zeroes, which keeps a month around
     "colors": [
       { "key": "1", "label": "orange", "hex": "#ef8213", "count": 293, "share": 0.2519 }
     ],
-    "swatches": [
-      { "hex": "#d02828", "n": 3 }, "... every colour picked, in spectrum order"
-    ]
+    "sequence": ["#f06000", "#c82828", "... every colour, in arrival order"],
+    "sampled": false
   },
   "grid": [
     { "date": "2026-09-06", "count": 191, "colors": { "1": 127, "9": 29, "dark": 21 } }
@@ -187,10 +189,14 @@ Empty hours are omitted rather than sent as zeroes, which keeps a month around
 }
 ```
 
-`totals.swatches` is the mosaic, already in spectrum order, and its counts sum
-to `totals.count`. `totals.colors` is the summary bar beneath it, and
-`totals.hours` is the hour-of-day chart. A month of 1,163 picks came to 740
-distinct colours and a 26 KB payload.
+`totals.sequence` is the mosaic, in dispatch order. `totals.colors` is the
+summary bar beneath it, and `totals.hours` is the hour-of-day chart, always all
+24 entries. A month of 1,163 picks is a 17 KB payload.
+
+A 24/7 stream at the 20-second pace tops out near 130,000 requests a month,
+which is neither renderable nor a sensible response. Past `MAX_SEQUENCE` the
+list is thinned by taking every Nth — keeping the month's shape end to end
+rather than just its tail — and `sampled` tells the page to say so.
 
 ## The page
 
@@ -212,31 +218,31 @@ than a third as bright as a cell of two pale ones. The second version fixed
 that by making each row one fixed hue, but it still paid a row per family —
 which forced the binning down to fourteen coarse names and hid every shade.
 
-The mosaic encodes **nothing**. A colour picked forty times gets forty squares,
-so popularity is simply how much of the picture it occupies, and sorting by hue
-turns the pile into a spectrum. Because it costs no rows, it needs no binning
-at all: every shade shows as itself.
+The mosaic encodes **nothing**, and reorders nothing. One square per
+submission, left to right in the order they arrived: it is the month as it
+happened. Because it costs no rows it needs no binning at all, so every shade
+shows as itself — a seeded month of 1,163 picks is 740 distinct colours rather
+than fourteen names.
 
-- **Order is the whole design.** Chromatic colours first, around the wheel and
-  light-to-dark within a hue; then the neutrals, which have no hue to place
-  them by; then the near-blacks.
-- **A summary bar keeps the exact numbers.** Area is a glance, not a figure, so
-  a single stacked bar of the fourteen families sits underneath with counts and
-  shares. That is the one place the coarse bins still earn their keep.
-- **Squares are capped at 4,000.** Past that the whole mosaic scales by one
-  factor, which leaves every colour's share of the picture intact, and the
-  caption says so. Colours that would round away keep one square rather than
-  disappearing.
-- **Hover is delegated.** One listener on the container, not one per square: at
-  a few thousand cells the per-cell handlers are the expensive part.
+- **No hover layer.** The squares are the record. Every number a reader might
+  want is in the summary bar below or the table further down, so nothing has to
+  be hovered to be reached.
+- **A summary bar keeps the exact numbers.** The mosaic deliberately says
+  nothing about which colour won — arrival order scatters a popular colour
+  across the whole picture. A single stacked bar of the fourteen families sits
+  underneath with counts and shares. That is the one place the coarse bins
+  still earn their keep.
 - **A hairline ring on every square**, so a near-black pick reads as a square
   rather than as a gap in the mosaic.
 
-The hour chart beside it labels **every** bar rather than every third: a label
-on some bars and not others reads as arbitrary rather than as an axis. Only the
-peak carries a value, and that label is positioned out of flow — as a flex item
-it overflowed its column and was the one bar the browser shrank, which made the
-peak render shorter than the runner-up.
+The hour chart shows **all 24 hours**, never trimmed to the ones that happened
+to be busy: the strip runs around the clock, so a quiet hour is a finding rather
+than an absence. Every bar is labelled — a label on some bars and not others
+reads as arbitrary rather than as an axis — with compact ticks (`12a`, then bare
+numbers, then `12p`) because spelled-out names are wider than their columns and
+the last one gets clipped. Only the peak carries a value, positioned out of
+flow: as a flex item it overflowed its column and was the one bar the browser
+shrank, which made the peak render shorter than the runner-up.
 
 The mosaic drops the calendar entirely. `grid` still carries per-day, per-family
 counts, and the table view under the chart is where both the numbers and the

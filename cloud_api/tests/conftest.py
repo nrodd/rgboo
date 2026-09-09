@@ -58,7 +58,8 @@ def mock_stats():
             'busiest_hour': None,
             'hours': [{'h': hour, 'n': 0} for hour in range(24)],
             'colors': [],
-            'swatches': [],
+            'sequence': [],
+            'sampled': False,
         },
         'grid': [],
     }

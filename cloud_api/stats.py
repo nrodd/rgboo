@@ -40,6 +40,12 @@ CACHE_TTL_SECONDS = 300
 # Firestore caps a batch at 500 writes.
 _BATCH_LIMIT = 400
 
+# Most squares the mosaic will ever be sent. A month of a 24/7 stream can
+# run to six figures of requests, which is neither renderable nor a
+# sensible payload, so a longer sequence is thinned by taking every Nth --
+# which keeps the month's shape and order rather than just its tail.
+MAX_SEQUENCE = 4000
+
 
 class StatsStore:
     """Reads and rebuilds the stats_daily aggregates."""
@@ -81,10 +87,10 @@ class StatsStore:
                 'date': day_id,
                 'count': day['count'],
                 'hours': day['hours'],
-                # Every distinct colour that day, rounded to SWATCH_STEP and
-                # counted. This is what the mosaic draws: no binning into
-                # families, just the colours people actually picked.
-                'swatches': day['swatches'],
+                # Every colour that day in dispatch order, rounded to
+                # SWATCH_STEP. This is what the mosaic draws: no binning
+                # into families and no reordering, just what happened.
+                'sequence': day['sequence'],
                 'timezone': STATS_TIMEZONE,
                 'updated_at': firestore.SERVER_TIMESTAMP,
             })
@@ -117,11 +123,15 @@ class StatsStore:
         start_at = buckets.local_midnight(start)
         end_at = buckets.local_midnight(end + timedelta(days=1))
 
+        # Ordered explicitly: accumulate() records dispatch order, and
+        # relying on the implicit ordering of an inequality filter would
+        # make that silently dependent on query-planner behaviour.
         query = (
             self._requests
             .where('status', '==', STATUS_DONE)
             .where('processed_at', '>=', start_at)
             .where('processed_at', '<', end_at)
+            .order_by('processed_at')
         )
 
         for doc in query.stream():
@@ -177,7 +187,7 @@ class StatsStore:
         """
         grid = []
         range_buckets: dict = {}
-        range_swatches: dict = {}
+        sequence: list = []
         hour_totals = [0] * 24
         total_count = 0
         active_days = 0
@@ -208,10 +218,9 @@ class StatsStore:
                 hour_totals[int(hour_key)] += count
                 buckets.merge_buckets(day_buckets, hour.get('buckets') or {})
 
-            for key, n in (data.get('swatches') or {}).items():
-                count = int(n)
-                if count > 0:
-                    range_swatches[key] = range_swatches.get(key, 0) + count
+            # Days are walked oldest first, so appending keeps the whole
+            # range in dispatch order.
+            sequence.extend(data.get('sequence') or [])
 
             buckets.merge_buckets(range_buckets, day_buckets)
             colors = {
@@ -220,6 +229,11 @@ class StatsStore:
                 if int(bucket.get('n', 0)) > 0
             }
             grid.append({'date': day_id, 'count': day_count, 'colors': colors})
+
+        # Thin by taking every Nth rather than the last N, so a long month
+        # keeps its shape from end to end instead of only its tail.
+        step = max(1, -(-len(sequence) // MAX_SEQUENCE))
+        shown = sequence[::step]
 
         peak_hour = max(hour_totals) if total_count else 0
         busiest_hour = (
@@ -248,14 +262,13 @@ class StatsStore:
                 # The 14 coarse families, busiest first. Only the summary
                 # bar uses these now; the mosaic shows colours unbinned.
                 'colors': buckets.rank_buckets(range_buckets),
-                # Every colour picked, ordered so the mosaic reads as a
-                # spectrum. `n` is how many times, which is how many cells
-                # it gets -- popularity becomes band width, with nothing
-                # encoded on top of the colour itself.
-                'swatches': [
-                    {'hex': f'#{key}', 'n': range_swatches[key]}
-                    for key in sorted(range_swatches, key=buckets.swatch_sort_key)
-                ],
+                # Every colour picked, in the order it was picked. Nothing
+                # is encoded and nothing is reordered: the mosaic is the
+                # month as it happened.
+                'sequence': [f'#{key}' for key in shown],
+                # True when the sequence above is a thinned sample of a
+                # longer month, so the page can say so.
+                'sampled': len(shown) < len(sequence),
             },
             'grid': grid,
         }

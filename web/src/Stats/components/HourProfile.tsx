@@ -1,5 +1,5 @@
 import type { HourSlot } from "../stats-api";
-import { formatCount, formatHour, pluralise } from "../format";
+import { formatCount, formatHour, formatHourTick, pluralise } from "../format";
 
 /**
  * When the stream is busy: submissions by hour of day, across the window.
@@ -9,17 +9,11 @@ import { formatCount, formatHour, pluralise } from "../format";
  * colour" used to fight over the same channel in one grid.
  */
 
-/** Trim the dead hours, padded by one either side. */
-const activeWindow = (hours: HourSlot[]) => {
-  const used = hours.filter((slot) => slot.n > 0);
-  if (!used.length) return hours;
-  const from = Math.max(0, Math.min(...used.map((slot) => slot.h)) - 1);
-  const to = Math.min(23, Math.max(...used.map((slot) => slot.h)) + 1);
-  return hours.filter((slot) => slot.h >= from && slot.h <= to);
-};
-
 export const HourProfile = ({ hours }: { hours: HourSlot[] }) => {
-  const shown = activeWindow(hours);
+  // All twenty-four, never trimmed to the hours that happened to be busy:
+  // the strip runs around the clock, so a quiet hour is a finding rather
+  // than an absence, and hiding it would overstate how narrow the day is.
+  const shown = hours;
   const peak = Math.max(...shown.map((slot) => slot.n), 0);
 
   return (
@@ -59,11 +53,13 @@ export const HourProfile = ({ hours }: { hours: HourSlot[] }) => {
               ))}
             </ul>
             {/* Every hour is labelled, not every third: a label on some bars
-                and not others reads as arbitrary rather than as an axis. */}
+                and not others reads as arbitrary rather than as an axis.
+                The full names live in each bar's title and screen-reader
+                text; these ticks are compact so all 24 fit. */}
             <ul className="stats-hour-axis" aria-hidden="true">
               {shown.map((slot) => (
                 <li key={slot.h} className="stats-hour-label">
-                  {formatHour(slot.h)}
+                  {formatHourTick(slot.h)}
                 </li>
               ))}
             </ul>

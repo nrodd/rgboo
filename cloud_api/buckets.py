@@ -114,7 +114,7 @@ def bucket_label(key: str) -> str:
 
 # Individual colours are stored rounded to this step per channel. Two
 # colours a step apart are indistinguishable on an LED strip, and rounding
-# bounds the per-day map at 32^3 keys however many people submit.
+# keeps the stored sequence compact.
 SWATCH_STEP = 8
 
 
@@ -124,30 +124,6 @@ def swatch_key(r: int, g: int, b: int) -> str:
         return max(0, min(255, round(value / SWATCH_STEP) * SWATCH_STEP))
 
     return "{:02x}{:02x}{:02x}".format(snap(r), snap(g), snap(b))
-
-
-def swatch_rgb(key: str) -> tuple:
-    """Back to (r, g, b) from a swatch key."""
-    return tuple(int(key[index:index + 2], 16) for index in (0, 2, 4))
-
-
-def swatch_sort_key(key: str):
-    """Order swatches so the mosaic reads as a spectrum.
-
-    Chromatic colours first, around the wheel and light-to-dark within a
-    hue; then the neutrals, which have no hue to place them by; then the
-    near-blacks. Sorting is what turns a bag of colours into a picture --
-    a band's width becomes how often that colour was picked, with nothing
-    encoded on top of the data.
-    """
-    r, g, b = swatch_rgb(key)
-    hue, lightness, _ = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
-
-    if lightness < DARK_LIGHTNESS_MAX:
-        return (2, 0.0, -lightness)
-    if chroma(r, g, b) < NEUTRAL_CHROMA_MAX:
-        return (1, 0.0, -lightness)
-    return (0, hue, -lightness)
 
 
 def add_sample(buckets: dict, r: int, g: int, b: int) -> dict:
@@ -216,19 +192,23 @@ def rank_buckets(buckets: dict) -> list:
 def accumulate(samples: Iterable[tuple]) -> dict:
     """Build a day's stored aggregate from (processed_at, r, g, b) rows.
 
-    Returns the `hours` and `swatches` maps a stats_daily document stores,
-    keyed by day, plus a per-day count. Days with no samples are absent.
+    Returns the `hours` map and the `sequence` a stats_daily document
+    stores, keyed by day, plus a per-day count. Days with no samples are
+    absent.
+
+    `sequence` is every colour in the order it was dispatched, not a
+    frequency map: the mosaic shows the month as it happened, and arrival
+    order is exactly the thing a count would throw away. Callers must pass
+    `samples` already ordered by time.
     """
     days: dict = {}
     for moment, r, g, b in samples:
         day = days.setdefault(
-            day_key(moment), {"count": 0, "hours": {}, "swatches": {}}
+            day_key(moment), {"count": 0, "hours": {}, "sequence": []}
         )
         hour = day["hours"].setdefault(hour_key(moment), {"n": 0, "buckets": {}})
         day["count"] += 1
         hour["n"] += 1
         add_sample(hour["buckets"], r, g, b)
-
-        key = swatch_key(r, g, b)
-        day["swatches"][key] = day["swatches"].get(key, 0) + 1
+        day["sequence"].append(swatch_key(r, g, b))
     return days

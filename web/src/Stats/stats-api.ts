@@ -15,9 +15,6 @@ export type ColorRow = {
   share: number;
 };
 
-/** One colour people picked, and how many times, across the window. */
-export type Swatch = { hex: string; n: number };
-
 export type StatsDay = {
   date: string;
   count: number;
@@ -36,8 +33,10 @@ export type StatsTotals = {
   busiest_hour: { hour: number; count: number } | null;
   hours: HourSlot[];
   colors: ColorRow[];
-  /** Every colour picked, already ordered so it reads as a spectrum. */
-  swatches: Swatch[];
+  /** Every colour picked, in the order it arrived. Thinned if very long. */
+  sequence: string[];
+  /** True when `sequence` is a thinned sample of a longer window. */
+  sampled: boolean;
 };
 
 export type StatsResponse = {

@@ -38,12 +38,18 @@ _OPS = {
 
 
 class FakeQuery:
-    def __init__(self, collection, filters=()):
+    def __init__(self, collection, filters=(), order=None):
         self._collection = collection
         self._filters = tuple(filters)
+        self._order = order
 
     def where(self, field, op, value):
-        return FakeQuery(self._collection, self._filters + ((field, op, value),))
+        return FakeQuery(
+            self._collection, self._filters + ((field, op, value),), self._order
+        )
+
+    def order_by(self, field):
+        return FakeQuery(self._collection, self._filters, field)
 
     def _matches(self, data):
         for field, op, value in self._filters:
@@ -55,9 +61,18 @@ class FakeQuery:
         return True
 
     def stream(self):
-        for doc_id, data in sorted(self._collection.docs.items()):
-            if self._matches(data):
-                yield FakeSnapshot(doc_id, data)
+        # Unordered queries come back by document id, which is arbitrary but
+        # stable -- code that needs an order has to ask for one, exactly as
+        # against real Firestore.
+        matched = [
+            (doc_id, data)
+            for doc_id, data in sorted(self._collection.docs.items())
+            if self._matches(data)
+        ]
+        if self._order:
+            matched.sort(key=lambda item: item[1][self._order])
+        for doc_id, data in matched:
+            yield FakeSnapshot(doc_id, data)
 
 
 class FakeCollection:
@@ -70,6 +85,9 @@ class FakeCollection:
 
     def where(self, field, op, value):
         return FakeQuery(self).where(field, op, value)
+
+    def order_by(self, field):
+        return FakeQuery(self).order_by(field)
 
 
 class FakeBatch:

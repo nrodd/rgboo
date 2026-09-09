@@ -1,5 +1,19 @@
 /** Formatting helpers for the stats page. */
 
+/**
+ * A compact axis tick: "12a", then bare numbers, then "12p".
+ *
+ * A full day is 24 ticks. Spelled out ("11 PM") they are wider than the
+ * column they label, so the last one gets clipped by the scrolling
+ * wrapper. Anchoring the two noons and numbering between them keeps every
+ * bar labelled and still reads as a clock.
+ */
+export const formatHourTick = (hour: number) => {
+  if (hour === 0) return "12a";
+  if (hour === 12) return "12p";
+  return String(hour % 12);
+};
+
 /** "8 PM", "12 AM" -- how a person names an hour, not "20:00". */
 export const formatHour = (hour: number) => {
   const suffix = hour < 12 ? "AM" : "PM";
