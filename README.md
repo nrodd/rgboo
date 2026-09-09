@@ -75,8 +75,11 @@ failure modes, and the security posture.
 
 ## 🚀 Deploying
 
-Nothing deploys on merge. The API has a one-click workflow
-(Actions -> **Deploy API**); everything else is a deliberate command.
+Merging to `main` ships the API: if the merge touches `cloud_api/` or
+`shared/`, CI re-runs the tests, builds, deploys to Cloud Run, verifies it, and
+rolls traffic back on its own if that verification fails. There is still a
+one-click workflow (Actions -> **Deploy API**) for redeploys and rollforwards.
+Everything else -- bridge, web, firmware -- is a deliberate command.
 
 See **[docs/architecture.md](docs/architecture.md)** for how the system fits
 together, and **[docs/deploying.md](docs/deploying.md)** for shipping each
