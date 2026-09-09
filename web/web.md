@@ -1,6 +1,6 @@
 # 🕸️ web
 
-Cloudflare workers deployed web app that call allows someone to submit a color and name to the middleware. The video stream will also be displayed on here.
+Cloudflare workers deployed web app that allows someone to submit a color and name to the cloud API. The video stream will also be displayed on here.
 
 ## Setup
 
@@ -40,39 +40,28 @@ yarn deploy
 the Worker-to-API credential. Protect `/admin` and `/admin-api/*` with
 Cloudflare Access; the admin browser never receives the key.
 
-Which upstream it targets is the `API_UPSTREAM` var in `wrangler.jsonc`:
-
-| Upstream                     | Reached through          | Credentials                             |
-| ---------------------------- | ------------------------ | --------------------------------------- |
-| `https://api.rgboo.com`      | Cloudflare Tunnel + Access | `CF_ACCESS_ID` + `CF_ACCESS_SECRET`   |
-| `https://<service>.run.app`  | Cloud Run (direct)       | `API_KEY`                               |
+Which upstream it targets is the `API_UPSTREAM` var in `wrangler.jsonc` —
+the Cloud Run service URL, authenticated with the `API_KEY` secret.
 
 Secrets are never committed — upload them with wrangler:
 
 ```
 wrangler secret put API_KEY
-wrangler secret put CF_ACCESS_ID
-wrangler secret put CF_ACCESS_SECRET
 ```
 
 Protect `/admin` and `/admin-api/*` with the Cloudflare Access
 application/policy.
 
-The Worker sends whichever credentials are configured, so both sets can be
-set at once during the migration: the old middleware ignores `X-Api-Key`,
-and the Cloud Run API ignores the `CF-Access-*` headers. That makes the
-cutover a config change rather than a code change:
+Pointing the Worker at a different API is a config change, not a code
+change:
 
 ```
-# cut over to GCP: set API_UPSTREAM to the Cloud Run URL in wrangler.jsonc
+# set API_UPSTREAM to the new Cloud Run URL in wrangler.jsonc
 wrangler secret put API_KEY
 wrangler deploy
-
-# roll back: set API_UPSTREAM back to https://api.rgboo.com
-wrangler deploy
 ```
 
-See `docs/gcp-migration-plan.md` for the full migration.
+See `docs/architecture.md` for how the pieces fit together.
 
 ## Testing
 
@@ -92,4 +81,4 @@ npx playwright install
 
 ## API Integration
 
-Communicates with the middleware API to submit color requests and receive queue information including position and estimated wait times.
+Communicates with the cloud API to submit color requests and receive queue information including position and estimated wait times.

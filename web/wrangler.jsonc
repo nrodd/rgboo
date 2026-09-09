@@ -14,12 +14,8 @@
 		"enabled": true
 	},
 	/**
-	 * Where worker/index.js proxies /api/* to.
-	 *
-	 * Cutover to GCP is a change to this value plus a deploy; rollback is
-	 * changing it back. See docs/gcp-migration-plan.md.
-	 *   old: https://api.rgboo.com          (Cloudflare Tunnel -> home machine)
-	 *   new: https://<service>.run.app      (Cloud Run)
+	 * Where worker/index.js proxies /api/* to: the Cloud Run service URL.
+	 * Pointing at a different API is a change to this value plus a deploy.
 	 */
 	"vars": {
 		"API_UPSTREAM": "https://rgboo-api-186324327580.us-east1.run.app"
@@ -34,7 +30,7 @@
 	 * environment at BUILD time from CLOUDFLARE_ENV, so `wrangler deploy --env
 	 * staging` does NOT work -- it silently ships the top-level (production)
 	 * worker instead. Secrets are a direct wrangler call and do take --env:
-	 *   wrangler secret put API_KEY --env staging   (and CF_ACCESS_* if used)
+	 *   wrangler secret put API_KEY --env staging
 	 *
 	 * workers_dev/preview_urls are off on purpose: a *.workers.dev or preview
 	 * URL sits in front of Cloudflare Access, so leaving them on would hand out
@@ -61,10 +57,7 @@
 	/**
 	 * Secrets are NOT set here -- they are uploaded with `wrangler secret put`:
 	 *   wrangler secret put API_KEY           # Cloud Run shared secret
-	 *   wrangler secret put CF_ACCESS_ID      # Cloudflare Access service token
-	 *   wrangler secret put CF_ACCESS_SECRET
-	 * The Worker sends whichever of these are configured, so both can be set
-	 * during the migration. See web.md.
+	 * See web.md.
 	 */
 	/**
 	 * Smart Placement
