@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import "./stats.css";
 import LogoIcon from "../assets/pumpkin.svg?react";
-import { RANGE_PRESETS } from "./stats-api";
 import { useStats } from "./useStats";
 import { formatUpdatedAt } from "./format";
 import { StatTiles } from "./components/StatTiles";
@@ -11,7 +10,7 @@ import { HourProfile } from "./components/HourProfile";
 import { StatsTable } from "./components/StatsTable";
 
 const Stats = () => {
-  const { stats, error, isLoading, isRefreshing, days, setDays } = useStats(30);
+  const { stats, error, isLoading, isRefreshing } = useStats();
   const [showTable, setShowTable] = useState(false);
 
   return (
@@ -28,21 +27,6 @@ const Stats = () => {
             Updated {formatUpdatedAt(stats?.updated_at ?? null)}
           </p>
         </header>
-
-        {/* One filter row, above everything it scopes. */}
-        <div className="flex flex-wrap items-center gap-2">
-          {RANGE_PRESETS.map((preset) => (
-            <button
-              key={preset}
-              type="button"
-              onClick={() => setDays(preset)}
-              aria-pressed={days === preset}
-              className={days === preset ? "stats-range-button stats-range-button--on" : "stats-range-button"}
-            >
-              Last {preset} days
-            </button>
-          ))}
-        </div>
 
         {error && (
           <p role="alert" className="stats-alert">

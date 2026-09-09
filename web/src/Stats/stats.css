@@ -116,28 +116,7 @@
     line-height: 1.6;
   }
 
-  .stats-range-button {
-    background: rgb(255 255 255 / 5%);
-    border: 1px solid rgb(255 255 255 / 10%);
-    border-radius: 0.75rem;
-    color: rgb(235 219 190 / 70%);
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 700;
-    padding: 0.5rem 0.9rem;
-    transition: 200ms;
-  }
 
-  .stats-range-button:hover {
-    background: rgb(255 255 255 / 9%);
-    color: var(--color-bone);
-  }
-
-  .stats-range-button--on {
-    background: rgb(227 104 16 / 15%);
-    border-color: rgb(227 104 16 / 45%);
-    color: var(--color-pumpkin-400);
-  }
 
   .stats-mosaic {
     display: grid;

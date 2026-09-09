@@ -122,8 +122,7 @@ test("shows all twenty-four hours, busy or not", async ({ worker }: { worker: Se
   await expect.element(page.getByText("3 AM: 0 colours")).toBeInTheDocument();
 });
 
-test("changing the range refetches for that window", async ({ worker }: { worker: SetupWorker }) => {
-  mockStats(worker);
+test("always asks for the 30-day window", async ({ worker }: { worker: SetupWorker }) => {
   const requested: string[] = [];
   worker.use(http.get("*/api/stats", ({ request }) => {
     requested.push(new URL(request.url).searchParams.get("days") ?? "");
@@ -132,9 +131,9 @@ test("changing the range refetches for that window", async ({ worker }: { worker
   renderStats();
 
   await expect.element(page.getByLabelText("Summary").getByText("148")).toBeInTheDocument();
-  await page.getByRole("button", { name: "Last 7 days" }).click();
-
-  await expect.poll(() => requested).toContain("7");
+  expect(requested).toEqual(["30"]);
+  // No range switcher to get out of step with it.
+  expect(document.querySelector(".stats-range-button")).toBeNull();
 });
 
 test("the table view exposes the same numbers without hovering", async ({ worker }: { worker: SetupWorker }) => {

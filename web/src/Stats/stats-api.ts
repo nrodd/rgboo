@@ -51,10 +51,14 @@ export type StatsResponse = {
   grid: StatsDay[];
 };
 
-export const RANGE_PRESETS = [7, 30, 90] as const;
+/**
+ * The only window the page shows. Sent explicitly rather than relying on
+ * the API's default, so the two cannot drift apart.
+ */
+export const STATS_DAYS = 30;
 
-export const fetchStats = async (days: number): Promise<StatsResponse> => {
-  const response = await fetch(`/api/stats?days=${days}`);
+export const fetchStats = async (): Promise<StatsResponse> => {
+  const response = await fetch(`/api/stats?days=${STATS_DAYS}`);
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || "Unable to load stats");
   return body as StatsResponse;

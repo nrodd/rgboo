@@ -155,7 +155,9 @@ does). Against production it needs application-default credentials and
 ## API
 
 `GET /api/stats?days=30` — public, reached through the Worker's `/api/*` proxy
-like the colour form. `days` is clamped to 1–90; anything else is a 400.
+like the colour form. `days` is clamped to 1–90; anything else is a 400. The
+page only ever asks for 30 — there is no range switcher — but the parameter
+stays because `scripts/rollup_stats.py` and any manual poking want it.
 
 Reads at most 31 documents and never touches the request log, so its cost does
 not grow with how busy the stream was. Cached three ways: a 5-minute in-process
