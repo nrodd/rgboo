@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 # Initialize profanity filter
 profanity.load_censor_words()
 
-# Aggregates only move when the rollup command is run, so a browser (and
-# the Cloudflare edge) can hold onto a response for a while.
+# Aggregates only move when the rollup is run, so a browser and the
+# Cloudflare edge can hold onto a response for a while.
 STATS_CACHE_SECONDS = 300
 
 def register_routes(app, store, stats=None):
@@ -140,13 +140,10 @@ def register_routes(app, store, stats=None):
 
     @app.route('/api/stats', methods=['GET'])
     def get_stats():
-        """Daily colour aggregates for the heatmap page.
+        """Daily colour aggregates for the stats page.
 
-        Reads at most 31 pre-computed documents. It never touches the
-        request log, so the cost of this endpoint does not grow with how
-        busy the stream was. Data is as fresh as the last
-        scripts/rollup_stats.py run, which the response reports as
-        `updated_at`.
+        As fresh as the last scripts/rollup_stats.py run, which the response
+        reports as `updated_at`.
         """
         if stats is None:
             return jsonify({'error': 'Stats are not available'}), 503

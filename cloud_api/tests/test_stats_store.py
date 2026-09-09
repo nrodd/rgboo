@@ -244,7 +244,6 @@ def test_read_range_returns_a_cell_per_colour_per_day(client, store):
 
 
 def test_read_range_keeps_every_colour_not_just_the_busiest(client, store):
-    """The old grid showed each hour's winner only, discarding the rest."""
     seed_day(client, _today(), {
         '20': {'n': 12, 'buckets': {
             '0': {'n': 9, 'r': 2295, 'g': 0, 'b': 0},
@@ -269,6 +268,19 @@ def test_read_range_covers_days_with_no_document(client, store):
     assert payload['totals']['colors'] == []
     assert payload['totals']['sequence'] == []
     assert all(day['colors'] == {} for day in payload['grid'])
+
+
+def test_read_range_survives_a_bad_hour_key(client, store):
+    """One unusable key must not 500 the page for the whole window."""
+    seed_day(client, _today(), {
+        '20': {'n': 3, 'buckets': {'0': {'n': 3, 'r': 765, 'g': 0, 'b': 0}}},
+        '99': {'n': 5, 'buckets': {'0': {'n': 5, 'r': 1275, 'g': 0, 'b': 0}}},
+    }, count=3)
+
+    totals = store.read_range(1)['totals']
+
+    assert totals['hours'][20]['n'] == 3
+    assert totals['busiest_hour'] == {'hour': 20, 'count': 3}
 
 
 def test_read_range_always_returns_a_full_24_hour_profile(client, store):

@@ -1,16 +1,13 @@
 """Pure bucketing math for the 30-day colour stats.
 
-Kept separate from stats.py exactly as pacing.py is kept separate from
-store.py: no Firestore, no ambient clock, so every edge case here is a
-plain unit test.
-
-The shape this produces is what a stats_daily document stores:
+No Firestore and no ambient clock, so every edge case here is a plain unit
+test. The shape it produces is what a stats_daily document stores:
 
     hours["20"]["buckets"]["3"] == {"n": 9, "r": 1834, "g": 612, "b": 90}
 
-Sums rather than an average, because sums are what a rollup can keep
-adding to. The average is taken at read time, and only *within* one hue
-bin -- averaging across bins turns a day of red and blue into mud.
+Sums rather than an average, because sums are what a rollup can keep adding
+to. The average is taken at read time, and only *within* one hue bin --
+averaging across bins turns a day of red and blue into mud.
 """
 
 import colorsys
@@ -192,14 +189,11 @@ def rank_buckets(buckets: dict) -> list:
 def accumulate(samples: Iterable[tuple]) -> dict:
     """Build a day's stored aggregate from (processed_at, r, g, b) rows.
 
-    Returns the `hours` map and the `sequence` a stats_daily document
-    stores, keyed by day, plus a per-day count. Days with no samples are
-    absent.
+    Returns the `hours` map and the `sequence` a stats_daily document stores,
+    keyed by day, plus a per-day count. Days with no samples are absent.
 
-    `sequence` is every colour in the order it was dispatched, not a
-    frequency map: the mosaic shows the month as it happened, and arrival
-    order is exactly the thing a count would throw away. Callers must pass
-    `samples` already ordered by time.
+    `sequence` is every colour in dispatch order, not a frequency map, so
+    callers must pass `samples` already ordered by time.
     """
     days: dict = {}
     for moment, r, g, b in samples:

@@ -90,7 +90,7 @@ mud.
 **Hue bins** (`cloud_api/buckets.py`): twelve 30° bins, each *centred* on its
 name's canonical hue, so pure red sits in the middle of "red" rather than on
 the boundary with "rose". Two extra bins catch colours that have no meaningful
-hue — `dark` (lightness < 0.10) and `neutral` (saturation < 0.15) — which would
+hue — `dark` (lightness < 0.10) and `neutral` (chroma < 0.10) — which would
 otherwise smear randomly across all twelve, since hue is numerically unstable
 down there.
 
@@ -155,7 +155,7 @@ does). Against production it needs application-default credentials and
 ## API
 
 `GET /api/stats?days=30` — public, reached through the Worker's `/api/*` proxy
-like the colour form. `days` is clamped to 1–90; anything else is a 400. The
+like the colour form. `days` must be 1–90; anything else is a 400. The
 page only ever asks for 30 — there is no range switcher — but the parameter
 stays because `scripts/rollup_stats.py` and any manual poking want it.
 

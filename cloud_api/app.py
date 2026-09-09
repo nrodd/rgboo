@@ -28,14 +28,14 @@ def create_app(store=None, stats=None) -> Flask:
     """
     app = Flask(__name__)
 
-    # Only an injected `store` decides whether we touch GCP: a test that
-    # passes a fake store but no fake stats must not end up building a
-    # real Firestore client behind its back. /api/stats answers 503 when
-    # it has no stats store, which is the right answer for those tests.
+    # A test that injects a fake store gets no stats store unless it asks for
+    # one, so it never builds a real Firestore client behind its own back.
+    # /api/stats answers 503 without one, which is the right answer there.
     if store is None:
         client = get_firestore_client()
         store = RequestStore(client)
-        stats = stats or StatsStore(client)
+        if stats is None:
+            stats = StatsStore(client)
 
     @app.before_request
     def enforce_auth():

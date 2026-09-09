@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """Rebuild the daily colour aggregates that GET /api/stats reads.
 
-This is the only writer of the stats_daily collection. It is deliberately
-an offline command rather than a scheduled job: request docs are never
-deleted and `done` is terminal, so the raw log accumulates on its own and
-a single run before publishing the stats page produces exactly the same
-numbers as an hourly job would have.
+The only writer of the stats_daily collection, and deliberately an offline
+command rather than a scheduled job -- docs/stats-aggregates.md says why.
 
 Run it whenever you want the published page to catch up:
 

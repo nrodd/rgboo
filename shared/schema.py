@@ -60,10 +60,7 @@ HUE_BUCKET_LABELS = (
 BUCKET_DARK = "dark"
 BUCKET_NEUTRAL = "neutral"
 DARK_LIGHTNESS_MAX = 0.10
-# Chroma (max channel minus min), not HLS saturation. Saturation divides by
-# a term that vanishes at the extremes, so it reports 1.0 for #fff8f8 -- a
-# near-white -- and would file it as a fully saturated red. Chroma reports
-# 0.03 for the same colour, which is what the eye says.
+# Chroma, not HLS saturation -- see buckets.chroma() for why.
 NEUTRAL_CHROMA_MAX = 0.10
 
 # Guard rails for GET /api/stats?days=

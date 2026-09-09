@@ -1,17 +1,8 @@
 """Daily colour aggregates: the write side (rollup) and the read side.
 
-The `requests` collection is an append-only log -- nothing in the system
-ever deletes a request doc, and `done` is terminal -- so these aggregates
-are pure derived data. That is what lets the rollup be an occasional
-offline command (scripts/rollup_stats.py) instead of a scheduled job:
-running it once before publishing the stats page produces exactly the
-same numbers as having run it hourly all along.
-
-Reading the raw log on every page view is what we are avoiding. A busy
-month is tens of thousands of request docs; a month of aggregates is at
-most 31, fetched in a single round trip.
-
-See docs/stats-aggregates.md.
+The aggregates are pure derived data, which is why the rollup is an offline
+command (scripts/rollup_stats.py) rather than a scheduled job. That argument,
+and the cost of the alternative, is in docs/stats-aggregates.md.
 """
 
 import logging
@@ -32,18 +23,15 @@ from . import buckets
 
 logger = logging.getLogger(__name__)
 
-# Aggregates only change when the rollup command is run by hand, so this
-# can be generous. It exists to stop a burst of page views turning into a
-# Firestore read each.
+# Aggregates only move when the rollup is run by hand, so this can be
+# generous. It stops a burst of page views becoming a Firestore read each.
 CACHE_TTL_SECONDS = 300
 
 # Firestore caps a batch at 500 writes.
 _BATCH_LIMIT = 400
 
-# Most squares the mosaic will ever be sent. A month of a 24/7 stream can
-# run to six figures of requests, which is neither renderable nor a
-# sensible payload, so a longer sequence is thinned by taking every Nth --
-# which keeps the month's shape and order rather than just its tail.
+# Most squares the mosaic will ever be sent. A 24/7 month runs to six
+# figures, which is neither renderable nor a sensible payload.
 MAX_SEQUENCE = 4000
 
 
@@ -64,15 +52,9 @@ class StatsStore:
     def rollup(self, start: date, end: date) -> dict:
         """Rebuild the stats_daily docs covering [start, end] inclusive.
 
-        Idempotent: each day doc is overwritten with a full recount rather
-        than incremented, so running this twice, or over an overlapping
-        range, converges on the same answer. That is also why it doubles
-        as the repair tool.
-
-        Days with no dispatched colours are left without a document. A day
-        can only ever gain requests -- `done` is terminal and request docs
-        are never deleted -- so "no rows today" always means "nothing ever
-        happened today", never "the data went away".
+        Idempotent: each day is a full recount written with set(), never an
+        increment, so re-running over the same or an overlapping range
+        converges. Days with no dispatched colours get no document.
         """
         if start > end:
             raise ValueError("start date must not be after end date")
@@ -88,8 +70,7 @@ class StatsStore:
                 'count': day['count'],
                 'hours': day['hours'],
                 # Every colour that day in dispatch order, rounded to
-                # SWATCH_STEP. This is what the mosaic draws: no binning
-                # into families and no reordering, just what happened.
+                # SWATCH_STEP. This is what the mosaic draws.
                 'sequence': day['sequence'],
                 'timezone': STATS_TIMEZONE,
                 'updated_at': firestore.SERVER_TIMESTAMP,
@@ -116,16 +97,15 @@ class StatsStore:
     def _iter_done(self, start: date, end: date):
         """Stream (processed_at, r, g, b) for dispatched requests in range.
 
-        Bounded by local midnight either side, so a day means the same
-        thing here as it does in the heatmap. Needs the composite index on
+        Bounded by local midnight either side, so a day means the same thing
+        here as it does on the page. Needs the composite index on
         (status ASC, processed_at ASC) -- see docs/stats-aggregates.md.
         """
         start_at = buckets.local_midnight(start)
         end_at = buckets.local_midnight(end + timedelta(days=1))
 
-        # Ordered explicitly: accumulate() records dispatch order, and
-        # relying on the implicit ordering of an inequality filter would
-        # make that silently dependent on query-planner behaviour.
+        # Ordered explicitly: accumulate() records dispatch order, and the
+        # implicit ordering of an inequality filter is not a promise.
         query = (
             self._requests
             .where('status', '==', STATUS_DONE)
@@ -178,12 +158,10 @@ class StatsStore:
         return found
 
     def _build(self, dates: list, found: dict) -> dict:
-        """Shape the aggregates into the colour x day grid the page draws.
+        """Shape the aggregates into the payload the page draws.
 
-        One row per colour family, one column per day. Deliberately *not*
-        each hour's single winning colour: that discarded most of a busy
-        hour and let a cell flip shade on a near-tie. Every bin a day saw
-        is reported with its own count.
+        Every bin a day saw is reported with its own count, so nothing a
+        busy hour recorded is discarded on the way out.
         """
         grid = []
         range_buckets: dict = {}
@@ -215,7 +193,12 @@ class StatsStore:
                 count = int(hour.get('n', 0))
                 if count <= 0:
                     continue
-                hour_totals[int(hour_key)] += count
+                try:
+                    hour_totals[int(hour_key)] += count
+                except (ValueError, IndexError):
+                    # A hand-edited or stale doc must not 500 the whole page.
+                    logger.warning("Skipping hour key %r on %s", hour_key, day_id)
+                    continue
                 buckets.merge_buckets(day_buckets, hour.get('buckets') or {})
 
             # Days are walked oldest first, so appending keeps the whole
@@ -256,18 +239,12 @@ class StatsStore:
                 'avg_per_active_day': avg,
                 'busiest_day': busiest_day if total_count else None,
                 'busiest_hour': busiest_hour,
-                # Hour-of-day profile for the whole range. Pure magnitude, so
-                # the page draws it in one accent colour, not in hues.
+                # Always all 24, so a quiet hour reads as a finding.
                 'hours': [{'h': hour, 'n': hour_totals[hour]} for hour in range(24)],
-                # The 14 coarse families, busiest first. Only the summary
-                # bar uses these now; the mosaic shows colours unbinned.
+                # The 14 coarse families, busiest first: the summary bar.
                 'colors': buckets.rank_buckets(range_buckets),
-                # Every colour picked, in the order it was picked. Nothing
-                # is encoded and nothing is reordered: the mosaic is the
-                # month as it happened.
+                # Every colour picked, in the order it was picked: the mosaic.
                 'sequence': [f'#{key}' for key in shown],
-                # True when the sequence above is a thinned sample of a
-                # longer month, so the page can say so.
                 'sampled': len(shown) < len(sequence),
             },
             'grid': grid,
