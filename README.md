@@ -73,6 +73,10 @@ a daemon at home does the physical USB write. See
 **[docs/architecture.md](docs/architecture.md)** for diagrams, the data model,
 failure modes, and the security posture.
 
+**[docs/stats-aggregates.md](docs/stats-aggregates.md)** covers the colour
+stats: what gets counted, how the daily aggregates are rebuilt, and why that is
+an offline command rather than a scheduled job.
+
 ## 🚀 Deploying
 
 Nothing deploys on merge. The API has a one-click workflow

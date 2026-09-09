@@ -31,3 +31,42 @@ STATUS_PENDING = "pending"
 STATUS_DONE = "done"
 STATUS_CANCELLED = "cancelled"
 STATUS_FAILED = "failed"
+
+# ---------------------------------------------------------------------------
+# 30-day colour stats (docs/stats-aggregates.md)
+# ---------------------------------------------------------------------------
+
+# One aggregate document per local day: stats_daily/{YYYY-MM-DD}.
+STATS_DAILY_COLLECTION = "stats_daily"
+
+# Days are bucketed in the stream's local time, not UTC -- "8pm on the
+# stream" has to land in the 8pm cell. Changing this invalidates existing
+# aggregates, so a change means re-running scripts/rollup_stats.py.
+STATS_TIMEZONE = "America/New_York"
+
+# Hues are binned into 12 x 30 degrees, each bin *centred* on its label's
+# canonical hue, so pure red (0 degrees) sits in the middle of "red" rather
+# than on the boundary between red and rose.
+HUE_BUCKET_COUNT = 12
+HUE_BUCKET_DEGREES = 360 // HUE_BUCKET_COUNT
+HUE_BUCKET_LABELS = (
+    "red", "orange", "yellow", "chartreuse",
+    "green", "spring green", "cyan", "azure",
+    "blue", "violet", "magenta", "rose",
+)
+
+# Colours with too little colourfulness or lightness have no meaningful hue,
+# so they get their own bins instead of being scattered across all twelve.
+BUCKET_DARK = "dark"
+BUCKET_NEUTRAL = "neutral"
+DARK_LIGHTNESS_MAX = 0.10
+# Chroma (max channel minus min), not HLS saturation. Saturation divides by
+# a term that vanishes at the extremes, so it reports 1.0 for #fff8f8 -- a
+# near-white -- and would file it as a fully saturated red. Chroma reports
+# 0.03 for the same colour, which is what the eye says.
+NEUTRAL_CHROMA_MAX = 0.10
+
+# Guard rails for GET /api/stats?days=
+STATS_MIN_DAYS = 1
+STATS_MAX_DAYS = 90
+STATS_DEFAULT_DAYS = 30
