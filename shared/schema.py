@@ -33,7 +33,7 @@ STATUS_CANCELLED = "cancelled"
 STATUS_FAILED = "failed"
 
 # ---------------------------------------------------------------------------
-# 30-day colour stats (docs/stats-aggregates.md)
+# 30-day colour stats (see stats_daily in docs/architecture.md)
 # ---------------------------------------------------------------------------
 
 # One aggregate document per local day: stats_daily/{YYYY-MM-DD}.

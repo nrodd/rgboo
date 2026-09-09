@@ -1,8 +1,8 @@
 """Daily colour aggregates: the write side (rollup) and the read side.
 
-The aggregates are pure derived data, which is why the rollup is an offline
-command (scripts/rollup_stats.py) rather than a scheduled job. That argument,
-and the cost of the alternative, is in docs/stats-aggregates.md.
+The aggregates are pure derived data -- `requests` is append-only and `done` is
+terminal -- so the rollup is an offline command (scripts/rollup_stats.py)
+rather than a scheduled job. See stats_daily in docs/architecture.md.
 """
 
 import logging
@@ -30,8 +30,9 @@ CACHE_TTL_SECONDS = 300
 # Firestore caps a batch at 500 writes.
 _BATCH_LIMIT = 400
 
-# Most squares the mosaic will ever be sent. A 24/7 month runs to six
-# figures, which is neither renderable nor a sensible payload.
+# Most squares the mosaic will ever be sent. A 24/7 month runs to six figures,
+# which is neither renderable nor a sensible payload. Thinned by taking every
+# Nth, so the month keeps its shape end to end rather than only its tail.
 MAX_SEQUENCE = 4000
 
 
@@ -99,7 +100,7 @@ class StatsStore:
 
         Bounded by local midnight either side, so a day means the same thing
         here as it does on the page. Needs the composite index on
-        (status ASC, processed_at ASC) -- see docs/stats-aggregates.md.
+        (status ASC, processed_at ASC) -- see docs/architecture.md.
         """
         start_at = buckets.local_midnight(start)
         end_at = buckets.local_midnight(end + timedelta(days=1))

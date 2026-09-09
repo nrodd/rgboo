@@ -154,10 +154,39 @@ cloud cannot call the home machine. See
 **`denylist/{sha256(name)}`** — blocked usernames, keyed by hash so a redacted
 name is never stored in readable form.
 
-**`stats_daily/{YYYY-MM-DD}`** — one aggregate document per local day, holding
-per-hour counts and hue-bin colour sums. Pure derived data: rebuilt from
-`requests` by `scripts/rollup_stats.py`, never written by the API or the
-bridge. See [stats-aggregates.md](stats-aggregates.md).
+**`stats_daily/{YYYY-MM-DD}`** — one aggregate document per local day, absent
+for days with nothing dispatched. Pure derived data: rebuilt from `requests` by
+`scripts/rollup_stats.py`, never written by the API or the bridge.
+
+| Field | Notes |
+|---|---|
+| `count` | Requests that reached `done` that day — only colours that actually lit up |
+| `hours` | `"0".."23"` → `{ n, buckets }`, populated hours only |
+| `hours.<h>.buckets` | Hue bin → `{ n, r, g, b }`, channels as **sums**, so a recount can rebuild them and a range query can merge them |
+| `sequence` | Every colour that day, rounded, in dispatch order |
+| `timezone`, `updated_at` | What the rollup used, and when it ran |
+
+Days and hours bucket in `STATS_TIMEZONE`, not UTC: an 8–11pm ET stream is
+00:00–03:00 the *next* UTC day, so UTC bucketing would put the busy band in the
+small hours and split one evening across two days. Changing the constant
+invalidates every existing aggregate. Usernames are never copied in, so a
+redaction cannot leave a name stranded in the stats.
+
+Two things to configure by hand — a composite index for the rollup's range
+query, and index exemptions for the two map fields, whose few thousand numeric
+leaves are auto-indexed by default for queries nobody runs:
+
+```
+gcloud firestore indexes composite create \
+  --collection-group=requests \
+  --field-config=field-path=status,order=ascending \
+  --field-config=field-path=processed_at,order=ascending
+
+gcloud firestore indexes fields update \
+  --collection-group=stats_daily --field-path=hours --disable-indexes
+gcloud firestore indexes fields update \
+  --collection-group=stats_daily --field-path=sequence --disable-indexes
+```
 
 ## API
 
@@ -198,6 +227,9 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 | ESP32 unplugged | Request marked `failed` with the error; the queue keeps moving. |
 | Serial write fails after re-read | Doc left `pending`; the next resync retries rather than dropping it. |
 | Firestore unreachable from home | Bridge logs and retries; heartbeat goes stale, so the cloud reports it offline. |
+| The stats rollup has never run | `/api/stats` returns an all-zero window. No error. |
+| `STATS_TIMEZONE` changes | Existing aggregates are wrong until the rollup is re-run over the full range. |
+| The API has no stats store | `/api/stats` answers 503; the rest of the API is unaffected. |
 
 ## Security
 
