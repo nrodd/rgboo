@@ -4,13 +4,23 @@ import logging
 
 from better_profanity import profanity
 
+from shared.schema import STATS_DEFAULT_DAYS, STATS_MAX_DAYS, STATS_MIN_DAYS
+
 logger = logging.getLogger(__name__)
 
 # Initialize profanity filter
 profanity.load_censor_words()
 
-def register_routes(app, store):
-    """Register all API routes with the Flask app"""
+# Aggregates only move when the rollup is run, so a browser and the
+# Cloudflare edge can hold onto a response for a while.
+STATS_CACHE_SECONDS = 300
+
+def register_routes(app, store, stats=None):
+    """Register all API routes with the Flask app.
+
+    `stats` is optional so the existing tests, which only exercise the
+    queue, can keep constructing the app with a single store.
+    """
 
     @app.route('/', methods=['GET'])
     def health_check():
@@ -127,6 +137,36 @@ def register_routes(app, store):
         status = store.get_queue_status()
         status['queue_contents'] = store.get_queue_contents()
         return jsonify(status)
+
+    @app.route('/api/stats', methods=['GET'])
+    def get_stats():
+        """Daily colour aggregates for the stats page.
+
+        As fresh as the last scripts/rollup_stats.py run, which the response
+        reports as `updated_at`.
+        """
+        if stats is None:
+            return jsonify({'error': 'Stats are not available'}), 503
+
+        raw_days = request.args.get('days', STATS_DEFAULT_DAYS)
+        try:
+            days = int(raw_days)
+        except (TypeError, ValueError):
+            return jsonify({'error': 'days must be an integer'}), 400
+        if not (STATS_MIN_DAYS <= days <= STATS_MAX_DAYS):
+            return jsonify({
+                'error': f'days must be between {STATS_MIN_DAYS} and {STATS_MAX_DAYS}'
+            }), 400
+
+        try:
+            payload = stats.read_range(days)
+        except Exception as e:
+            logger.error(f"Error reading stats: {str(e)}")
+            return jsonify({'error': 'Internal server error'}), 500
+
+        response = jsonify(payload)
+        response.headers['Cache-Control'] = f'public, max-age={STATS_CACHE_SECONDS}'
+        return response
 
     @app.route('/admin/status', methods=['GET'])
     def get_admin_status():

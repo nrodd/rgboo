@@ -1,5 +1,4 @@
 import hmac
-import hmac
 import logging
 
 from flask import Flask, jsonify, request
@@ -7,6 +6,7 @@ from flask import Flask, jsonify, request
 from .config import Config
 from .firestore_client import get_firestore_client
 from .routes import register_routes
+from .stats import StatsStore
 from .store import RequestStore
 
 logging.basicConfig(
@@ -16,20 +16,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def create_app(store=None) -> Flask:
+def create_app(store=None, stats=None) -> Flask:
     """Application factory.
 
-    Pass `store` to inject a fake RequestStore in tests. Production
+    Pass `store` (and `stats`) to inject fakes in tests. Production
     (gunicorn's `--factory` loader, see Dockerfile) calls this with no
-    arguments, which builds a real Firestore-backed store -- and its
+    arguments, which builds the real Firestore-backed stores -- and their
     client -- here, at worker boot, rather than at import time. That
     keeps `import cloud_api.app` side-effect-free, so it never needs
     live GCP credentials just to be imported (e.g. by tests or tooling).
     """
     app = Flask(__name__)
 
+    # A test that injects a fake store gets no stats store unless it asks for
+    # one, so it never builds a real Firestore client behind its own back.
+    # /api/stats answers 503 without one, which is the right answer there.
     if store is None:
-        store = RequestStore(get_firestore_client())
+        client = get_firestore_client()
+        store = RequestStore(client)
+        if stats is None:
+            stats = StatsStore(client)
 
     @app.before_request
     def enforce_auth():
@@ -53,7 +59,7 @@ def create_app(store=None) -> Flask:
         return None
 
 
-    register_routes(app, store)
+    register_routes(app, store, stats)
     return app
 
 
