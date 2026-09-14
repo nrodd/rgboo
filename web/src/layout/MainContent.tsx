@@ -1,20 +1,69 @@
-import LogoIcon from "../assets/pumpkin.svg?react";
 import ColorForm from "../components/ColorForm";
+import InfoButton from "../components/InfoButton";
 import { StreamEmbed } from "../components/StreamEmbed";
+import { Footer } from "./Footer";
 
 export const MainContent = () => (
-  <div className="main-content">
-    <div className="flex lg:absolute py-4 left-0 right-0 justify-center items-center gap-4 z-50">
-      <LogoIcon viewBox="0 0 441 409" className="w-10 h-10 sm:w-24 sm:h-24" />
-      <h1 className="leading-none text-bone text-sm sm:text-md font-bold">
-        RGBOO
-      </h1>
-    </div>
-    <div>
-      <StreamEmbed />
-    </div>
-    <div className="lg:absolute lg:bottom-0 lg:right-0 md:w-auto md:flex-shrink-0 w-full mt-12 mb-16 z-40">
-      <ColorForm />
-    </div>
-  </div>
+  <main id="main-content" className="main-content">
+    <section className="tv-set" aria-label="RGBOO live color television">
+      <div className="cabinet-highlight" aria-hidden="true" />
+
+      <header className="tv-header">
+        <div className="brand-plate">
+          <div>
+            <h1>RGBOO</h1>
+            <p>Colorcast receiver</p>
+          </div>
+        </div>
+        <div className="channel-readout" aria-label="Channel 31">
+          <span>CH</span>
+          <strong>31</strong>
+        </div>
+      </header>
+
+      <div className="tv-face">
+        <div className="screen-bezel">
+          <div className="screen-window">
+            <StreamEmbed />
+            <div className="screen-effects" aria-hidden="true" />
+            <div className="on-air-bug" aria-hidden="true">
+              <span /> LIVE
+            </div>
+          </div>
+        </div>
+
+        <aside className="control-panel" aria-label="Television controls">
+          <div className="panel-heading">
+            <p>Viewer control</p>
+            <span>COLOR•TRONIC</span>
+          </div>
+
+          <ColorForm />
+
+          <div className="speaker" aria-label="Speaker grille" role="img">
+            {Array.from({ length: 21 }, (_, index) => (
+              <span key={index} />
+            ))}
+          </div>
+
+          <div className="panel-badges" aria-hidden="true">
+            <span>REMOTE</span>
+            <span>SOLID STATE</span>
+          </div>
+        </aside>
+      </div>
+
+      <footer className="tv-footer">
+        <div className="vent" aria-hidden="true" />
+        <p>Live interactive broadcast system</p>
+        <div className="tv-footer-actions">
+          <div className="power-light" aria-label="Television powered on">
+            <span /> POWER
+          </div>
+          <Footer />
+          <InfoButton />
+        </div>
+      </footer>
+    </section>
+  </main>
 );

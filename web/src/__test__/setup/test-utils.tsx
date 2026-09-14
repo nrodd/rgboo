@@ -13,7 +13,7 @@ export function nameInput() {
 }
 
 export function submitButton() {
-  return page.getByRole("button");
+  return page.getByRole("button", { name: "TRANSMIT" });
 }
 
 export async function fillName(value: string) {

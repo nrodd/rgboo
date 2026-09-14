@@ -11,22 +11,31 @@ export const InfoButton = () => {
 
   return (
     <div
-      className="info-icon right-6 z-50"
+      className="info-icon"
       data-testid="info-button"
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      <InfoIcon
-        viewBox="0 0 64 64"
-        width={isMobile ? SM : LG}
-        height={isMobile ? SM : LG}
-      />
+      <button
+        type="button"
+        aria-label="About RGBOO"
+        aria-expanded={showTooltip}
+        onClick={() => setShowTooltip((isVisible) => !isVisible)}
+        onFocus={() => setShowTooltip(true)}
+        onBlur={() => setShowTooltip(false)}
+      >
+        <InfoIcon
+          viewBox="0 0 64 64"
+          width={isMobile ? SM : LG}
+          height={isMobile ? SM : LG}
+        />
+      </button>
 
       {showTooltip && (
-        <div className="absolute z-50 -left-64 top-0 w-64 p-4 bg-arcana-900/95 border border-pumpkin-400 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-200 ease-out">
-          <div className="text-bone text-xs leading-relaxed">
-            <h3 className="font-bold text-base mb-2">The Project</h3>
-            <p className="mb-2">
+        <div className="info-tooltip" role="tooltip">
+          <div>
+            <h3>The project</h3>
+            <p>
               This project controls a physical LED strip in real-time! When you
               submit a color, it gets added to a queue.
             </p>

@@ -132,7 +132,7 @@ export const ColorForm = () => {
   };
 
   return (
-    <div data-testid="color-form-container" className="px-6">
+    <div data-testid="color-form-container" className="color-form">
       <Formik
         initialValues={{
           username: "",
@@ -145,56 +145,61 @@ export const ColorForm = () => {
         onSubmit={onSubmit}
         validationSchema={colorFormSchema}
       >
-        <Form>
-          <div className="flex flex-col space-y-8">
-            <div className="flex flex-col space-y-4">
+        <Form className="control-form">
+          <div className="control-stack">
+            <div className="control-group color-control">
+              <span className="control-number">01</span>
+              <label className="control-label" htmlFor="color-dial">
+                Color dial
+              </label>
+              <ColorInput />
+            </div>
+
+            <div className="control-group name-control">
+              <span className="control-number">02</span>
+              <label className="control-label" htmlFor="username">
+                Broadcast name
+              </label>
               <Field
                 id="username"
                 name="username"
+                type="text"
                 aria-label="username"
-                placeholder="Name"
-                className="text-sm sm:text-base form-field pl-4 py-2 placeholder-bone"
+                placeholder="YOUR NAME"
+                autoComplete="nickname"
+                className="retro-input"
               />
               <ErrorMessage
                 name="username"
                 component="span"
-                className="text-bone"
+                className="field-error"
               />
-              <ColorInput />
             </div>
+
             <button
               type="submit"
-              className={`form-field form-button ${isOnCooldown ? "opacity-50 cursor-not-allowed" : ""}`}
+              className="transmit-button"
               disabled={isSubmitting || isOnCooldown}
             >
-              {isSubmitting
-                ? "Sending..."
-                : isOnCooldown
-                  ? `Wait ${cooldownTime}s`
-                  : "Send"}
+              <span className="button-lamp" aria-hidden="true" />
+              <span>
+                {isSubmitting
+                  ? "TUNING…"
+                  : isOnCooldown
+                    ? `WAIT ${cooldownTime}s`
+                    : "TRANSMIT"}
+              </span>
             </button>
           </div>
         </Form>
       </Formik>
 
       {showPopup && message.text && (
-        <div
-          className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ease-out transform ${
-            showPopup
-              ? "translate-y-0 opacity-100"
-              : "-translate-y-full opacity-0"
-          }`}
-        >
-          <div
-            className={`mx-4 mt-4 p-4 rounded-lg shadow-lg text-center ${
-              message.type === "success"
-                ? "bg-green-900/90 border border-pumpkin-400 text-bone backdrop-blur-sm"
-                : "bg-red-900/90 border border-pumpkin-400 text-bone backdrop-blur-sm"
-            }`}
-          >
-            <p className="font-medium">{message.text}</p>
+        <div className="signal-message-wrap">
+          <div className={`signal-message ${message.type}`} role="status">
+            <p>{message.text}</p>
             {message.type === "success" && message.eta !== null && (
-              <p className="text-sm mt-2 opacity-90 text-bone">
+              <p className="signal-eta">
                 {message.eta === 0
                   ? "Your color will appear immediately!"
                   : message.eta < 60

@@ -9,16 +9,18 @@ export const Footer = () => {
   const { isMobile } = useScreenSize();
 
   return (
-    <div id="footer" data-testid="footer" className="footer">
+    <nav id="footer" data-testid="footer" className="footer" aria-label="RGBOO links">
       <a
         href="https://twitch.tv/roddzillaaa"
         target="_blank"
         rel="noopener noreferrer"
         className="content-center text-bone pointer-events-auto"
+        aria-label="Watch RGBOO on Twitch"
       >
         <img
           src={TwitchLogo}
-          className="w-6 md:w-10 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+          alt=""
+          className="footer-logo twitch-logo"
         />
       </a>
       <a
@@ -26,14 +28,16 @@ export const Footer = () => {
         target="_blank"
         rel="noopener noreferrer"
         className="content-center text-bone pointer-events-auto"
+        aria-label="View RGBOO on GitHub"
       >
         <GhLogo
-          className="github-icon fill-current cursor-pointer hover:opacity-80 transition-opacity"
+          aria-hidden="true"
+          className="footer-logo github-icon"
           viewBox="0 0 100 100"
           width={isMobile ? SM : LG}
           height={isMobile ? SM : LG}
         />
       </a>
-    </div>
+    </nav>
   );
 };
