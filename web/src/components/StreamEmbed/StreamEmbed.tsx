@@ -15,7 +15,7 @@ export const StreamEmbed = ({ className = "" }: StreamEmbedProps) => {
       data-testid="stream-embed-container"
       className={`stream-embed-container w-full ${className}`}
     >
-      <div className="lg:absolute lg:h-screen h-64 w-screen">
+      <div className="h-full w-full overflow-hidden">
         {devEmbed ? (
           <video
             src={devVideoUrl}
@@ -24,7 +24,6 @@ export const StreamEmbed = ({ className = "" }: StreamEmbedProps) => {
             loop
             playsInline
             className="w-full h-full object-cover"
-            style={{ minHeight: "200px" }}
           />
         ) : (
           <iframe
@@ -34,7 +33,6 @@ export const StreamEmbed = ({ className = "" }: StreamEmbedProps) => {
             allowFullScreen
             className="w-full h-full"
             style={{
-              minHeight: "200px",
               border: 0,
               visibility: "visible",
               display: "block",

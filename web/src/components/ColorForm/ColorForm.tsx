@@ -148,23 +148,15 @@ export const ColorForm = () => {
         <Form className="control-form">
           <div className="control-stack">
             <div className="control-group color-control">
-              <span className="control-number">01</span>
-              <label className="control-label" htmlFor="color-dial">
-                Color dial
-              </label>
               <ColorInput />
             </div>
 
             <div className="control-group name-control">
-              <span className="control-number">02</span>
-              <label className="control-label" htmlFor="username">
-                Broadcast name
-              </label>
               <Field
                 id="username"
                 name="username"
                 type="text"
-                aria-label="username"
+                aria-label="Broadcast name"
                 placeholder="YOUR NAME"
                 autoComplete="nickname"
                 className="retro-input"

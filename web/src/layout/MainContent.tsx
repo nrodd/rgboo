@@ -9,10 +9,14 @@ export const MainContent = () => (
       <div className="cabinet-highlight" aria-hidden="true" />
 
       <header className="tv-header">
-        <div className="brand-plate">
+        <div className="top-vent" aria-hidden="true" />
+        <div
+          className="brand-plate brand-stamp"
+          aria-label="RGBOO"
+        >
           <div>
             <h1>RGBOO</h1>
-            <p>Colorcast receiver</p>
+            <span className="brand-spectrum" aria-hidden="true" />
           </div>
         </div>
         <div className="channel-readout" aria-label="Channel 31">
@@ -33,21 +37,11 @@ export const MainContent = () => (
         </div>
 
         <aside className="control-panel" aria-label="Television controls">
-          <div className="panel-heading">
-            <p>Viewer control</p>
-            <span>COLOR•TRONIC</span>
-          </div>
-
           <ColorForm />
 
-          <div className="speaker" aria-label="Speaker grille" role="img">
-            {Array.from({ length: 21 }, (_, index) => (
-              <span key={index} />
-            ))}
-          </div>
-
           <div className="panel-badges" aria-hidden="true">
-            <span>REMOTE</span>
+            <span>COLOR</span>
+            <span>SIGNAL</span>
             <span>SOLID STATE</span>
           </div>
         </aside>
@@ -55,7 +49,6 @@ export const MainContent = () => (
 
       <footer className="tv-footer">
         <div className="vent" aria-hidden="true" />
-        <p>Live interactive broadcast system</p>
         <div className="tv-footer-actions">
           <div className="power-light" aria-label="Television powered on">
             <span /> POWER
