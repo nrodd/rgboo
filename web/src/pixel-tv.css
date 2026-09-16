@@ -1,0 +1,347 @@
+/* A small, warm palette and hard-edged shading keep the cabinet pixel-like.
+   Scope the skin to the TV so the admin interface and video stay untouched. */
+.tv-set.pixel-tv {
+  --pixel-ink: #49352f;
+  --pixel-walnut: #78523e;
+  --pixel-caramel: #b98259;
+  --pixel-biscuit: #ddb381;
+  --pixel-cream: #ffe4b4;
+  --pixel-sage: #b7c894;
+  --pixel-screen: #292d27;
+  --pixel-cut: polygon(
+    0 16px, 8px 16px, 8px 8px, 16px 8px, 16px 0,
+    calc(100% - 16px) 0, calc(100% - 16px) 8px,
+    calc(100% - 8px) 8px, calc(100% - 8px) 16px, 100% 16px,
+    100% calc(100% - 16px), calc(100% - 8px) calc(100% - 16px),
+    calc(100% - 8px) calc(100% - 8px), calc(100% - 16px) calc(100% - 8px),
+    calc(100% - 16px) 100%, 16px 100%, 16px calc(100% - 8px),
+    8px calc(100% - 8px), 8px calc(100% - 16px), 0 calc(100% - 16px)
+  );
+  padding: clamp(12px, 2vw, 28px);
+  border: 4px solid var(--pixel-ink);
+  background: var(--pixel-walnut);
+  box-shadow: inset 4px 4px var(--pixel-caramel), inset -4px -4px #543b30;
+  color: var(--pixel-cream);
+}
+
+.pixel-tv::before {
+  inset: 4px;
+  border: 0;
+  clip-path: var(--pixel-cut);
+  background: linear-gradient(
+    to bottom,
+    var(--pixel-cream) 0 8px,
+    #ecc99a 8px 16px,
+    var(--pixel-biscuit) 16px calc(100% - 20px),
+    #c29466 calc(100% - 20px) calc(100% - 8px),
+    var(--pixel-caramel) calc(100% - 8px)
+  );
+  box-shadow: inset 8px 0 #ecc99a, inset -8px 0 #c29466;
+}
+
+/* Four square inset fasteners, painted on the cabinet rather than controls. */
+.pixel-tv::after {
+  inset: 14px;
+  background:
+    linear-gradient(#9b704e, #9b704e) left top / 4px 4px,
+    linear-gradient(#9b704e, #9b704e) right top / 4px 4px,
+    linear-gradient(#9b704e, #9b704e) left bottom / 4px 4px,
+    linear-gradient(#9b704e, #9b704e) right bottom / 4px 4px;
+  background-repeat: no-repeat;
+}
+
+.pixel-tv .cabinet-highlight {
+  inset: 12px;
+  clip-path: var(--pixel-cut);
+  background:
+    repeating-conic-gradient(#fff1cf 0 25%, transparent 0 50%) 0 0 / 8px 8px;
+  mix-blend-mode: normal;
+  opacity: 0.1;
+}
+
+.pixel-tv .tv-header,
+.pixel-tv .tv-footer {
+  color: var(--pixel-ink);
+}
+
+.pixel-tv .tv-header {
+  min-height: 56px;
+  padding-bottom: 16px;
+}
+
+.pixel-tv .brand-plate h1 {
+  background: none;
+  color: var(--pixel-walnut);
+  filter: none;
+  text-shadow: 0 2px var(--pixel-cream);
+  -webkit-text-fill-color: currentColor;
+  -webkit-text-stroke: 0;
+}
+
+.pixel-tv .brand-spectrum {
+  width: 36px;
+  height: 4px;
+  margin-top: 6px;
+  border: 0;
+  background: linear-gradient(90deg, #c77259 0 12px, #889866 12px 24px, #8b849f 24px);
+  box-shadow: 0 2px #be9064;
+}
+
+.pixel-tv .top-vent,
+.pixel-tv .vent {
+  height: 8px;
+  border-radius: 0;
+  background: repeating-linear-gradient(90deg, var(--pixel-walnut) 0 4px, transparent 4px 12px);
+  opacity: 0.8;
+}
+
+.pixel-tv .channel-readout {
+  padding: 4px 8px;
+  border: 3px solid var(--pixel-walnut);
+  border-radius: 0;
+  background: var(--pixel-screen);
+  box-shadow: -2px -2px #bf8e62, 2px 2px var(--pixel-cream), inset 2px 2px #1c201c;
+  color: #d2dfa8;
+  text-shadow: 2px 2px #464f38;
+}
+
+.pixel-tv .channel-readout span {
+  color: #c0c79e;
+}
+
+.pixel-tv .tv-face {
+  gap: 20px;
+}
+
+.pixel-tv .screen-bezel {
+  position: relative;
+  padding: 16px;
+  border: 0;
+  border-radius: 0;
+  clip-path: var(--pixel-cut);
+  background: var(--pixel-ink);
+  box-shadow: none;
+}
+
+.pixel-tv .screen-bezel::before {
+  position: absolute;
+  inset: 4px;
+  clip-path: var(--pixel-cut);
+  background: #70503f;
+  box-shadow: inset 4px 4px #956447, inset -4px -4px #d2a371;
+  content: "";
+  pointer-events: none;
+}
+
+.pixel-tv .screen-window {
+  /* The viewing area keeps its original 16:9 size and native video resolution. */
+  border: 0;
+  border-radius: 0;
+  clip-path: var(--pixel-cut);
+  box-shadow: none;
+}
+
+.pixel-tv .screen-effects {
+  border-radius: 0;
+  background:
+    radial-gradient(ellipse at center, transparent 65%, rgb(30 24 20 / 32%) 100%),
+    repeating-linear-gradient(0deg, rgb(0 0 0 / 6%) 0 1px, transparent 1px 4px);
+  box-shadow: inset 0 0 0 4px rgb(19 24 20 / 32%);
+}
+
+.pixel-tv .on-air-bug {
+  right: 16px;
+  bottom: 12px;
+  border: 2px solid #a4b58c;
+  border-radius: 0;
+  background: #353f32;
+  box-shadow: 2px 2px #202820;
+  color: #e3eac3;
+}
+
+.pixel-tv .on-air-bug span,
+.pixel-tv .power-light span,
+.pixel-tv .button-lamp {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 0;
+  background: #c8dd9b;
+  box-shadow: 2px 2px #697950;
+}
+
+.pixel-tv .control-panel {
+  padding: 20px 24px 16px;
+  border: 4px solid var(--pixel-walnut);
+  border-radius: 0;
+  background:
+    linear-gradient(#c7986b 0 8px, transparent 8px calc(100% - 8px), #f2d2a0 calc(100% - 8px)),
+    #d7ac7c;
+  box-shadow: 0 4px var(--pixel-cream), inset 4px 0 #c7986b, inset -4px 0 #f2d2a0;
+}
+
+.pixel-tv .control-panel::before {
+  display: none;
+}
+
+.pixel-tv .wheel-dial-surround {
+  background:
+    radial-gradient(circle closest-side, var(--pixel-walnut) 0 84%, transparent 84%),
+    repeating-conic-gradient(from -1deg, var(--pixel-cream) 0deg 3deg, transparent 3deg 15deg);
+  filter: none;
+}
+
+.pixel-tv .color-wheel {
+  border-color: var(--pixel-ink);
+  box-shadow: 0 4px var(--pixel-walnut);
+}
+
+.pixel-tv .color-wheel::after {
+  background: none;
+}
+
+.pixel-tv .hex-editor,
+.pixel-tv .retro-input {
+  border: 3px solid var(--pixel-walnut);
+  border-radius: 0;
+  background: var(--pixel-screen);
+  box-shadow: -2px -2px #bd8b60, 2px 2px #f2d2a0, inset 2px 2px #1b201c;
+  color: #d2dfa8;
+}
+
+.pixel-tv .hex-editor span {
+  border-color: #566048;
+  color: #c1c9a1;
+}
+
+.pixel-tv .hex-editor input {
+  color: #d2dfa8;
+}
+
+.pixel-tv .retro-input::placeholder {
+  color: #a9b18f;
+}
+
+.pixel-tv .field-error {
+  color: #762f27;
+}
+
+.pixel-tv .transmit-button {
+  border: 3px solid #556443;
+  border-radius: 0;
+  background: var(--pixel-sage);
+  box-shadow: inset 3px 3px #dce6bb, inset -3px -3px #91a674, 0 4px #556443;
+  color: #2e3b29;
+  text-shadow: none;
+  transition: none;
+}
+
+.pixel-tv .transmit-button:hover:not(:disabled) {
+  filter: none;
+  background: #c7d6a4;
+}
+
+.pixel-tv .transmit-button:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: inset 3px 3px #91a674;
+}
+
+.pixel-tv .button-lamp {
+  background: #f8e5ac;
+  box-shadow: 2px 2px #869361;
+}
+
+.pixel-tv .panel-badges {
+  width: 100%;
+  border-top: 2px solid #bb8c60;
+  padding-top: 8px;
+  color: #70503b;
+}
+
+.pixel-tv .footer a,
+.pixel-tv .info-icon button {
+  border: 2px solid var(--pixel-walnut);
+  border-radius: 0;
+  background: #997155;
+  box-shadow: inset 2px 2px #c69b6e, inset -2px -2px #7f583f, 0 3px var(--pixel-walnut);
+  color: var(--pixel-cream);
+  transition: none;
+}
+
+.pixel-tv .footer a:hover,
+.pixel-tv .info-icon button:hover {
+  background: #ae805b;
+  transform: translateY(-2px);
+}
+
+.pixel-tv .info-tooltip,
+.pixel-tv .signal-message {
+  border: 3px solid var(--pixel-walnut);
+  border-radius: 0;
+  background: #fff0ce;
+  box-shadow: 4px 4px var(--pixel-ink);
+  color: var(--pixel-ink);
+}
+
+.pixel-tv .info-tooltip h3,
+.pixel-tv .signal-eta {
+  color: #70503b;
+}
+
+.pixel-tv .signal-message.error {
+  border-color: #a74d39;
+}
+
+.pixel-tv :is(.retro-input, .color-wheel, .transmit-button, .footer a, .info-icon button):focus-visible,
+.pixel-tv .hex-editor:focus-within {
+  outline: 3px solid var(--pixel-ink);
+  outline-offset: 4px;
+}
+
+@media (max-width: 650px) {
+  .tv-set.pixel-tv {
+    padding: 12px;
+  }
+
+  .pixel-tv .tv-header {
+    min-height: 48px;
+    padding: 0 8px 12px;
+  }
+
+  .pixel-tv .tv-face {
+    gap: 16px;
+  }
+
+  .pixel-tv .screen-bezel {
+    padding: 12px;
+  }
+
+  .pixel-tv .control-panel {
+    padding: 20px 16px 12px;
+  }
+
+  .pixel-tv .control-stack {
+    gap: 20px;
+  }
+
+  .pixel-tv .name-control {
+    width: 100%;
+  }
+
+  .pixel-tv .on-air-bug {
+    right: 12px;
+    bottom: 8px;
+  }
+}
+
+@media (max-height: 560px) {
+  .tv-set.pixel-tv {
+    padding-block: 12px;
+  }
+
+  .pixel-tv .tv-header {
+    min-height: 40px;
+    padding-bottom: 8px;
+  }
+}

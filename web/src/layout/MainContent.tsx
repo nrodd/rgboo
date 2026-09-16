@@ -2,10 +2,11 @@ import ColorForm from "../components/ColorForm";
 import InfoButton from "../components/InfoButton";
 import { StreamEmbed } from "../components/StreamEmbed";
 import { Footer } from "./Footer";
+import "../pixel-tv.css";
 
 export const MainContent = () => (
   <main id="main-content" className="main-content">
-    <section className="tv-set" aria-label="RGBOO live color television">
+    <section className="tv-set pixel-tv" aria-label="RGBOO live color television">
       <div className="cabinet-highlight" aria-hidden="true" />
 
       <header className="tv-header">
