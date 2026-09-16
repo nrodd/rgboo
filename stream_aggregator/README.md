@@ -52,6 +52,60 @@ Deploy to an always-running container host/VM with outbound HTTPS/WebSocket
 access. This is a background worker, not a request-serving Cloud Run service;
 request-based CPU and scale-to-zero would stop chat ingestion. Logs go to stdout.
 
+## Unraid deployment
+
+The Dockerfile should work on Unraid without application changes, but has not
+been tested on an Unraid machine. There is no published image or Community Apps
+template yet; build the image locally from a copy of this repository.
+
+Unraid does not include native Docker Compose support. Use the terminal commands
+below, configure the built image through **Docker → Add Container**, or install
+Compose support separately. See the [Unraid Docker documentation](https://docs.unraid.net/unraid-os/using-unraid-to/run-docker-containers/overview/).
+
+From the repository root in the Unraid terminal:
+
+```sh
+docker build -t rgboo-stream-aggregator stream_aggregator
+cp stream_aggregator/.env.example stream_aggregator/.env
+# Edit stream_aggregator/.env with your cloud and platform credentials.
+
+mkdir -p /mnt/user/appdata/stream-aggregator
+chown 10001:10001 /mnt/user/appdata/stream-aggregator
+chmod 700 /mnt/user/appdata/stream-aggregator
+
+docker run -d --name rgboo-stream-aggregator --restart unless-stopped \
+  --network bridge --init --stop-timeout 30 \
+  --env-file stream_aggregator/.env \
+  -v /mnt/user/appdata/stream-aggregator:/data \
+  rgboo-stream-aggregator
+```
+
+The `/data` mapping preserves refreshed Twitch credentials in Unraid's appdata
+share. The container runs as UID/GID `10001:10001`, so this directory must be
+writable by that identity. Keep `TWITCH_TOKEN_FILE=/data/twitch-tokens.json` when
+using automatic refresh. No inbound port mappings or privileged access are needed;
+the container only makes outbound connections.
+
+If using **Add Container** instead of `docker run`, use these settings after
+building the image:
+
+| Setting | Value |
+| --- | --- |
+| Name | `rgboo-stream-aggregator` |
+| Repository/image | `rgboo-stream-aggregator:latest` (locally built) |
+| Network type | `Bridge` |
+| Host path → container path | `/mnt/user/appdata/stream-aggregator` → `/data` (read/write) |
+| Variables | Cloud and platform variables from `.env.example` |
+| Extra Parameters (Advanced View) | `--init --stop-timeout 30` |
+| Privileged | Off |
+| Port mappings | None |
+
+Enable **Autostart** in Unraid for the UI-managed container. Choose either the
+terminal or UI method to create the container, not both. For local image updates,
+rebuild from the updated source and recreate the container, preserving the appdata
+mapping. Registry-based automatic image updates are not available for this local
+build.
+
 ## YouTube setup
 
 1. Enable **YouTube Data API v3** in your Google Cloud project.
