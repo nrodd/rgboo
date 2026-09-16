@@ -68,3 +68,7 @@ middleware/requests.db
 
 # Dependencies
 node_modules/
+
+# Stream aggregator local environment and rotated OAuth credentials
+.venv-stream/
+stream_aggregator/*tokens*.json
