@@ -74,30 +74,6 @@ wrangler deploy
 
 See `docs/gcp-migration-plan.md` for the full migration.
 
-## Now playing
-
-The Worker also runs a tiny pub/sub for the currently playing track, backed by a
-`NowPlaying` Durable Object (`worker/now-playing.js`). One instance owns every
-open connection, so a single push reaches all listeners.
-
-```
-# bridge pushes a track change (JSON or plain text body both work)
-curl -X POST https://rgboo.com/api/update-song \
-  -H "X-Push-Secret: $PUSH_SECRET" \
-  -d '{"artist":"Daft Punk","title":"One More Time"}'
-
-# anything listens over Server-Sent Events, no client library
-curl -N https://rgboo.com/api/stream
-```
-
-New subscribers immediately get the last track, then every change as it lands.
-The push is gated by a shared secret (unset locally = open). It's generic so the
-same secret can guard future pushes like color:
-
-```
-wrangler secret put PUSH_SECRET
-```
-
 ## Testing
 
 Testing is powered through [Vitest](https://vitest.dev/) using [Playwright](https://playwright.dev/) for browser support. Can be run in headless mode (default) or in a browser. Server is mocked through [Mock Service Worker](https://mswjs.io/).
