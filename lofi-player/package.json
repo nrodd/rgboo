@@ -7,7 +7,6 @@
     "lofi": "index.js"
   },
   "scripts": {
-    "postinstall": "node postinstall.js",
     "start": "node index.js"
   },
   "dependencies": {
