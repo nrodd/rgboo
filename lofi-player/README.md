@@ -1,14 +1,17 @@
 # lofi-player
 
 Streams the [Lofi Girl](https://www.youtube.com/c/LofiGirl) YouTube channel to your
-speakers. yt-dlp is bundled via npm; mpv is the one system dependency.
+speakers. `npm install` pulls in both dependencies: yt-dlp (bundled via npm) and
+mpv (installed on postinstall using your platform's package manager).
 
 ## Setup
 
 ```sh
-brew install mpv   # or your platform's package manager
 npm install
 ```
+
+The postinstall step installs mpv via brew / apt / dnf / pacman / winget / choco.
+If none is available it prints a one-line hint so you can install mpv yourself.
 
 ## Listen
 
