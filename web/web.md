@@ -83,7 +83,7 @@ open connection, so a single push reaches all listeners.
 ```
 # bridge pushes a track change (JSON or plain text body both work)
 curl -X POST https://rgboo.com/api/update-song \
-  -H "X-Song-Secret: $SONG_UPDATE_SECRET" \
+  -H "X-Push-Secret: $PUSH_SECRET" \
   -d '{"artist":"Daft Punk","title":"One More Time"}'
 
 # anything listens over Server-Sent Events, no client library
@@ -91,10 +91,11 @@ curl -N https://rgboo.com/api/stream
 ```
 
 New subscribers immediately get the last track, then every change as it lands.
-The push is gated by a shared secret (unset locally = open):
+The push is gated by a shared secret (unset locally = open). It's generic so the
+same secret can guard future pushes like color:
 
 ```
-wrangler secret put SONG_UPDATE_SECRET
+wrangler secret put PUSH_SECRET
 ```
 
 ## Testing
