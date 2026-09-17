@@ -4,8 +4,9 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-// Lofi Girl live channel. mpv resolves this to the current live stream via yt-dlp.
-const STREAM_URL = 'https://www.youtube.com/c/LofiGirl';
+// Lofi Girl live radio. The /live endpoint points at the current broadcast;
+// the plain channel URL (/c/LofiGirl) expands to a playlist of all uploads instead.
+const STREAM_URL = 'https://www.youtube.com/@LofiGirl/live';
 
 // yt-dlp binary shipped by youtube-dl-exec, so we don't rely on a system install.
 const ytDlpPath = path.join(
@@ -14,6 +15,8 @@ const ytDlpPath = path.join(
   'bin',
   process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
 );
+
+console.log('lofi-player: now playing Lofi Girl. Ctrl-C to stop.');
 
 const mpv = spawn(
   'mpv',
