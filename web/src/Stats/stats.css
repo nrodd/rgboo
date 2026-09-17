@@ -1,0 +1,307 @@
+/**
+ * Styles for the /stats page, imported by Stats.tsx so the page's chrome
+ * travels with its components.
+ *
+ * Raw CSS rather than @apply: theme.css sets `--color-*: initial`, which
+ * deletes Tailwind's palette, and --text-sm/base/md are sized for the
+ * colour form. Theme tokens still work -- they are :root properties.
+ *
+ * The rules stay in the `components` layer, which theme.css declares via
+ * `@import "tailwindcss"`, so Tailwind utilities in JSX still win over them.
+ */
+
+@layer components {
+  .stats-ink {
+    color: #ffffff;
+  }
+
+  .stats-muted {
+    color: rgb(235 219 190 / 60%);
+  }
+
+  .stats-faint {
+    color: rgb(235 219 190 / 40%);
+  }
+
+  .stats-card {
+    background: rgb(27 16 32 / 75%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 50px -12px rgb(0 0 0 / 20%);
+    overflow: hidden;
+    backdrop-filter: blur(4px);
+  }
+
+  .stats-card-head {
+    border-bottom: 1px solid rgb(255 255 255 / 10%);
+  }
+
+  .stats-tile {
+    background: rgb(255 255 255 / 4.5%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    backdrop-filter: blur(4px);
+  }
+
+  .stats-hero {
+    background:
+      linear-gradient(to bottom right,
+        rgb(227 104 16 / 25%) 0%,
+        rgb(39 3 2 / 80%) 55%,
+        var(--color-arcana-900) 100%);
+    border: 1px solid rgb(227 104 16 / 40%);
+    border-radius: 1.5rem;
+    box-shadow: 0 25px 50px -12px rgb(39 3 2 / 20%);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .stats-hero-glow {
+    background: rgb(227 104 16 / 20%);
+    border-radius: 9999px;
+    filter: blur(40px);
+    height: 9rem;
+    pointer-events: none;
+    position: absolute;
+    right: -3rem;
+    top: -3rem;
+    width: 9rem;
+  }
+
+
+  .stats-soon {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    padding: 4rem 1.5rem 4.5rem;
+    position: relative;
+    text-align: center;
+  }
+
+  .stats-soon-pumpkin {
+    filter: drop-shadow(0 0 34px rgb(227 104 16 / 35%));
+    height: 5.5rem;
+    margin-bottom: 1.75rem;
+    width: 5.5rem;
+    animation: stats-soon-float 5s ease-in-out infinite;
+  }
+
+  .stats-soon-heading {
+    color: #ffffff;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+
+  .stats-soon-body {
+    color: rgb(235 219 190 / 60%);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    max-width: 34rem;
+  }
+
+  /* An anchor, so it needs what the button class assumes. */
+  .stats-soon-link {
+    display: inline-block;
+    text-decoration: none;
+  }
+
+  .stats-skeleton {
+    background: rgb(255 255 255 / 5%);
+    border: 1px solid rgb(255 255 255 / 10%);
+    border-radius: 1.5rem;
+    height: 10rem;
+  }
+
+  .stats-eyebrow {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgb(235 219 190 / 45%);
+  }
+
+  .stats-eyebrow--accent {
+    color: var(--color-pumpkin-400);
+  }
+
+  .stats-heading {
+    color: #ffffff;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  .stats-note {
+    color: rgb(235 219 190 / 55%);
+    font-size: 0.8rem;
+    line-height: 1.6;
+  }
+
+
+
+  .stats-mosaic {
+    display: grid;
+    /* Squares shrink to fit, so busy and quiet months both read solid. */
+    grid-template-columns: repeat(auto-fill, minmax(10px, 1fr));
+    gap: 2px;
+    padding: 1.5rem;
+    transition: opacity 200ms;
+  }
+
+  .stats-chip {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    /* A hairline ring, so a near-black pick is a square not a gap. */
+    box-shadow: inset 0 0 0 1px rgb(235 219 190 / 10%);
+    display: block;
+    width: 100%;
+  }
+
+  .stats-family-bar {
+    border-radius: 9999px;
+    display: flex;
+    gap: 2px;
+    height: 0.6rem;
+    overflow: hidden;
+  }
+
+  .stats-family-seg {
+    flex-basis: 0;
+    min-width: 2px;
+  }
+
+  .stats-hour-chart {
+    min-width: max-content;
+    width: 100%;
+  }
+
+  .stats-hours {
+    align-items: flex-end;
+    /* A baseline, so a one-pick hour is a short bar not a stray mark. */
+    border-bottom: 1px solid rgb(255 255 255 / 12%);
+    display: flex;
+    gap: 4px;
+    height: 9rem;
+    /* Headroom for the peak's value label, which sits above its bar; the
+       scrolling wrapper clips anything leaving this box. */
+    padding-top: 1.5rem;
+  }
+
+  .stats-hour-col {
+    align-items: center;
+    display: flex;
+    /* Fill a wide card, but never narrower than a label; then scroll. */
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 100%;
+    min-width: 30px;
+  }
+
+  .stats-hour-bar {
+    background: linear-gradient(to top, var(--color-pumpkin-400), #ffaf5c);
+    border-radius: 3px 3px 0 0;
+    display: block;
+    /* Keeps the quietest hour visible instead of collapsing it to nothing. */
+    min-height: 3px;
+    position: relative;
+    /* Without this, the bar carrying the value label is the one flex
+       shrinks -- rendering the peak shorter than the runner-up. */
+    flex-shrink: 0;
+    width: 100%;
+  }
+
+  .stats-hour-value {
+    bottom: 100%;
+    color: var(--color-pumpkin-400);
+    font-size: 0.65rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    left: 50%;
+    /* Out of flow, so labelling a bar never changes its height. */
+    position: absolute;
+    padding-bottom: 0.3rem;
+    transform: translateX(-50%);
+  }
+
+  .stats-hour-axis {
+    display: flex;
+    gap: 4px;
+    padding-top: 0.5rem;
+  }
+
+  .stats-hour-label {
+    color: rgb(235 219 190 / 40%);
+    flex: 1 1 0;
+    font-size: 0.6rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    min-width: 30px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .stats-swatch {
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 20%);
+    flex-shrink: 0;
+  }
+
+  .stats-family-row {
+    border-top: 1px solid rgb(255 255 255 / 10%);
+  }
+
+  .stats-th {
+    color: rgb(235 219 190 / 45%);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 0 0.75rem 0.6rem 0;
+    text-transform: uppercase;
+  }
+
+  .stats-td {
+    font-size: 0.78rem;
+    padding: 0.7rem 0.75rem 0.7rem 0;
+    vertical-align: top;
+  }
+
+  .stats-td--night {
+    white-space: nowrap;
+  }
+
+  .stats-row {
+    border-bottom: 1px solid rgb(255 255 255 / 6%);
+  }
+
+  .stats-row:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-mosaic {
+    grid-template-columns: repeat(auto-fill, minmax(8px, 1fr));
+    padding: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-mosaic {
+    transition: none;
+  }
+}
+
+@keyframes stats-soon-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-soon-pumpkin {
+    animation: none;
+  }
+}

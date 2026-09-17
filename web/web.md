@@ -34,6 +34,14 @@ Deployed using Cloudflare Workers.
 yarn deploy
 ```
 
+## Pages
+
+| Route | Access |
+| --- | --- |
+| `/` | Public colour form and stream |
+| `/admin` | Cloudflare Access only |
+| `/stats` | Public, but deliberately not linked from anywhere yet. Publish it by adding a link to `src/layout/Footer.tsx`. |
+
 ## API proxy
 
 `worker/index.js` serves the app and proxies `/api/*` and `/admin-api/*` with
