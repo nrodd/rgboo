@@ -3,6 +3,7 @@
 
 const { spawn } = require('child_process');
 const path = require('path');
+const nowPlaying = require('./now-playing');
 
 // Lofi Girl live radio. The /live endpoint points at the current broadcast;
 // the plain channel URL (/c/LofiGirl) expands to a playlist of all uploads instead.
@@ -17,6 +18,9 @@ const ytDlpPath = path.join(
 );
 
 console.log('lofi-player: now playing Lofi Girl. Ctrl-C to stop.');
+
+// Print track changes as the bridge pushes them. Never blocks playback.
+nowPlaying.start();
 
 const mpv = spawn(
   'mpv',
