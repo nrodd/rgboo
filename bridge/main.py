@@ -34,7 +34,7 @@ def parse_args(argv=None):
         '--dry-run',
         action='store_true',
         help="Log color writes instead of opening the serial port, for "
-             "development on a machine with no ESP32 attached.",
+             "development on a machine with no Pico attached.",
     )
     parser.add_argument(
         '--poll',
@@ -50,7 +50,7 @@ def parse_args(argv=None):
     parser.add_argument(
         '--serial-port',
         default=Config.SERIAL_PORT,
-        help="Serial device to use; omit to auto-detect the ESP32 by VID/PID.",
+        help="Serial device to use; omit to auto-detect the Pico 2 by VID/PID.",
     )
     parser.add_argument('--obs-host', default=Config.OBS_HOST)
     parser.add_argument('--obs-port', type=int, default=Config.OBS_PORT)
@@ -80,10 +80,10 @@ def build_serial_controller(args):
 
     controller = SerialController()
     if controller.connect(args.serial_port):
-        logger.info("Successfully connected to ESP32")
+        logger.info("Successfully connected to Pico controller")
     else:
         logger.warning(
-            "Could not connect to ESP32 on startup - will retry on first color"
+            "Could not connect to Pico controller on startup - will retry on first color"
         )
     return controller
 

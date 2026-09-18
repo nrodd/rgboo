@@ -21,7 +21,7 @@ def build(mock_store, mock_serial, obs_callback=None):
     )
 
 
-"""Test a request whose slot has arrived is sent to the ESP32 and marked done.
+"""Test a request whose slot has arrived is sent to the Pico and marked done.
 The color sent is the re-read one, not the queued copy, so an edit between
 queueing and dispatch cannot send a stale value."""
 def test_due_request_is_sent_and_marked_done(mock_store, mock_serial):

@@ -1,7 +1,7 @@
 """A SerialController stand-in that logs instead of touching the USB port.
 
 --dry-run exercises the whole path -- Firestore, slot timing,
-cancellation, OBS, status writes -- on a machine with no ESP32 attached,
+cancellation, OBS, status writes -- on a machine with no Pico attached,
 or without fighting a running bridge for the port.
 """
 

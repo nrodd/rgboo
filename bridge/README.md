@@ -2,11 +2,11 @@
 
 The half of RGBoo that cannot live in the cloud. It watches Firestore for
 pending color requests, waits for each one's slot, and writes the color to
-the ESP32 over USB serial. See [`docs/architecture.md`](../docs/architecture.md)
+the Raspberry Pi Pico 2 over USB serial. See [`docs/architecture.md`](../docs/architecture.md)
 for the full design; this is the how-to-run.
 
 ```
-Cloud Run API --> Firestore --> bridge (this machine) --> USB serial --> ESP32
+Cloud Run API --> Firestore --> bridge (this machine) --> USB serial --> Pico 2
 ```
 
 It also serves the OBS browser source on `:5001` from `obs.py` and
@@ -18,7 +18,7 @@ change to Cloudflare, which broadcasts it from `https://rgboo.com/api/stream`.
 
 New here? [`docs/local-setup.md`](../docs/local-setup.md) starts the complete
 emulator-backed stack and runs this bridge in dry-run mode, which is what you
-want unless the ESP32 is plugged into your machine.
+want unless the Pico is plugged into your machine.
 
 ## Install
 
@@ -55,7 +55,7 @@ only.
 ## Dry run
 
 `--dry-run` logs color writes instead of opening the serial port, so it
-runs anywhere -- no ESP32 attached, and no fight over the port with a
+runs anywhere -- no Pico attached, and no fight over the port with a
 bridge that is already running.
 
 ```
