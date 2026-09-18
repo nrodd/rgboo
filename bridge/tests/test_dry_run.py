@@ -2,8 +2,8 @@ from ..dry_run import DryRunSerialController
 
 """
 Unit tests for the --dry-run serial stand-in (bridge/dry_run.py). The
-point of dry-run is that the old middleware keeps owning the USB port,
-so the important assertions are about what it does *not* do.
+point of dry-run is that it never touches the USB port, so the important
+assertions are about what it does *not* do.
 """
 
 

@@ -3,8 +3,8 @@
     python -m bridge.main --dry-run     # safe: logs instead of writing serial
     python -m bridge.main               # owns the USB port
 
-Run from the repo root so the `bridge`, `shared`, and `middleware`
-packages all resolve. Firestore auth comes from the service-account key
+Run from the repo root so the `bridge` and `shared` packages both
+resolve. Firestore auth comes from the service-account key
 pointed at by GOOGLE_APPLICATION_CREDENTIALS.
 """
 
@@ -32,8 +32,8 @@ def parse_args(argv=None):
     parser.add_argument(
         '--dry-run',
         action='store_true',
-        help="Log color writes instead of opening the serial port. Use while "
-             "the old middleware still owns the ESP32.",
+        help="Log color writes instead of opening the serial port, for "
+             "development on a machine with no ESP32 attached.",
     )
     parser.add_argument(
         '--poll',
@@ -70,7 +70,7 @@ def build_serial_controller(args):
 
     # Imported lazily so --dry-run works on a machine without pyserial's
     # device access (or without pyserial at all).
-    from middleware.serial_controller import SerialController
+    from .serial_controller import SerialController
 
     controller = SerialController()
     if controller.connect(args.serial_port):

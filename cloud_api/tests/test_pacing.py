@@ -4,8 +4,7 @@ from ..pacing import next_slot
 from shared.schema import SLOT_SECONDS
 
 """
-Unit tests for the pacing slot-assignment math (cloud_api/pacing.py),
-ported from middleware/color_queue.py's add_request lock.
+Unit tests for the pacing slot-assignment math (cloud_api/pacing.py).
 """
 
 """Test no prior schedule starts SLOT_SECONDS from now"""

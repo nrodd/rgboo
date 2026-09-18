@@ -17,9 +17,8 @@ class Config:
     the environment is what the systemd unit uses.
     """
 
-    # Embedded OBS browser-source server. Defaults match the old
-    # middleware (middleware/firmware_config.py) so the OBS scene's
-    # existing http://127.0.0.1:5001/obs URL keeps working.
+    # Embedded OBS browser-source server. The defaults are the ones the
+    # OBS scene already points at (http://127.0.0.1:5001/obs).
     OBS_HOST = os.getenv('BRIDGE_OBS_HOST', '127.0.0.1')
     OBS_PORT = int(os.getenv('BRIDGE_OBS_PORT', 5001))
     OBS_SECRET_KEY = os.getenv('BRIDGE_OBS_SECRET_KEY', 'obs-websocket-secret')
