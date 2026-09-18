@@ -1,6 +1,6 @@
 # cloud_api
 
-Flask API for RGBoo, deployed to Cloud Run. See `docs/gcp-migration-plan.md`
+Flask API for RGBoo, deployed to Cloud Run. See `docs/architecture.md`
 for the full design; this is just the how-to-run.
 
 ## Local development

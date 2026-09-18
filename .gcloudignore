@@ -36,9 +36,6 @@ venv/
 # The bridge runs on the home machine, not in the image
 bridge/
 
-# The old middleware is not deployed
-middleware/
-
 # Docs
 docs/
 *.md

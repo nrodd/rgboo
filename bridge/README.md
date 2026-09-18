@@ -2,16 +2,19 @@
 
 The half of RGBoo that cannot live in the cloud. It watches Firestore for
 pending color requests, waits for each one's slot, and writes the color to
-the ESP32 over USB serial. See `docs/gcp-migration-plan.md` for the full
-design; this is the how-to-run.
+the ESP32 over USB serial. See [`docs/architecture.md`](../docs/architecture.md)
+for the full design; this is the how-to-run.
 
 ```
 Cloud Run API --> Firestore --> bridge (this machine) --> USB serial --> ESP32
 ```
 
-It also serves the OBS browser source on `:5001`, reusing
-`middleware/obs.py` and its template unchanged, so the OBS scene needs no
-edits at cutover.
+It also serves the OBS browser source on `:5001` from `obs.py` and
+`templates/`, at the `http://127.0.0.1:5001/obs` URL the OBS scene
+already points at.
+
+On Windows it also listens to the system media session and POSTs each track
+change to Cloudflare, which broadcasts it from `https://rgboo.com/api/stream`.
 
 New here? [`docs/local-setup.md`](../docs/local-setup.md) starts the complete
 emulator-backed stack and runs this bridge in dry-run mode, which is what you
@@ -19,18 +22,28 @@ want unless the ESP32 is plugged into your machine.
 
 ## Install
 
-Run everything from the **repo root** -- the daemon imports `shared/` and
-`middleware/` as siblings.
+Run everything from the **repo root** -- the daemon imports `shared/` as
+a sibling.
 
 ```
 python -m venv .venv && source .venv/bin/activate
 pip install -r bridge/requirements.txt
 ```
 
+On the Windows bridge machine, set the push secret to the same value uploaded
+to the Cloudflare Worker with `wrangler secret put PUSH_SECRET`:
+
+```powershell
+$env:BRIDGE_PUSH_SECRET = "the-shared-secret"
+```
+
+The destination defaults to `https://rgboo.com/api/update-song`; override it
+with `BRIDGE_NOW_PLAYING_URL`. Use `--no-now-playing` to disable the listener.
+
 ## Credentials
 
-Firestore auth uses the `rgboo-bridge` service-account key (created in
-Phase 4 of the migration plan, with `roles/datastore.user`):
+Firestore auth uses the `rgboo-bridge` service-account key
+(`roles/datastore.user`):
 
 ```
 export GOOGLE_APPLICATION_CREDENTIALS=/etc/rgboo/bridge-sa-key.json
@@ -41,9 +54,9 @@ only.
 
 ## Dry run
 
-`--dry-run` logs color writes instead of opening the serial port, so it is
-safe to run while the old middleware still owns the ESP32 -- that is how
-Phase 4 tests the cloud path in parallel with live traffic.
+`--dry-run` logs color writes instead of opening the serial port, so it
+runs anywhere -- no ESP32 attached, and no fight over the port with a
+bridge that is already running.
 
 ```
 python -m bridge.main --dry-run
@@ -102,8 +115,7 @@ bridge picks them back up (overdue ones dispatch immediately). See
 
 - **`main.py`** wires everything together and owns shutdown.
 - **`store.py`** is the only module that knows Firestore.
-- **`processor.py`** is the dispatch loop, ported from
-  `middleware/color_queue.py:82-138`. It re-reads each doc immediately
+- **`processor.py`** is the dispatch loop. It re-reads each doc immediately
   before the serial write, which is how `POST /admin/queue/clear` actually
   stops the LEDs changing.
 - **`listener.py`** feeds the processor, either from an `on_snapshot`
@@ -112,6 +124,8 @@ bridge picks them back up (overdue ones dispatch immediately). See
   that dies quietly.
 - **`heartbeat.py`** writes `meta/bridge` every 60s; the cloud API reads
   it to answer `bridge_online` / `serial_connected`.
+- **`now_playing.py`** listens for Windows media/session changes and pushes
+  artist/title JSON to the Cloudflare SSE fan-out.
 
 ## Tests
 

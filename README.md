@@ -8,10 +8,10 @@ A haunting collection of software that lets the community control RGB LEDs toget
 ## 🦇 Project Architecture
 
 ```
-Web Frontend → Flask API → ESP32 Firmware → RGB LEDs
+Web Frontend → Cloud API → Firestore → Bridge → ESP32 Firmware → RGB LEDs
 ```
 
-The system consists of three main components working together:
+The system consists of four main components working together:
 
 ## 📁 Directory Overview
 
@@ -23,27 +23,17 @@ The system consists of three main components working together:
 - Built with Arduino framework and PlatformIO
 - Handles RGB color formats
 
-### 🧙‍♀️ `middleware/`
-**Python Flask API**
-- REST API that bridges web and hardware
-- Receives color requests from the web frontend
-- Communicates with ESP32 via USB serial
-- Starts a webssocket to communicate with OBS
-- Handles user tracking and logging
-- Auto-detects ESP32 connections
-- Supports RGB colors
-
 ### 🕸️ `web/`
 **React Web Interface**
 - Modern React application built with Vite
 - User-friendly color picker interface
 - Deployed with Cloudflare workers
-- Sends color commands to the middleware API
+- Sends color commands to the cloud API
 - Real-time color preview and control
 
 ### ☁️ `cloud_api/`
 **Python Flask API on Cloud Run**
-- The middleware's HTTP half, moved to Google Cloud
+- The HTTP half of the system, running on Google Cloud
 - Validates color requests and paces them one per 20 seconds
 - Stores the queue in Firestore, so it survives restarts
 - Deployed on demand from Actions -> Deploy API
@@ -83,17 +73,15 @@ Everything else -- bridge, web, firmware -- is a deliberate command.
 
 See **[docs/architecture.md](docs/architecture.md)** for how the system fits
 together, and **[docs/deploying.md](docs/deploying.md)** for shipping each
-component and rolling it back. The migration from the old always-on middleware to GCP is
-described in [docs/gcp-migration-plan.md](docs/gcp-migration-plan.md)
+component and rolling it back.
 
 ## 🎭 Getting Started
 
 ### Quick Setup
 1. **Flash the firmware** to your ESP32
-2. **Start the middleware** API server
-3. **Launch the web** interface
-4. **Connect** ESP32 via USB
-5. **Control** your RGB LEDs through the web!
+2. **Connect** ESP32 via USB
+3. **Run** `./scripts/setup.sh` then `./scripts/dev.sh`
+4. **Control** your RGB LEDs through the web!
 
 ## 🦴 Technology Stack
 
