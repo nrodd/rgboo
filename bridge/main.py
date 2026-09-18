@@ -18,6 +18,7 @@ from .config import Config
 from .dry_run import DryRunSerialController
 from .heartbeat import HeartbeatWriter
 from .listener import OverlayControlWatcher, PendingPoller, PendingWatcher
+from .now_playing import NowPlayingPublisher
 from .obs_server import create_obs_app, make_obs_callback, start_obs_server
 from .overlay_control import OverlayController
 from .processor import ColorProcessor
@@ -57,6 +58,11 @@ def parse_args(argv=None):
         '--no-obs',
         action='store_true',
         help="Skip the embedded OBS browser-source server.",
+    )
+    parser.add_argument(
+        '--no-now-playing',
+        action='store_true',
+        help="Skip publishing Windows media changes to Cloudflare.",
     )
     parser.add_argument('--log-level', default=Config.LOG_LEVEL)
     return parser.parse_args(argv)
@@ -131,6 +137,14 @@ def main(argv=None) -> int:
     heartbeat = HeartbeatWriter(store, serial_controller, Config.HEARTBEAT_SECONDS)
     heartbeat.start()
 
+    now_playing = None
+    if not args.no_now_playing:
+        now_playing = NowPlayingPublisher(
+            Config.NOW_PLAYING_URL,
+            Config.NOW_PLAYING_PUSH_SECRET,
+        )
+        now_playing.start()
+
     def shutdown(signum, _frame):
         logger.info(f"Received signal {signum}, shutting down")
         processor.stop()
@@ -149,6 +163,8 @@ def main(argv=None) -> int:
         # runs on daemon threads.
         processor.run()
     finally:
+        if now_playing is not None:
+            now_playing.stop()
         heartbeat.stop()
         poller.stop()
         if watcher is not None:

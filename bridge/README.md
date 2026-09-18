@@ -13,6 +13,9 @@ It also serves the OBS browser source on `:5001` from `obs.py` and
 `templates/`, at the `http://127.0.0.1:5001/obs` URL the OBS scene
 already points at.
 
+On Windows it also listens to the system media session and POSTs each track
+change to Cloudflare, which broadcasts it from `https://rgboo.com/api/stream`.
+
 New here? [`docs/local-setup.md`](../docs/local-setup.md) starts the complete
 emulator-backed stack and runs this bridge in dry-run mode, which is what you
 want unless the ESP32 is plugged into your machine.
@@ -26,6 +29,16 @@ a sibling.
 python -m venv .venv && source .venv/bin/activate
 pip install -r bridge/requirements.txt
 ```
+
+On the Windows bridge machine, set the push secret to the same value uploaded
+to the Cloudflare Worker with `wrangler secret put PUSH_SECRET`:
+
+```powershell
+$env:BRIDGE_PUSH_SECRET = "the-shared-secret"
+```
+
+The destination defaults to `https://rgboo.com/api/update-song`; override it
+with `BRIDGE_NOW_PLAYING_URL`. Use `--no-now-playing` to disable the listener.
 
 ## Credentials
 
@@ -111,6 +124,8 @@ bridge picks them back up (overdue ones dispatch immediately). See
   that dies quietly.
 - **`heartbeat.py`** writes `meta/bridge` every 60s; the cloud API reads
   it to answer `bridge_online` / `serial_connected`.
+- **`now_playing.py`** listens for Windows media/session changes and pushes
+  artist/title JSON to the Cloudflare SSE fan-out.
 
 ## Tests
 

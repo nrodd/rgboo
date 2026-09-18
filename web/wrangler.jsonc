@@ -62,6 +62,14 @@
 			"name": "rgboo-staging",
 			"workers_dev": false,
 			"preview_urls": false,
+			// Bindings are not inherited by named Wrangler environments. Keep
+			// staging's stream isolated from production by binding its own
+			// NowPlaying Durable Object instance.
+			"durable_objects": {
+				"bindings": [
+					{ "name": "NOW_PLAYING", "class_name": "NowPlaying" }
+				]
+			},
 			"vars": {
 				"API_UPSTREAM": "https://rgboo-api-186324327580.us-east1.run.app"
 			},
