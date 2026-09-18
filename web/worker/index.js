@@ -9,10 +9,19 @@
  * pointing at a different deployment is a config change, not a code change.
  */
 
+import { NowPlaying } from "./now-playing.js";
+
+export { NowPlaying };
+
 const DEFAULT_API_UPSTREAM =
   "https://rgboo-api-186324327580.us-east1.run.app";
 
 const ALLOWED_ORIGINS = ["https://rgboo.com"];
+
+/** Route now-playing traffic to the single shared Durable Object instance. */
+function nowPlayingStub(env) {
+  return env.NOW_PLAYING.get(env.NOW_PLAYING.idFromName("global"));
+}
 
 /** The origin to echo back, or null when it isn't one we allow. */
 function allowedOrigin(request) {
@@ -53,6 +62,20 @@ export default {
           ? await request.text()
           : undefined,
       });
+    }
+
+    // Terminals and the web UI subscribe here; the bridge posts track changes.
+    // Both hit the same Durable Object so a post fans out to every listener.
+    if (url.pathname === "/api/stream" && request.method === "GET") {
+      return nowPlayingStub(env).fetch(request);
+    }
+    if (url.pathname === "/api/update-song" && request.method === "POST") {
+      // Shared secret so only the bridge can push. Generic on purpose: the same
+      // secret will guard future pushes (color, etc). Unset in dev = open.
+      if (env.PUSH_SECRET && request.headers.get("X-Push-Secret") !== env.PUSH_SECRET) {
+        return new Response("unauthorized\n", { status: 401 });
+      }
+      return nowPlayingStub(env).fetch(request);
     }
 
     // Handle API requests

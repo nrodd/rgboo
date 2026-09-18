@@ -21,6 +21,22 @@
 		"API_UPSTREAM": "https://rgboo-api-186324327580.us-east1.run.app"
 	},
 	/**
+	 * Now-playing pub/sub. The bridge POSTs /api/update-song and terminals/web
+	 * subscribe to /api/stream (SSE); this DO fans one out to the other. See
+	 * worker/now-playing.js. new_sqlite_classes keeps it on the Workers free
+	 * plan. The bridge's push secret is a wrangler secret, not a var (generic so
+	 * it can guard future pushes like color too):
+	 *   wrangler secret put PUSH_SECRET
+	 */
+	"durable_objects": {
+		"bindings": [
+			{ "name": "NOW_PLAYING", "class_name": "NowPlaying" }
+		]
+	},
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["NowPlaying"] }
+	],
+	/**
 	 * Staging: the `main` branch, served at staging.rgboo.com and gated behind
 	 * Cloudflare Access (email allowlist) so only invited users reach it.
 	 * Production stays the top-level worker above (see-you-next-october) and is
