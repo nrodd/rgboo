@@ -1,0 +1,16 @@
+{
+  "name": "lofi-player",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stream the Lofi Girl YouTube channel straight to your speakers via mpv + yt-dlp.",
+  "bin": {
+    "lofi": "index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "start:staging": "node index.js --staging"
+  },
+  "dependencies": {
+    "youtube-dl-exec": "^3.0.0"
+  }
+}
