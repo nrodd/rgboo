@@ -59,6 +59,7 @@ class NowPlayingPublisher:
         self._session = None
         self._session_token = None
         self._last_song = None
+        self._publish_lock: Optional[asyncio.Lock] = None
 
     def start(self) -> None:
         if sys.platform != 'win32':
@@ -158,15 +159,22 @@ class NowPlayingPublisher:
             logger.error("Failed to publish now-playing update: %s", error)
 
     async def _publish_song(self, song: dict) -> None:
-        if song == self._last_song:
-            return
-        try:
-            await asyncio.to_thread(
-                self._poster, self._url, self._push_secret, song
-            )
-            self._last_song = song
-            logger.info("Now playing: %s - %s", song['artist'], song['title'])
-        except Exception as error:
-            # Keep the last successfully sent value, so a later duplicate event
-            # gets another chance after a transient network failure.
-            logger.error("Failed to publish now-playing update: %s", error)
+        # Windows can emit the same media change more than once in quick
+        # succession. Keep the comparison and POST in one critical section so
+        # concurrent handler tasks cannot both observe the old _last_song.
+        if self._publish_lock is None:
+            self._publish_lock = asyncio.Lock()
+
+        async with self._publish_lock:
+            if song == self._last_song:
+                return
+            try:
+                await asyncio.to_thread(
+                    self._poster, self._url, self._push_secret, song
+                )
+                self._last_song = song
+                logger.info("Now playing: %s - %s", song['artist'], song['title'])
+            except Exception as error:
+                # Keep the last successfully sent value, so a later duplicate
+                # event gets another chance after a transient network failure.
+                logger.error("Failed to publish now-playing update: %s", error)

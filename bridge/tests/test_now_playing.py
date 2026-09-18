@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 from unittest.mock import Mock, patch
 
 from ..now_playing import NowPlayingPublisher, post_song
@@ -39,6 +40,21 @@ def test_duplicate_media_event_is_not_posted_twice():
         await publisher._publish_session(Session())
 
     asyncio.run(publish_twice())
+
+    poster.assert_called_once()
+
+
+def test_concurrent_duplicate_events_are_not_posted_twice():
+    poster = Mock(side_effect=lambda *_args: time.sleep(0.05))
+    publisher = NowPlayingPublisher('https://example.com', None, poster)
+
+    async def publish_concurrently():
+        await asyncio.gather(
+            publisher._publish_session(Session()),
+            publisher._publish_session(Session()),
+        )
+
+    asyncio.run(publish_concurrently())
 
     poster.assert_called_once()
 
