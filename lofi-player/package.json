@@ -7,7 +7,8 @@
     "lofi": "index.js"
   },
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "start:staging": "node index.js --staging"
   },
   "dependencies": {
     "youtube-dl-exec": "^3.0.0"
