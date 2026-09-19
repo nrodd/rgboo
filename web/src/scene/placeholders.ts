@@ -9,11 +9,11 @@ export function makePlaceholder(art: SceneArtwork, options: { floorY?: number } 
   if (id === "wall") {
     const floor = options.floorY ?? h - 64;
     const panel = Math.max(0, floor - 108);
-    g.rect(0, 0, w, h).fill(0x14111b);
+    g.rect(0, 0, w, h).fill(0x1e1a27);
     for (let x = 24; x < w; x += 96) {
-      g.rect(x, 0, 3, panel).fill(0x211b29);
+      g.rect(x, 0, 3, panel).fill(0x2a2433);
       for (let y = 36; y < panel - 24; y += 80) {
-        pixels(g, ["..a..", ".aba.", "ab.ba", ".aba.", "..a.."], { a: 0x2b2130, b: 0x3b2a38 }, 3, x + 38, y);
+        pixels(g, ["..a..", ".aba.", "ab.ba", ".aba.", "..a.."], { a: 0x342a39, b: 0x443341 }, 3, x + 38, y);
       }
     }
     // Paper bats and a corner cobweb: simple 80s Halloween decorations.

@@ -1,6 +1,6 @@
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
 import { pixels } from "./pixelArt";
-import { layerNames, sceneArtwork, sceneConfig, tvArtwork, vhsTapes, type SceneAction, type SceneLayer } from "./scene.config";
+import { layerNames, sceneArtwork, sceneConfig, tvArtwork, vhsTapes, windowOpening, type SceneAction, type SceneLayer } from "./scene.config";
 import { getSceneLayout } from "./layout";
 import { drawTelevision, drawTape, drawTapeGlow } from "./television";
 import { createLoungingCat, createIdleFrog } from "./characters";
@@ -23,7 +23,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
   app.stage.addChild(light.wall, light.candle);
   const world = app.stage.addChild(new Container({ label: "room" }));
   const layers = Object.fromEntries(layerNames.map((name) => [name, world.addChild(new Container({ label: name }))])) as Record<SceneLayer, Container>;
-  const outsideMask = layers.background.addChild(new Graphics().rect(950, 125, 460, 510).fill(0xffffff));
+  const outsideMask = layers.background.addChild(new Graphics().rect(windowOpening.x, windowOpening.y, windowOpening.width, windowOpening.height).fill(0xffffff));
   layers.outside.mask = outsideMask;
   const objects = new Map<string, Container>();
   const positions = new Map(sceneArtwork.map((art) => [art.id, { x: art.x, y: art.y }]));

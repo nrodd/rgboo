@@ -2,7 +2,7 @@
 
 The homepage is a full-page PixiJS v8 scene based on the room sketch. The old
 logo, form, info button and footer are no longer mounted; `/admin` is retained.
-The cat and candles use the custom PNG exports from `feat/pixel-art`; the other
+The cat, candles and window use the custom PNG exports from `feat/pixel-art`; the other
 room objects still use code-authored pixel-art placeholders.
 The CRT has a stepped plastic casing, rabbit-ear antenna and feet on a wooden
 stand. Five VHS tapes sit on the shelf below it. Hovering or focusing a tape
@@ -49,7 +49,7 @@ inside `sceneArtwork` in `src/scene/scene.config.ts`, for example:
 ```
 
 Slots are provided for wall, night sky, moon, two fog layers, window frame,
-sill, frog, fixed spider, and two candles. Positions use a 1600 × 1000 design
+frog, fixed spider, and two candles. The custom window includes its own sill. Positions use a 1600 × 1000 design
 space (the wall fills the viewport independently). Each export replaces only its own placeholder; a failed asset load keeps
 the placeholder visible and logs the asset ID. Keep the frame transparent
 between its bars. Fog and moon are clipped to the window opening. Fog drifts,
@@ -134,15 +134,22 @@ VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test -- src/__test__/youtube-live.tes
 
 ## Room ambience and animal behavior
 
-`characters.ts` loads `src/assets/cat_default.png` (two 64 × 64 frames) and
-`cat_awake.png`. The cat breathes gently, blinks and occasionally opens its eyes.
-The original image files are unchanged; Pixi crops their transparent padding.
-The body rests at source row 43, with the tail below that row kept stationary
+`characters.ts` loads `src/assets/cat_default.png` (96 × 96 resting pose) and
+`cat_awake.png` (64 × 64 awake pose). The cat breathes gently, occasionally
+opens its eyes and blinks while awake. The original image files and palette
+are unchanged; Pixi crops their transparent padding and normalizes pose widths.
+The resting body ends at source row 64; the awake body ends at row 43. Both
+share the same TV contact plane, with the tail below that plane kept stationary
 while the body breathes upward. Its scale adapts to the space above the TV.
 The frog blinks,
 breathes, looks toward the rain, and makes a small idle hop every 14 seconds.
 These idle behaviors never call the API. Clicking the frog still performs its
 larger hop and the existing green submission with cooldown protection.
+
+`src/assets/window.png` supplies the frame, reflections and sill as one square
+export. `windowOpening` clips rain, moon and fog to its panes. The frog, mug
+and curtains align with the integrated sill. Wallpaper is slightly lighter
+for contrast behind the dark cat; the cat artwork itself is not brightened.
 
 `atmosphere.ts` adds two depths of pixel rain within the outside-window mask,
 a shared warm candlelight pool, and cool TV light on the wall, bezel and shelf.

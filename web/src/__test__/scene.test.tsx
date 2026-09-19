@@ -8,6 +8,7 @@ import { worker } from "./mocks/browser";
 import { StreamEmbed } from "../components/StreamEmbed";
 import { createLoungingCat } from "../scene/characters";
 import { getSceneLayout } from "../scene/layout";
+import { sceneArtwork } from "../scene/scene.config";
 import { createYouTubePlayer, type YouTubeAPI } from "../media/youtubePlayer";
 
 afterEach(() => { localStorage.removeItem("rgboo_cooldown_end"); localStorage.removeItem("rgboo_scene_preferences"); delete window.YT; vi.restoreAllMocks(); });
@@ -23,7 +24,8 @@ test("frog pointer interaction hops and sends the original color API payload onc
   await expect.poll(() => document.querySelectorAll("canvas").length).toBe(1);
   const host = document.querySelector(".scene-canvas-host")!;
   const l = getSceneLayout(host.clientWidth, host.clientHeight);
-  await canvas().click({ position: { x: l.x + 1327 * l.scale, y: l.y + 600 * l.scale } });
+  const frog = sceneArtwork.find((art) => art.id === "frog")!;
+  await canvas().click({ position: { x: l.x + (frog.x + frog.width / 2) * l.scale, y: l.y + (frog.y + frog.height / 2) * l.scale } });
   await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("Frog sent green! #2 in the queue.");
   expect(requests).toEqual([{ username: "Frog", color: { r: 143, g: 167, b: 123 } }]);
   await userEvent.keyboard("f");

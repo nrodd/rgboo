@@ -3,35 +3,39 @@ import { pixels } from "./pixelArt";
 import catDefaultUrl from "../assets/cat_default.png";
 import catAwakeUrl from "../assets/cat_awake.png";
 
-/** Original 64px exports; both poses share the same paw contact row (43). */
+/** The resting and awake exports have different sizes but share a resting plane. */
 export function createLoungingCat() {
   const root = new Container({ label: "lounging-cat" });
   root.eventMode = "none";
   const body = root.addChild(new Sprite({ label: "cat-body" }));
   const tail = root.addChild(new Sprite({ label: "cat-tail" }));
-  const unit = 34 / 53;
-  body.scale.set(unit);
-  tail.scale.set(unit);
   body.anchor.set(0, 1);
   let frames: { body: Texture; tail: Texture }[] = [];
   const update = (time: number, still: boolean) => {
-    const blink = !still && time % 8 > 6.9 && time % 8 < 7.3;
+    const blink = !still && time % 20 > 18.6 && time % 20 < 18.9;
     const awake = !still && time % 20 > 17;
-    const frame = frames[blink ? 1 : awake ? 2 : 0];
-    if (frame) { body.texture = frame.body; tail.texture = frame.tail; }
+    const frame = frames[awake && !blink ? 1 : 0];
+    if (frame) {
+      body.texture = frame.body; tail.texture = frame.tail;
+      body.scale.set(34 / frame.body.width);
+      tail.scale.set(34 / frame.tail.width);
+    }
     // Only the body expands upward; the paws and hanging tail stay in place.
-    body.scale.y = unit * (still ? 1 : 1 + (Math.sin(time * 1.2) + 1) * .008);
+    body.scale.y = body.scale.x * (still ? 1 : 1 + (Math.sin(time * 1.2) + 1) * .008);
     return blink ? "blinking" : awake ? "awake" : "lounging";
   };
   const ready = Promise.all([Assets.load<Texture>(catDefaultUrl), Assets.load<Texture>(catAwakeUrl)]).then(([rest, awake]) => {
     if (root.destroyed) return;
     rest.source.scaleMode = awake.source.scaleMode = "nearest";
-    const poses: [Texture, number][] = [[rest, 0], [rest, 64], [awake, 0]];
-    frames = poses.map(([texture, y]) => {
+    const poses = [
+      { texture: rest, x: 10, y: 18, width: 80, contact: 64, bottom: 88 },
+      { texture: awake, x: 7, y: 12, width: 53, contact: 43, bottom: 59 },
+    ];
+    frames = poses.map(({ texture, x, y, width, contact, bottom }) => {
       const source = texture.source;
       return {
-        body: new Texture({ source, frame: new Rectangle(7, y + 12, 53, 31) }),
-        tail: new Texture({ source, frame: new Rectangle(7, y + 43, 53, 16) }),
+        body: new Texture({ source, frame: new Rectangle(x, y, width, contact - y) }),
+        tail: new Texture({ source, frame: new Rectangle(x, contact, width, bottom - contact) }),
       };
     });
     update(0, true);
