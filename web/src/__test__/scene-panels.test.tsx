@@ -16,13 +16,13 @@ test("first tape submits a name and RGB color, shares frog cooldown, and returns
   worker.use(http.post("*/api/color", async ({ request }) => { requests.push(await request.json()); return HttpResponse.json({ queue_position: 3 }); }));
   await render(<StreamEmbed videoId="" />);
   await tape(1).click();
-  await expect.element(page.getByRole("dialog", { name: "Send a color" })).toHaveAttribute("data-side", "right");
-  await page.getByRole("textbox", { name: "Your name", exact: true }).fill("Test Viewer");
+  await expect.element(page.getByRole("dialog", { name: "Color" })).toHaveAttribute("data-side", "right");
+  await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test Viewer");
   await page.getByRole("textbox", { name: "Hex color" }).fill("#123456");
-  await page.getByRole("button", { name: "Send to the stream" }).click();
-  await expect.element(page.getByRole("status")).toHaveTextContent("#3 in the queue");
+  await page.getByRole("button", { name: "Send" }).click();
+  await expect.element(page.getByRole("status")).toHaveTextContent("Queued · #3");
   expect(requests).toEqual([{ username: "Test Viewer", color: { r: 18, g: 52, b: 86 } }]);
-  await expect.element(page.getByRole("button", { name: /Send again in/ })).toBeDisabled();
+  await expect.element(page.getByRole("button", { name: /Wait \d+s/ })).toBeDisabled();
   await userEvent.keyboard("{Escape}");
   await expect.element(tape(1)).toHaveFocus();
   await canvas().click({ position: { x: 10, y: 10 } });
@@ -36,14 +36,14 @@ test("invalid inputs and server rejection keep the color form available to retry
   worker.use(http.post("*/api/color", () => { requests(); return HttpResponse.json({ error: "Queue is full" }, { status: 503 }); }));
   await render(<StreamEmbed videoId="" />);
   await tape(1).click();
-  await page.getByRole("textbox", { name: "Your name", exact: true }).fill("Test!!!");
-  await page.getByRole("button", { name: "Send to the stream" }).click();
+  await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test!!!");
+  await page.getByRole("button", { name: "Send" }).click();
   await expect.element(page.getByRole("status")).toHaveTextContent("alphanumeric");
   expect(requests).not.toHaveBeenCalled();
-  await page.getByRole("textbox", { name: "Your name", exact: true }).fill("Test Viewer");
-  await page.getByRole("button", { name: "Send to the stream" }).click();
+  await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test Viewer");
+  await page.getByRole("button", { name: "Send" }).click();
   await expect.element(page.getByRole("status")).toHaveTextContent("Queue is full");
-  await expect.element(page.getByRole("button", { name: "Send to the stream" })).toBeEnabled();
+  await expect.element(page.getByRole("button", { name: "Send" })).toBeEnabled();
   expect(localStorage.getItem("rgboo_cooldown_end")).toBeNull();
 });
 

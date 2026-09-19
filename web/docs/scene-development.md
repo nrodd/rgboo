@@ -5,7 +5,7 @@ logo, form, info button and footer are no longer mounted; `/admin` is retained.
 The room uses code-authored pixel-art placeholders until your artwork is ready.
 The CRT has a stepped plastic casing, rabbit-ear antenna and feet on a wooden
 stand. Five VHS tapes sit on the shelf below it. Hovering or focusing a tape
-adds a subtle pixel halo. The last two tapes show a temporary “Coming soon” toast. The first three open shadcn panels: color submission from the right, project links from the right, and settings from the right.
+adds a subtle pixel halo. The last two tapes show a temporary “Coming soon” toast. The first three open compact shadcn glass cards on the right: color submission, project links, and settings.
 
 ## Local preview
 
@@ -177,9 +177,11 @@ receiver badge and control strip have been removed.
 
 ## VHS panels and resizing
 
-`ScenePanels.tsx` owns the color form, existing Twitch/GitHub/YouTube links and
-project description, and playback/accessibility settings. All panels open from
-the right with simple titles and no visible header captions. Components in
+`ScenePanels.tsx` owns the color form, existing Twitch/GitHub/YouTube links, and
+playback/accessibility settings. Cards float on the right with content-sized
+height, subtle backdrop blur, a thin highlight and rounded corners. They use
+short labels without descriptive captions. The color picker has a compact
+saturation field, slim hue bar, preset swatches and an integrated hex field. Components in
 `src/components/ui` come from the official shadcn New York registry and are
 locally themed in `scene.css`; `components.json` configures future additions.
 Source: https://ui.shadcn.com/docs/components/radix/sheet

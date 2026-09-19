@@ -42,7 +42,7 @@ export const tvArtwork = { src: "", width: 964, height: 610.25,
 /** Shelf slots; replace individual tapes with exported pixel art when ready. */
 export const vhsTapes = [
   { id: "vhs-1", label: "VHS tape 1: Send a color", title: "Send a color", color: 0x9f855f },
-  { id: "vhs-2", label: "VHS tape 2: Links & about", title: "Links & about", color: 0x60867a },
+  { id: "vhs-2", label: "VHS tape 2: Links", title: "Links", color: 0x60867a },
   { id: "vhs-3", label: "VHS tape 3: Settings", title: "Settings", color: 0x946172 },
   { id: "vhs-4", label: "VHS tape 4: Coming soon", title: "Coming soon", color: 0x69748f },
   { id: "vhs-5", label: "VHS tape 5: Coming soon", title: "Coming soon", color: 0x9b8757 },
