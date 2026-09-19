@@ -9,8 +9,12 @@
 #define SERIAL_BUFFER_SIZE 256
 
 // LED settings
-#define MAX_LEDS 60
+#define MAX_LEDS 50
 #define LED_PIN 4
+#define LED_BRIGHTNESS 51
+
+// Do not wait forever for Windows to open the Pico's USB serial port.
+#define SERIAL_CONNECT_TIMEOUT 3000
 
 // Debug settings
 #define DEBUG_ENABLED true

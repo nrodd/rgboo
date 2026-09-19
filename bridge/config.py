@@ -17,12 +17,20 @@ class Config:
     the environment is what the systemd unit uses.
     """
 
-    # Embedded OBS browser-source server. Defaults match the old
-    # middleware (middleware/firmware_config.py) so the OBS scene's
-    # existing http://127.0.0.1:5001/obs URL keeps working.
+    # Embedded OBS browser-source server. The defaults are the ones the
+    # OBS scene already points at (http://127.0.0.1:5001/obs).
     OBS_HOST = os.getenv('BRIDGE_OBS_HOST', '127.0.0.1')
     OBS_PORT = int(os.getenv('BRIDGE_OBS_PORT', 5001))
     OBS_SECRET_KEY = os.getenv('BRIDGE_OBS_SECRET_KEY', 'obs-websocket-secret')
+
+    # Windows now-playing events are POSTed here and fanned out over the
+    # Cloudflare Worker's /api/stream SSE endpoint. The secret must match the
+    # Worker's PUSH_SECRET; the BRIDGE_ name keeps its purpose clear locally.
+    NOW_PLAYING_URL = os.getenv(
+        'BRIDGE_NOW_PLAYING_URL',
+        'https://rgboo.com/api/update-song',
+    )
+    NOW_PLAYING_PUSH_SECRET = os.getenv('BRIDGE_PUSH_SECRET')
 
     # Optional explicit serial device; empty means auto-detect by VID/PID.
     SERIAL_PORT = os.getenv('BRIDGE_SERIAL_PORT') or None
