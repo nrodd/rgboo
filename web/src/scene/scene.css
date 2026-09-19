@@ -33,12 +33,15 @@
   top: 50%; bottom: auto; right: max(24px, env(safe-area-inset-right)); left: auto;
   translate: 0 -50%; width: min(360px, calc(100vw - 48px)); max-width: 360px;
   height: auto; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain;
-  padding: 22px; border: 1px solid rgb(241 230 209 / 18%); border-radius: 20px;
-  color: var(--foreground); background: linear-gradient(145deg, rgb(73 65 54 / 72%), rgb(28 26 28 / 82%));
-  -webkit-backdrop-filter: blur(18px) saturate(1.15); backdrop-filter: blur(18px) saturate(1.15);
-  box-shadow: inset 0 1px 0 rgb(255 249 233 / 12%), 0 16px 48px rgb(0 0 0 / 24%);
-  font: 14px/1.5 monospace; scrollbar-width: thin; scrollbar-color: #6e6557 transparent;
+  padding: 22px; border: 1px solid rgb(241 230 209 / 26%); border-radius: 20px;
+  color: var(--foreground); background: linear-gradient(145deg, rgb(73 65 54 / 34%), rgb(24 23 27 / 46%));
+  -webkit-backdrop-filter: blur(3px) saturate(1.2); backdrop-filter: blur(3px) saturate(1.2);
+  backdrop-filter: var(--glass-refraction) blur(2px) saturate(1.2);
+  box-shadow: inset 1px 1px 0 rgb(255 249 233 / 18%), inset -1px -1px 0 rgb(255 249 233 / 5%), 0 16px 48px rgb(0 0 0 / 24%);
+  font: 14px/1.5 monospace; text-shadow: 0 1px 3px rgb(0 0 0 / 40%); scrollbar-width: thin; scrollbar-color: #6e6557 transparent;
 }
+.glass-filter-defs { position: absolute; pointer-events: none; }
+.scene-sheet:focus { outline: none; }
 .scene-sheet[data-state="open"] { animation: card-in 180ms ease-out; }
 .scene-sheet[data-state="closed"] { animation: card-out 120ms ease-in; }
 @keyframes card-in { from { opacity: 0; transform: translateX(12px) scale(.985); } to { opacity: 1; transform: none; } }

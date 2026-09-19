@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { HexColorPicker } from "react-colorful";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -20,6 +20,8 @@ const titles = ["Color", "Links", "Settings"];
 const swatches = ["#8fa77b", "#d5854c", "#946172", "#697fa8", "#d2b575", "#722cc7"];
 
 export function ScenePanels({ panel, onClose, returnFocus, player, playback, videoId, preferences, onPreferences, onRetry }: Props) {
+  const glassId = useId();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [username, setUsername] = useState("");
   const [color, setColor] = useState("#8fa77b");
   const [hexInput, setHexInput] = useState(color);
@@ -37,8 +39,19 @@ export function ScenePanels({ panel, onClose, returnFocus, player, playback, vid
   const pickColor = (hex: string) => { setColor(hex); setHexInput(hex); };
   const playing = playback.status === "playing" || playback.status === "buffering";
   const togglePreference = (key: keyof ScenePreferences, value: boolean) => onPreferences({ ...preferences, [key]: value });
-  return <Sheet open={panel !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
-    <SheetContent side="right" className="scene-sheet" data-side="right" aria-describedby={undefined}
+  return <>
+    <svg width="0" height="0" className="glass-filter-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id={glassId} x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="1" seed="8" result="refraction" />
+          <feDisplacementMap in="SourceGraphic" in2="refraction" scale="36" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </defs>
+    </svg>
+    <Sheet open={panel !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <SheetContent ref={cardRef} tabIndex={-1} side="right" className="scene-sheet"
+      style={{ "--glass-refraction": `url("#${glassId}")` } as CSSProperties}
+      onOpenAutoFocus={(event) => { event.preventDefault(); cardRef.current?.focus({ preventScroll: true }); }} data-side="right" aria-describedby={undefined}
       data-reduced-motion={preferences.reduceMotion} data-high-contrast={preferences.highContrast}
       onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus({ preventScroll: true }); }}>
       <SheetHeader className="panel-header">
@@ -88,5 +101,5 @@ export function ScenePanels({ panel, onClose, returnFocus, player, playback, vid
         </section>
       </div>}
     </SheetContent>
-  </Sheet>;
+  </Sheet></>;
 }

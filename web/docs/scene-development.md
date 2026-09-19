@@ -179,7 +179,9 @@ receiver badge and control strip have been removed.
 
 `ScenePanels.tsx` owns the color form, existing Twitch/GitHub/YouTube links, and
 playback/accessibility settings. Cards float on the right with content-sized
-height, subtle backdrop blur, a thin highlight and rounded corners. They use
+height, a translucent tint, SVG backdrop displacement, a thin highlight and
+rounded corners. The displacement bends the background without distorting the
+controls. High-contrast and reduced-transparency modes use an opaque surface. They use
 short labels without descriptive captions. The color picker has a compact
 saturation field, slim hue bar, preset swatches and an integrated hex field. Components in
 `src/components/ui` come from the official shadcn New York registry and are
@@ -192,6 +194,8 @@ cooldown with the frog. Requests are aborted on unmount; failures can be retried
 Reduced motion, higher UI contrast and visible tape labels persist locally.
 Device reduced-motion preferences are always respected. Sheets trap keyboard
 focus, close with Escape, and restore focus to the tape that opened them.
+Opening focuses the card rather than the close button; Tab moves to the close
+button with a visible keyboard focus outline.
 
 Resize observers keep the HTML player, tape hit areas and Pixi geometry aligned
 without replacing the iframe or canvas. Pixi immediately renders after resizing

@@ -51,6 +51,11 @@ test("second tape opens old links from the right and the dialog traps focus", as
   await render(<StreamEmbed videoId="" />);
   await tape(2).click();
   await expect.element(page.getByRole("dialog", { name: "Links" })).toHaveAttribute("data-side", "right");
+  await expect.element(page.getByRole("dialog", { name: "Links" })).toHaveFocus();
+  await expect.element(page.getByRole("button", { name: "Close", exact: true })).not.toHaveFocus();
+  await userEvent.keyboard("{Tab}");
+  await expect.element(page.getByRole("button", { name: "Close", exact: true })).toHaveFocus();
+  expect(document.activeElement?.matches(":focus-visible")).toBe(true);
   await expect.element(page.getByRole("link", { name: /Twitch/ })).toHaveAttribute("href", "https://twitch.tv/roddzillaaa");
   await expect.element(page.getByRole("link", { name: /GitHub/ })).toHaveAttribute("href", "https://github.com/nrodd/rgboo");
   for (let i = 0; i < 8; i++) {
