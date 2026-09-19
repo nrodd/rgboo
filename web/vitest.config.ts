@@ -6,7 +6,10 @@ import svgr from "vite-plugin-svgr";
 
 export default defineConfig({
   plugins: [react(), tailwindcss(), svgr()],
+  optimizeDeps: { include: ["react-dom/client"] },
   test: {
+    // Scene tests use real WebGL contexts and shared browser resources.
+    fileParallelism: false,
     setupFiles: ["./src/__test__/setup/setupTests.ts"],
     env: {
       VITE_YOUTUBE_VIDEO_ID: "",

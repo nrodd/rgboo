@@ -6,10 +6,11 @@ import { http, HttpResponse } from "msw";
 import { test } from "./setup/test-extend";
 import { worker } from "./mocks/browser";
 import { StreamEmbed } from "../components/StreamEmbed";
+import { createLoungingCat } from "../scene/characters";
 import { getSceneLayout } from "../scene/layout";
 import { createYouTubePlayer, type YouTubeAPI } from "../media/youtubePlayer";
 
-afterEach(() => { localStorage.removeItem("rgboo_cooldown_end"); delete window.YT; vi.restoreAllMocks(); });
+afterEach(() => { localStorage.removeItem("rgboo_cooldown_end"); localStorage.removeItem("rgboo_scene_preferences"); delete window.YT; vi.restoreAllMocks(); });
 const canvas = () => page.getByRole("group", { name: /Interactive scene/ });
 
 test("frog pointer interaction hops and sends the original color API payload once during cooldown", async () => {
@@ -26,7 +27,7 @@ test("frog pointer interaction hops and sends the original color API payload onc
   await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("Frog sent green! #2 in the queue.");
   expect(requests).toEqual([{ username: "Frog", color: { r: 143, g: 167, b: 123 } }]);
   await userEvent.keyboard("f");
-  await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent(/Frog is resting/);
+  expect(document.body.textContent).not.toContain("Frog is resting");
   expect(requests).toHaveLength(1);
   await userEvent.keyboard("l");
   await expect.element(canvas()).toHaveAttribute("data-candles", "dim");
@@ -51,7 +52,7 @@ test("TV layout preserves the YouTube minimum size and stays inside small and de
     expect(screen.x).toBeGreaterThanOrEqual(0);
     expect(screen.y).toBeGreaterThanOrEqual(0);
     expect(screen.x + screen.width).toBeLessThanOrEqual(width);
-    expect(screen.y + screen.height + 96).toBeLessThanOrEqual(height);
+    expect(screen.y + screen.height + 220).toBeLessThanOrEqual(Math.max(width < 760 ? 640 : 540, height));
   }
 });
 
@@ -90,4 +91,85 @@ test("official player API handles playback, sound and teardown without extractin
   handle.destroy();
   expect(apiPlayer.destroy).toHaveBeenCalledOnce();
   expect(host.children).toHaveLength(0);
+});
+
+
+test("unassigned VHS tapes still glow and show Coming soon", async () => {
+  const view = await render(<StrictMode><StreamEmbed videoId="" /></StrictMode>);
+  await expect.poll(() => document.querySelectorAll("canvas").length).toBe(1);
+  const firstTape = page.getByRole("button", { name: "VHS tape 4: Coming soon", exact: true });
+  await firstTape.hover();
+  await expect.element(canvas()).toHaveAttribute("data-hovered-tape", "vhs-4");
+  await firstTape.click();
+  const toast = page.getByRole("status", { name: "VHS notification" });
+  await expect.element(toast).toHaveTextContent("Coming soon");
+  await expect.element(toast).toHaveAttribute("data-visible", "true");
+  await userEvent.keyboard("{Tab}");
+  await expect.element(canvas()).toHaveAttribute("data-hovered-tape", "vhs-5");
+  await userEvent.keyboard("{Enter}");
+  await expect.element(toast).toHaveTextContent("Coming soon");
+  await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("");
+  await expect.element(toast, { timeout: 4000 }).toHaveAttribute("data-visible", "false");
+  await view.unmount();
+  expect(document.querySelectorAll("canvas")).toHaveLength(0);
+});
+
+
+test("idle animal behavior never submits a color", async () => {
+  const submitted = vi.fn();
+  worker.use(http.post("*/api/color", () => { submitted(); return HttpResponse.json({ queue_position: 1 }); }));
+  await render(<StreamEmbed videoId="" />);
+  await expect.element(canvas()).toHaveAttribute("data-cat", "lounging");
+  await expect.element(canvas()).toHaveAttribute("data-motion", "full");
+  await expect.element(canvas(), { timeout: 10000 }).toHaveAttribute("data-frog", "hopping");
+  expect(submitted).not.toHaveBeenCalled();
+  await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("");
+});
+
+test("reduced motion keeps rain and animal behavior still", async () => {
+  const originalMatchMedia = window.matchMedia.bind(window);
+  vi.spyOn(window, "matchMedia").mockImplementation((query) => {
+    const result = originalMatchMedia(query);
+    if (query === "(prefers-reduced-motion: reduce)") Object.defineProperty(result, "matches", { value: true });
+    return result;
+  });
+  await render(<StreamEmbed videoId="" />);
+  await expect.element(canvas()).toHaveAttribute("data-motion", "reduced");
+  await expect.element(canvas()).toHaveAttribute("data-cat", "lounging");
+  await expect.element(canvas()).toHaveAttribute("data-frog", "resting");
+});
+
+
+test("the cat stays planted on its resting surface throughout its breathing cycle", () => {
+  const cat = createLoungingCat();
+  cat.root.position.set(20, 100);
+  cat.root.scale.set(4);
+  for (let time = 0; time < 16; time += 0.125) {
+    cat.update(time, false);
+    const bounds = cat.root.getBounds();
+    expect(bounds.y + bounds.height).toBeCloseTo(100, 5);
+  }
+  cat.update(0, true);
+  const still = cat.root.getBounds();
+  expect(still.y + still.height).toBeCloseTo(100, 5);
+  cat.root.destroy({ children: true });
+});
+
+
+test("upright tapes, the larger rug and right-side cat remain aligned on all layouts", () => {
+  for (const [width, height] of [[240, 420], [390, 844], [844, 420], [1280, 720], [1440, 900]]) {
+    const { screen, stand, tapes, cat, rug } = getSceneLayout(width, height);
+    for (const tape of tapes) {
+      expect(tape.height).toBeGreaterThan(tape.width);
+      expect(tape.y + tape.height).toBe(stand.y + 80);
+      expect(tape.x).toBeGreaterThan(stand.x);
+      expect(tape.x + tape.width).toBeLessThan(stand.x + stand.width);
+    }
+    expect(cat.x).toBeGreaterThan(screen.x + screen.width / 2);
+    expect(cat.y).toBe(screen.y - 22);
+    expect(cat.x + 34 * cat.pixelSize).toBeLessThanOrEqual(width);
+    expect(rug.x).toBeGreaterThanOrEqual(0);
+    expect(rug.x + rug.width).toBeLessThanOrEqual(width);
+    expect(rug.y + rug.height + 3).toBeLessThanOrEqual(Math.max(width < 760 ? 640 : 540, height));
+  }
 });

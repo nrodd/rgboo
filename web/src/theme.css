@@ -161,3 +161,15 @@
   width: auto;
   height: auto;
 }
+
+/* Semantic tokens used by the locally owned shadcn components. */
+@theme inline {
+  --color-background: var(--background, #211b19);
+  --color-foreground: var(--foreground, #f1dfbe);
+  --color-primary: var(--primary, #c5945b);
+  --color-primary-foreground: var(--primary-foreground, #21170f);
+  --color-input: var(--input, #5d4a38);
+  --color-ring: var(--ring, #e8c792);
+  --color-muted-foreground: var(--muted-foreground, #c3af94);
+  --color-secondary: var(--secondary, #3a2c24);
+}

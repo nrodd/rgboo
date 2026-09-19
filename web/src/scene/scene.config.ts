@@ -1,6 +1,6 @@
 export const layerNames = ["background", "outside", "window", "props", "foreground"] as const;
 export type SceneLayer = (typeof layerNames)[number];
-export type SceneAction = "toggle-playback" | "toggle-sound" | "toggle-candles" | "frog-hop";
+export type SceneAction = "toggle-playback" | "toggle-sound" | "toggle-candles" | "frog-hop" | "coming-soon" | "open-color" | "open-links" | "open-settings";
 export interface Bounds { x: number; y: number; width: number; height: number }
 export interface SceneArtwork extends Bounds {
   id: string;
@@ -11,8 +11,9 @@ export interface SceneArtwork extends Bounds {
   motion?: "fog" | "float";
 }
 export const sceneConfig = {
-  width: 1600, height: 1000, background: 0x171923,
-  screen: { x: 215, y: 365, width: 900, height: 506.25 },
+  width: 1600, height: 1000, background: 0x19151b,
+  ambience: { color: 0x7b9fd8 },
+  screen: { x: 215, y: 255, width: 900, height: 506.25 },
 };
 
 /** Back-to-front order within each layer. All art uses these design-pixel bounds. */
@@ -23,13 +24,26 @@ export const sceneArtwork: SceneArtwork[] = [
   { id: "fog-back", layer: "outside", x: 960, y: 315, width: 460, height: 130, motion: "fog" },
   { id: "fog-front", layer: "outside", x: 925, y: 465, width: 510, height: 110, motion: "fog" },
   { id: "window-frame", layer: "window", x: 930, y: 105, width: 500, height: 535 },
+  { id: "curtain-rod", layer: "window", x: 898, y: 85, width: 565, height: 12 },
+  { id: "curtain-left", layer: "window", x: 910, y: 97, width: 75, height: 533 },
+  { id: "curtain-right", layer: "window", x: 1385, y: 97, width: 75, height: 533 },
   { id: "window-sill", layer: "window", x: 910, y: 635, width: 540, height: 28 },
+  { id: "tea-mug", layer: "props", x: 1170, y: 579, width: 58, height: 56 },
   { id: "frog", layer: "props", x: 1280, y: 565, width: 95, height: 70, action: "frog-hop" },
   { id: "spider", layer: "foreground", x: 105, y: 0, width: 80, height: 240 },
-  { id: "candle-left", layer: "foreground", x: 1245, y: 780, width: 55, height: 130, motion: "float", action: "toggle-candles" },
-  { id: "candle-right", layer: "foreground", x: 1350, y: 710, width: 65, height: 170, motion: "float", action: "toggle-candles" },
+  { id: "candle-left", layer: "foreground", x: 1190, y: 742, width: 55, height: 130, motion: "float", action: "toggle-candles" },
+  { id: "candle-right", layer: "foreground", x: 1260, y: 705, width: 65, height: 170, motion: "float", action: "toggle-candles" },
 ];
 
 /** TV is laid out separately so its YouTube opening stays usable on narrow screens. */
 export const tvArtwork = { src: "", width: 964, height: 610.25,
   opening: { x: 32, y: 32, width: 900, height: 506.25 } };
+
+/** Shelf slots; replace individual tapes with exported pixel art when ready. */
+export const vhsTapes = [
+  { id: "vhs-1", label: "VHS tape 1: Send a color", title: "Send a color", color: 0x9f855f },
+  { id: "vhs-2", label: "VHS tape 2: Links & about", title: "Links & about", color: 0x60867a },
+  { id: "vhs-3", label: "VHS tape 3: Settings", title: "Settings", color: 0x946172 },
+  { id: "vhs-4", label: "VHS tape 4: Coming soon", title: "Coming soon", color: 0x69748f },
+  { id: "vhs-5", label: "VHS tape 5: Coming soon", title: "Coming soon", color: 0x9b8757 },
+];
