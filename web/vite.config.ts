@@ -3,7 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "fs";
 import path from "path";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import svgr from "vite-plugin-svgr";
 
 const localApiTarget = process.env.RGBOO_API_URL || "http://127.0.0.1:8080";
@@ -63,7 +63,11 @@ function devAssetsPlugin() {
   };
 }
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => {
+  const env = loadEnv(mode, process.cwd(), "RGBOO_");
+  // Optional public Worker target for live scene testing; admin stays local.
+  const publicApiTarget = env.RGBOO_PUBLIC_API_URL;
+  return ({
   plugins: [
     react(),
     // The Worker owns production routing. Locally, Vite serves the SPA and
@@ -79,7 +83,9 @@ export default defineConfig(({ command }) => ({
     port: 5173,
     strictPort: true,
     proxy: {
-      "/api": localApiProxy,
+      "/api": publicApiTarget
+        ? { target: publicApiTarget, changeOrigin: true }
+        : localApiProxy,
       "/admin-api": {
         ...localApiProxy,
         rewrite: (path: string) => path === "/admin-api/health"
@@ -91,4 +97,5 @@ export default defineConfig(({ command }) => ({
       usePolling: true,
     },
   },
-}));
+  });
+});
