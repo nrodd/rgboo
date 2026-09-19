@@ -9,7 +9,8 @@ export default defineConfig({
   test: {
     setupFiles: ["./src/__test__/setup/setupTests.ts"],
     env: {
-      VITE_DEV_EMBED: "true",
+      VITE_DEV_EMBED: "false",
+      VITE_STREAM_URL: "",
     },
     browser: {
       provider: playwright(),

@@ -1,0 +1,31 @@
+.scene-page {
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 24px 24px 112px;
+  color: #ebdbbe;
+}
+
+.scene-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.scene-header h1 { font-size: 24px; font-weight: 700; }
+.scene-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; gap: 24px; }
+.scene-player { min-width: 0; color: #ebdbbe; }
+.scene-viewport { position: relative; overflow: hidden; background: #14121a; border-radius: 8px; }
+.scene-canvas-host { position: absolute; inset: 0; }
+.scene-canvas-host canvas { display: block; }
+.scene-native-video { width: 100%; height: 100%; object-fit: contain; }
+.scene-status { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-size: 16px; color: #ebdbbe; }
+.scene-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
+.scene-playback-status { margin-right: auto; }
+.scene-controls button { cursor: pointer; border: 1px solid #716676; border-radius: 6px; padding: 8px 12px; min-height: 44px; }
+.scene-controls button[aria-pressed="true"] { background: #39343e; }
+.scene-controls button:disabled { opacity: 0.45; cursor: default; }
+.scene-controls button:focus-visible { outline: 2px solid #ebdbbe; outline-offset: 3px; }
+.scene-participation { padding: 16px 0; border: 1px solid #39343e; border-radius: 8px; }
+.scene-participation .form-field { font-size: 18px; width: 100%; }
+
+@media (max-width: 900px) {
+  .scene-page { padding: 20px 12px 100px; }
+  .scene-workspace { grid-template-columns: minmax(0, 1fr); }
+  .scene-participation { width: 100%; max-width: 420px; justify-self: center; }
+}
