@@ -147,8 +147,8 @@ These idle behaviors never call the API. Clicking the frog still performs its
 larger hop and the existing green submission with cooldown protection.
 
 `src/assets/window.png` supplies the frame, reflections and sill as one square
-export. `windowOpening` clips rain, moon and fog to its panes. The frog, mug
-and curtains align with the integrated sill. Wallpaper is slightly lighter
+export. `windowOpening` clips rain, moon and fog to its panes. The frog and mug align with the integrated sill. Curtains and the curtain rod
+are removed so the custom frame stays visible. Wallpaper is slightly lighter
 for contrast behind the dark cat; the cat artwork itself is not brightened.
 
 `atmosphere.ts` adds two depths of pixel rain within the outside-window mask,
@@ -168,9 +168,9 @@ brightness changes remain available. Hidden tabs pause rendering, and all
 animation uses the existing scene ticker and cleanup lifecycle.
 
 The current styling leans toward a cozy late-80s/early-90s living room: muted
-plum wallpaper, walnut paneling, rose curtains, a teal woven rug and TV runner,
+plum wallpaper, walnut paneling, a teal woven rug and TV runner,
 a mug on the sill, and faded striped VHS labels. `roomDecor.ts` draws the rug;
-the curtain and mug exports have named slots in `sceneArtwork`.
+the mug export has a named slot in `sceneArtwork`.
 
 Cat breathing scales gently upward around its local y=0 resting plane rather
 than translating the sprite. Its paws remain in contact with the TV runner;
@@ -222,7 +222,7 @@ and candles at the free end of the shelf. Short viewports scroll to preserve
 YouTube's 200 × 200 minimum player. Browser tests sample rendered pixels through
 repeated resizes and exercise the panels with mocked color submissions.
 
-The Halloween palette uses ink/plum walls, burgundy curtains, faded teal fabric
+The Halloween palette uses ink/plum walls, faded teal fabric
 and warm amber light. Pixel paper bats hang above the TV, a cobweb sits in the
 upper corner, bare branches sit behind the rain, and a jack-o'-lantern lights
 the floor beside the stand. On narrow screens the pumpkin moves onto the rug
