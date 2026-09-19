@@ -1,55 +1,43 @@
-import { Container, Graphics } from "pixi.js";
-import { pixels, pixelLine } from "./pixelArt";
+import { Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
+import { pixels } from "./pixelArt";
+import catDefaultUrl from "../assets/cat_default.png";
+import catAwakeUrl from "../assets/cat_awake.png";
 
-/** Small, independently animated sprite parts; final art can replace each part. */
+/** Original 64px exports; both poses share the same paw contact row (43). */
 export function createLoungingCat() {
   const root = new Container({ label: "lounging-cat" });
-  const tail = root.addChild(new Graphics({ label: "cat-tail" }));
-  const body = root.addChild(new Graphics({ label: "cat-body" }));
-  const face = root.addChild(new Graphics({ label: "cat-face" }));
-  pixels(body, [
-    "..d....d.........................",
-    "..dd..dd.........................",
-    "..dlddld.....ddddddddddd..........",
-    ".dlllllld..ddlllllllllldd.........",
-    ".dlllllldddlllllllllllllld........",
-    ".dllllllllllllllllllllllllld......",
-    "..dllllclllllldllllldllllllld......",
-    "...dcccccclllldllllldllllllld......",
-    "..dcccccccclllllllllllllllld......",
-    "..dddddddddddddddddddddddddd......",
-  ], { d: 0x38313e, l: 0x65576f, c: 0x9b8875 }, 1, 0, -10);
-  // Blue reflected light along the paws facing the screen.
-  body.rect(4, -1, 23, 1).fill(0x8595aa);
-  let previousPose = "";
+  root.eventMode = "none";
+  const body = root.addChild(new Sprite({ label: "cat-body" }));
+  const tail = root.addChild(new Sprite({ label: "cat-tail" }));
+  const unit = 34 / 53;
+  body.scale.set(unit);
+  tail.scale.set(unit);
+  body.anchor.set(0, 1);
+  let frames: { body: Texture; tail: Texture }[] = [];
   const update = (time: number, still: boolean) => {
-    // Local y=0 is the contact plane: expand the body upward, never translate it.
-    const breathScale = still ? 1 : 1 + (Math.sin(time * 1.2) + 1) * 0.012;
-    body.scale.y = breathScale;
-    face.scale.y = breathScale;
-    const sleepyBlink = !still && time % 8 > 6.9 && time % 8 < 7.3;
-    const tailFrame = still ? 0 : Math.floor(time / 0.7) % 8;
-    const earTwitch = !still && time % 13 > 10.4 && time % 13 < 10.7;
-    const pose = `${sleepyBlink}-${tailFrame}-${earTwitch}`;
-    if (pose !== previousPose) {
-      previousPose = pose;
-      face.clear();
-      for (const x of [3, 7]) {
-        face.rect(x, -5, 2, 1).fill(sleepyBlink ? 0xd2c0b0 : 0x302a3c);
-        if (sleepyBlink) face.rect(x, -6, 1, 1).fill(0x8ea5a7);
-      }
-      face.rect(6, -3, 1, 1).fill(0x926d77);
-      if (earTwitch) face.rect(7, -11, 1, 2).fill(0x65576f);
-      tail.clear();
-      const rise = [0, 0, 1, 2, 2, 1, 0, 0][tailFrame];
-      pixelLine(tail, 26, -2, 30, -2, 0x554958, 2);
-      pixelLine(tail, 30, -2, 32, -4 - rise, 0x65576f, 2);
-      tail.rect(31, -6 - rise, 2, 2).fill(0x9b8875);
-    }
-    return sleepyBlink ? "blinking" : earTwitch ? "ear-twitch" : "lounging";
+    const blink = !still && time % 8 > 6.9 && time % 8 < 7.3;
+    const awake = !still && time % 20 > 17;
+    const frame = frames[blink ? 1 : awake ? 2 : 0];
+    if (frame) { body.texture = frame.body; tail.texture = frame.tail; }
+    // Only the body expands upward; the paws and hanging tail stay in place.
+    body.scale.y = unit * (still ? 1 : 1 + (Math.sin(time * 1.2) + 1) * .008);
+    return blink ? "blinking" : awake ? "awake" : "lounging";
   };
-  update(0, true);
-  return { root, update };
+  const ready = Promise.all([Assets.load<Texture>(catDefaultUrl), Assets.load<Texture>(catAwakeUrl)]).then(([rest, awake]) => {
+    if (root.destroyed) return;
+    rest.source.scaleMode = awake.source.scaleMode = "nearest";
+    const poses: [Texture, number][] = [[rest, 0], [rest, 64], [awake, 0]];
+    frames = poses.map(([texture, y]) => {
+      const source = texture.source;
+      return {
+        body: new Texture({ source, frame: new Rectangle(7, y + 12, 53, 31) }),
+        tail: new Texture({ source, frame: new Rectangle(7, y + 43, 53, 16) }),
+      };
+    });
+    update(0, true);
+  });
+  root.on("destroyed", () => frames.forEach((frame) => { frame.body.destroy(); frame.tail.destroy(); }));
+  return { root, update, ready };
 }
 
 export function createIdleFrog(width: number) {

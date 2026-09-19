@@ -30,7 +30,9 @@ export function getSceneLayout(width: number, height: number) {
     x: screen.x + 12 + index * (tapeWidth + gap), y: stand.y + 80 - [60, 64, 62, 60, 64][index],
     width: tapeWidth, height: [60, 64, 62, 60, 64][index],
   }));
-  const catPixel = Math.max(2, Math.min(5, Math.floor(screen.width / 100)));
+  // The custom cat has 31 body rows in a 53px-wide crop. Leave room for its
+  // ears above the TV even when a short viewport pushes the screen upward.
+  const catPixel = Math.max(2, Math.min(compact ? 2 : 5, Math.floor(screen.width / 100), Math.floor((screen.y - 30) / (31 * 34 / 53))));
   // Body rests on the right edge; only the tail can extend in front of the window.
   const cat = {
     x: Math.min(width - 34 * catPixel - 8, screen.x + screen.width - 28 * catPixel),

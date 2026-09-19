@@ -1,3 +1,6 @@
+import candleFatUrl from "../assets/candle_fat.png";
+import candleTallUrl from "../assets/candle_tall.png";
+
 export const layerNames = ["background", "outside", "window", "props", "foreground"] as const;
 export type SceneLayer = (typeof layerNames)[number];
 export type SceneAction = "toggle-playback" | "toggle-sound" | "toggle-candles" | "frog-hop" | "coming-soon" | "open-color" | "open-links" | "open-settings";
@@ -6,6 +9,8 @@ export interface SceneArtwork extends Bounds {
   id: string;
   /** Add a /scene/file.png path to replace this slot's placeholder. */
   src?: string;
+  /** Optional visible bounds inside a padded export. */
+  crop?: Bounds;
   layer: SceneLayer;
   action?: SceneAction;
   motion?: "fog" | "float";
@@ -32,8 +37,8 @@ export const sceneArtwork: SceneArtwork[] = [
   { id: "pumpkin", layer: "foreground", x: 110, y: 810, width: 96, height: 96 },
   { id: "frog", layer: "props", x: 1280, y: 565, width: 95, height: 70, action: "frog-hop" },
   { id: "spider", layer: "foreground", x: 105, y: 0, width: 80, height: 240 },
-  { id: "candle-left", layer: "foreground", x: 1190, y: 742, width: 55, height: 130, motion: "float", action: "toggle-candles" },
-  { id: "candle-right", layer: "foreground", x: 1260, y: 705, width: 65, height: 170, motion: "float", action: "toggle-candles" },
+  { id: "candle-left", src: candleFatUrl, crop: { x: 8, y: 7, width: 17, height: 25 }, layer: "foreground", x: 1190, y: 742, width: 68, height: 132, motion: "float", action: "toggle-candles" },
+  { id: "candle-right", src: candleTallUrl, crop: { x: 9, y: 2, width: 15, height: 30 }, layer: "foreground", x: 1272, y: 705, width: 68, height: 168, motion: "float", action: "toggle-candles" },
 ];
 
 /** TV is laid out separately so its YouTube opening stays usable on narrow screens. */

@@ -1,4 +1,5 @@
-import { Application, Assets, Container, Graphics, Rectangle, Sprite, type Texture } from "pixi.js";
+import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
+import { pixels } from "./pixelArt";
 import { layerNames, sceneArtwork, sceneConfig, tvArtwork, vhsTapes, type SceneAction, type SceneLayer } from "./scene.config";
 import { getSceneLayout } from "./layout";
 import { drawTelevision, drawTape, drawTapeGlow } from "./television";
@@ -63,6 +64,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
   app.stage.addChild(light.reflected, layers.foreground);
   const cat = createLoungingCat();
   app.stage.addChild(cat.root);
+  void cat.ready.catch((error: unknown) => console.warn("Could not load cat artwork", error));
   const setPlaying = (playing: boolean) => {
     light.setPlaying(playing);
     app.canvas.dataset.tvPowered = String(playing);
@@ -213,8 +215,21 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
       if (disposed) return;
       const object = objects.get(art.id)!;
       object.removeChildren().forEach((child) => child.destroy());
-      object.addChild(new Sprite({ texture, width: art.width, height: art.height }));
+      const cropped = art.crop ? new Texture({ source: texture.source, frame: new Rectangle(art.crop.x, art.crop.y, art.crop.width, art.crop.height) }) : texture;
+      if (art.crop) object.on("destroyed", () => cropped.destroy());
+      const sprite = object.addChild(new Sprite({ texture: cropped }));
+      if (art.id.startsWith("candle")) {
+        // The supplied wax exports are unlit. Keep a separate flame above the wick,
+        // and scale the cropped art uniformly so its pixels retain their proportions.
+        const flameHeight = 32;
+        sprite.scale.set(Math.min(art.width / cropped.width, (art.height - flameHeight) / cropped.height));
+        sprite.position.set((art.width - sprite.width) / 2, flameHeight);
+        const flame = object.addChild(new Graphics({ label: "candle-flame" }));
+        pixels(flame, ["...a...", "..aaa..", "..aba..", ".abbba.", "..aba..", "...b...", "...w...", "...w..."],
+          { a: 0xdd9460, b: 0xffe8ad, w: 0x30202b }, 4, art.width / 2 - 14, 0);
+      } else { sprite.width = art.width; sprite.height = art.height; }
       if (art.id === "wall") resize();
+      if (!disposed) app.render();
     } catch (error) { console.warn(`Could not load scene art: ${art.id}`, error); }
   }));
   if (tvArtwork.src) void Assets.load<Texture>(tvArtwork.src).then((texture) => {

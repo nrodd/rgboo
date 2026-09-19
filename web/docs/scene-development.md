@@ -2,7 +2,8 @@
 
 The homepage is a full-page PixiJS v8 scene based on the room sketch. The old
 logo, form, info button and footer are no longer mounted; `/admin` is retained.
-The room uses code-authored pixel-art placeholders until your artwork is ready.
+The cat and candles use the custom PNG exports from `feat/pixel-art`; the other
+room objects still use code-authored pixel-art placeholders.
 The CRT has a stepped plastic casing, rabbit-ear antenna and feet on a wooden
 stand. Five VHS tapes sit on the shelf below it. Hovering or focusing a tape
 adds a subtle pixel halo. The last two tapes show a temporary “Coming soon” toast. The first three open compact shadcn glass cards on the right: color submission, project links, and settings.
@@ -133,15 +134,23 @@ VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test -- src/__test__/youtube-live.tes
 
 ## Room ambience and animal behavior
 
-`characters.ts` draws a lounging pixel cat on the TV, with slow breathing,
-sleepy blinks, an occasional ear twitch and a lazy tail. The frog blinks,
+`characters.ts` loads `src/assets/cat_default.png` (two 64 × 64 frames) and
+`cat_awake.png`. The cat breathes gently, blinks and occasionally opens its eyes.
+The original image files are unchanged; Pixi crops their transparent padding.
+The body rests at source row 43, with the tail below that row kept stationary
+while the body breathes upward. Its scale adapts to the space above the TV.
+The frog blinks,
 breathes, looks toward the rain, and makes a small idle hop every 14 seconds.
 These idle behaviors never call the API. Clicking the frog still performs its
 larger hop and the existing green submission with cooldown protection.
 
 `atmosphere.ts` adds two depths of pixel rain within the outside-window mask,
 a shared warm candlelight pool, and cool TV light on the wall, bezel and shelf.
-The candles sit closer together next to the TV and float only slightly.
+The candles use `src/assets/candle_fat.png` and `candle_tall.png`. Their `crop`
+bounds in `scene.config.ts` remove transparent margins, and they scale uniformly.
+These exports contain wax only, so separate pixel flames sit above the wicks.
+The candles sit closer together next to the TV, float slightly and still dim
+when clicked (or with L).
 `sceneConfig.ambience.color` sets the TV light color (a cool blue chosen to
 match the current broadcast). This is authored lighting, not live color sampling
 from YouTube. Its intensity follows the official player's play/pause state.

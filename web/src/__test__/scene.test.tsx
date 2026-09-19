@@ -140,17 +140,22 @@ test("reduced motion keeps rain and animal behavior still", async () => {
 });
 
 
-test("the cat stays planted on its resting surface throughout its breathing cycle", () => {
+test("the custom cat frames keep its paws planted and its tail hanging during breathing", async () => {
   const cat = createLoungingCat();
+  await cat.ready;
   cat.root.position.set(20, 100);
   cat.root.scale.set(4);
-  for (let time = 0; time < 16; time += 0.125) {
+  const body = cat.root.getChildByLabel("cat-body")!;
+  const tail = cat.root.getChildByLabel("cat-tail")!;
+  for (let time = 0; time < 24; time += 0.125) {
     cat.update(time, false);
-    const bounds = cat.root.getBounds();
+    const bounds = body.getBounds();
     expect(bounds.y + bounds.height).toBeCloseTo(100, 5);
+    expect(tail.getBounds().y).toBeCloseTo(100, 5);
+    expect(tail.getBounds().height).toBeGreaterThan(0);
   }
   cat.update(0, true);
-  const still = cat.root.getBounds();
+  const still = body.getBounds();
   expect(still.y + still.height).toBeCloseTo(100, 5);
   cat.root.destroy({ children: true });
 });
@@ -167,6 +172,7 @@ test("upright tapes, the larger rug and right-side cat remain aligned on all lay
     }
     expect(cat.x).toBeGreaterThan(screen.x + screen.width / 2);
     expect(cat.y).toBe(screen.y - 22);
+    expect(cat.y - 31 * 34 / 53 * cat.pixelSize * 1.016).toBeGreaterThanOrEqual(0);
     expect(cat.x + 34 * cat.pixelSize).toBeLessThanOrEqual(width);
     expect(rug.x).toBeGreaterThanOrEqual(0);
     expect(rug.x + rug.width).toBeLessThanOrEqual(width);
