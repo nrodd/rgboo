@@ -1,7 +1,7 @@
 import type Hls from "hls.js";
 import type { VideoSourceConfig } from "./videoSource";
 
-export type PlaybackStatus = "unconfigured" | "loading" | "playing" | "buffering" | "paused" | "blocked" | "ended" | "error";
+import type { PlaybackStatus } from "./playbackStatus";
 
 /** Owns transport and playback. It knows nothing about Pixi or the scene. */
 export function createVideoPlayer(

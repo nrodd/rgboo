@@ -1,133 +1,119 @@
-# Building the scene
+# Building the room
 
-The homepage now mounts a PixiJS v8 scene beside the existing color form. The
-starter scene is deliberately just a screen and a placeholder housing. Replace
-it with your own composition; no room or illustration style is baked in.
+The homepage is a full-page PixiJS v8 scene based on the room sketch. The old
+logo, form, info button and footer are no longer mounted; `/admin` is retained.
+Everything in the room is placeholder geometry until your artwork is ready.
 
-## Run locally
-
-```sh
-yarn install
-yarn dev
-```
-
-If Yarn is not installed, use the project's pinned version through npm:
+## Local preview
 
 ```sh
-npx --yes --package=@yarnpkg/cli-dist@4.9.1 yarn dev
+npm run dev
 ```
 
-Copy `.env.example` to `.env.local` if you have not already done so. With
-`VITE_DEV_EMBED=true`, development uses the existing `dev-assets/dev-embed.mp4`.
-Restart Vite after changing environment variables. The local API is still
-needed to actually submit colors; rendering the scene does not depend on it.
+Open http://127.0.0.1:5173. Set `VITE_YOUTUBE_VIDEO_ID` in `.env.local` to the
+current broadcast's video ID (currently `6LVM4iQfMX4`). Restart Vite after changing
+configuration. A new YouTube broadcast can have a new ID. `/api/stream` provides
+song metadata over SSE; it is not a video endpoint.
 
-## Where to work
+The official YouTube iframe sits over a matching rectangular opening in the
+Pixi television. `src/scene/layout.ts` supplies the same coordinates to both
+surfaces. On phones, the window scene sits above a larger TV. The player remains
+at least 200 × 200; extremely small windows scroll instead of cropping it.
 
-| File | Responsibility |
-| --- | --- |
-| `src/scene/scene.config.ts` | Design dimensions, screen opening, CRT settings, artwork manifest |
-| `src/scene/createScene.ts` | Pixi containers, sprites, masks, animation, resize and cleanup |
-| `src/scene/scene.css` | Browser layout and HTML controls |
-| `src/media/createVideoPlayer.ts` | Native video/HLS playback and cleanup |
-| `src/media/videoSource.ts` | Environment configuration |
-| `src/components/StreamEmbed/StreamEmbed.tsx` | React lifecycle, playback controls, fallback |
-| `src/layout/MainContent.tsx` | Homepage composition and existing color form |
-| `public/scene/` | Your exported artwork |
+TV buttons and the volume slider use the official IFrame Player API. They are
+accessible HTML controls in the TV casing, outside the video. The supported
+`controls=0` option hides the native control bar. YouTube can still show its
+branding, titles, ads and other player UI. We do not obscure or reskin those.
+If API initialization fails, native YouTube controls are restored, with Retry
+and a YouTube link available. Playback attempts to start muted; press Play if
+browser autoplay is blocked. The stream remains usable if Pixi/artwork fails.
 
-## Add art
+No YouTube media URLs are extracted or proxied. There are no CRT filters, masks,
+or overlays over its player. The earlier direct-media adapter remains in
+`src/media/createVideoPlayer.ts` for a future independently hosted source, but
+is not connected to the homepage. Its old `VITE_STREAM_*`/`VITE_DEV_EMBED`
+settings do not control this scene.
 
-The scene uses a 1600 × 900 design space. Positions and sizes in the manifest
-are design pixels. The whole scene scales uniformly to fit its container.
-Mobile currently stacks the form below the scene; adjust the composition here
-when your art direction calls for a dedicated portrait layout.
+## Replace the placeholder art
 
-Export separate images with transparency where appropriate. Register them in
-`sceneArtwork`, for example (these example files are not included):
+Put transparent PNG/WebP exports in `public/scene/`. Set the matching `src`
+inside `sceneArtwork` in `src/scene/scene.config.ts`, for example:
 
 ```ts
-export const sceneArtwork: SceneArtwork[] = [
-  {
-    id: "room",
-    src: "/scene/room.webp",
-    layer: "background",
-    x: 0, y: 0, width: 1600, height: 900,
-  },
-  {
-    id: "tv-bezel",
-    src: "/scene/tv-bezel.png",
-    layer: "foreground",
-    x: 288, y: 148, width: 1024, height: 604,
-  },
-];
+{ id: "frog", src: "/scene/frog.png", layer: "props",
+  x: 1280, y: 565, width: 95, height: 70, action: "frog-hop" }
 ```
 
-Draw order is `background → props → screen → foreground → lighting`.
-Within a layer, manifest order is draw order. The TV screen lives in `screen`;
-give bezel art a transparent opening and put it in `foreground`. Turn
-`showPlaceholders` off when the actual housing is ready. Change `screen.x`,
-`screen.y`, `screen.width`, `screen.height`, and `screen.radius` to match the art.
-Video is contained inside that opening without stretching or cropping.
+Slots are provided for wall, night sky, moon, two fog layers, window frame,
+sill, frog, fixed spider, and two candles. Positions use a 1600 × 1000 design
+space. Each export replaces only its own placeholder; a failed asset load keeps
+the placeholder visible and logs the asset ID. Keep the frame transparent
+between its bars. Fog and moon are clipped to the window opening. Fog drifts,
+candles float, and the spider stays fixed. Reduced motion stops ambient movement
+and the hop; the frog's API action still works. Rendering pauses in hidden tabs.
 
-For animated or interactive objects, add code in `createScene.ts` using its
-named `layers`. The starter world has `eventMode = "none"`; enable event handling
-on the world and appropriate objects if you add Pixi pointer interactions.
-Keep text inputs and essential controls in React so keyboard and touch input
-remain native. Add animation to `app.ticker`; use `ticker.deltaMS` for elapsed
-time rather than assuming a particular frame rate. Respect reduced motion.
+The TV has a separate `tvArtwork` entry because it resizes independently on
+mobile. Default art bounds are 964 × 610.25 with an opening at (32, 32), sized
+900 × 506.25. Update both the exported dimensions and `opening` when changing
+the TV art. Keep the opening rectangular and clear, and leave space below it
+for the controls. The iframe always remains fully visible above artwork.
 
-CRT settings currently control scanlines, noise, and vignette. The filter's
-`curvature` bends the scanlines, not the video geometry. Add a custom distortion
-filter if the art needs a genuinely curved screen. Filters affect the display
-container only. The user can disable effects, and reduced motion defaults them
-off. Rendering pauses while the page is hidden.
+`createScene.ts` owns Pixi containers, lifecycle and animation;
+`placeholders.ts` contains only replaceable drawing code. Each slot can bind a
+`SceneAction`. Media actions call the player adapter; room actions animate Pixi.
+React owns the iframe, accessible TV controls and API feedback. Shared asset
+textures remain cached across mounts, while each scene releases its canvas,
+listeners, resize observer and ticker on unmount (including StrictMode).
 
-## Connect direct video
+## Frog interaction and API
 
-```dotenv
-VITE_DEV_EMBED=false
-VITE_STREAM_URL=https://your-media-host.example/live/index.m3u8
-VITE_STREAM_TYPE=hls
+Clicking the frog makes it hop and sends the same request as the old color form:
+
+```http
+POST /api/color
+Content-Type: application/json
+
+{"username":"Frog","color":{"r":143,"g":167,"b":123}}
 ```
 
-Use the actual browser playback URL, not an embed page or an RTMP ingest URL.
-The scaffold supports HLS (native when available, otherwise lazy-loaded hls.js)
-and browser-playable files such as MP4. `auto` recognizes `.m3u8` including query
-strings; set `hls` explicitly for extensionless playback URLs. Codec support
-still depends on the browser. WebRTC/signaling and ingest/transcoding are not
-implemented; those belong in the media adapter or the streaming service.
+The green is `#8FA77B`. Edit `src/api/frogColor.ts` to change the name/color.
+The sender prevents overlapping requests and shares the form's 30-second
+successful-send cooldown in localStorage. Every click can still animate the
+frog. Feedback appears beneath the TV, including queue position, cooldown, or
+a failed-send message. Failed requests do not start a cooldown.
 
-Serve media over HTTPS in production. The media host must allow cross-origin
-access from the site and development origin, including HLS manifests, segments,
-and any encryption keys. Setting `crossOrigin` on the video alone is not enough.
-Every `VITE_` value is public browser configuration; do not place secrets there.
+With the canvas focused: Space plays/pauses, M toggles sound, F triggers the
+frog and sends green, and L dims the candles. Clicking candles also dims them.
 
-Playback starts muted and exposes play/pause, mute, reconnect after errors, and
-CRT toggling. Fatal HLS failures stop the transport until the visitor reconnects.
-If WebGL initialization or artwork loading fails, a native video player is
-shown. A missing production URL shows an offline state. The development clip
-is never used as a production fallback. Configure Vite values at build time.
+Production requests use the existing same-origin Worker route. Vite defaults
+to the local API at `127.0.0.1:8080`; start the local backend from the repository
+root with `./scripts/dev.sh --api-only` after completing its setup instructions.
+The browser never receives the backend API key. The scene does not silently
+redirect local development writes to production.
 
-## Lifecycle and validation
-
-React mounts the scene asynchronously and aborts it on unmount, including
-StrictMode's development mount/cleanup cycle. The scene releases its canvas,
-ticker, resize observer, video texture and filters. Artwork uses Pixi's shared
-Assets cache, so it is retained between scene mounts; explicitly unload unused
-art when implementing multiple large scenes.
+## Validation
 
 ```sh
-yarn build
-yarn test
-yarn lint
+npm run test
+npm run build
+npm run lint
 ```
 
-Browser tests cover actual preview-video playback, the CRT control, StrictMode
-cleanup and the existing form/admin behavior. Before connecting production,
-also test your real stream on Safari and Chromium: codecs, CORS, latency and
-reconnection depend on that media source.
+Browser tests cover full-page layout, StrictMode cleanup, actual Pixi frog
+clicks, the JSON payload, cooldown/error feedback, candle interactions, and
+minimum player dimensions. YouTube API tests use a fake API to verify playback,
+volume, autoplay-blocked state and cleanup without loading external media.
+Live YouTube availability and embedding restrictions must also be checked in
+a real browser. Retained form/admin/Worker tests run with the same suite.
 
-References: [Pixi application lifecycle](https://pixijs.com/8.x/guides/components/application),
-[Pixi textures](https://pixijs.com/8.x/guides/components/textures),
-[CRT options](https://pixijs.io/filters/docs/CRTFilter.html),
-[HLS.js](https://github.com/video-dev/hls.js).
+References: [YouTube player parameters](https://developers.google.com/youtube/player_parameters),
+[YouTube IFrame API](https://developers.google.com/youtube/iframe_api_reference),
+[YouTube player requirements](https://developers.google.com/youtube/terms/required-minimum-functionality),
+[Pixi events](https://pixijs.com/8.x/guides/components/events).
+
+Optional live playback check (contacts YouTube; requires an active, embeddable
+broadcast):
+
+```sh
+VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test -- src/__test__/youtube-live.test.tsx
+```

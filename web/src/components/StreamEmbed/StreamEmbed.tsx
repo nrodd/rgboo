@@ -1,114 +1,66 @@
 import { useEffect, useRef, useState } from "react";
-import { createVideoPlayer, type PlaybackStatus } from "../../media/createVideoPlayer";
-import { getVideoSource, type VideoSourceConfig } from "../../media/videoSource";
-import type { SceneHandle } from "../../scene/createScene";
-import { sceneConfig } from "../../scene/scene.config";
+import { createYouTubePlayer, defaultVideoId, type YouTubeHandle, type YouTubeState } from "../../media/youtubePlayer";
+import { createFrogSender } from "../../api/frogColor";
+import { getSceneLayout } from "../../scene/layout";
 import "../../scene/scene.css";
 
-const defaultSource = getVideoSource();
-const statusText: Record<PlaybackStatus, string> = {
-  unconfigured: "Stream offline",
-  loading: "Connecting to stream…",
-  playing: "Playing",
-  buffering: "Buffering…",
-  paused: "Paused",
-  blocked: "Press play to watch",
-  ended: "Stream ended",
-  error: "Unable to play the stream",
-};
-
-interface StreamEmbedProps {
-  className?: string;
-  source?: VideoSourceConfig;
-}
-
-/** React owns controls and lifecycle; Pixi owns the artwork and video pixels. */
-export const StreamEmbed = ({ className = "", source = defaultSource }: StreamEmbedProps) => {
+export const StreamEmbed = ({ videoId = defaultVideoId }: { videoId?: string }) => {
+  const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<SceneHandle | undefined>(undefined);
-  const playerRef = useRef<ReturnType<typeof createVideoPlayer> | undefined>(undefined);
-  const [status, setStatus] = useState<PlaybackStatus>(source.url ? "loading" : "unconfigured");
-  const [fallback, setFallback] = useState(false);
+  const screenRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<YouTubeHandle | null>(null);
+  const [state, setState] = useState<YouTubeState>({ status: "loading", ready: false, muted: true, volume: 70 });
+  const [frogMessage, setFrogMessage] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const [muted, setMuted] = useState(true);
-  const [effects, setEffects] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const effectsRef = useRef(effects);
-  const mutedRef = useRef(muted);
-
+  const [sceneFailed, setSceneFailed] = useState(false);
   useEffect(() => {
-    effectsRef.current = effects;
-    sceneRef.current?.setEffects(effects);
-  }, [effects]);
-  useEffect(() => {
-    mutedRef.current = muted;
-    playerRef.current?.setMuted(muted);
-  }, [muted]);
-  useEffect(() => {
-    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const change = () => setEffects(!preference.matches);
-    preference.addEventListener("change", change);
-    return () => preference.removeEventListener("change", change);
-  }, []);
-
-  useEffect(() => {
+    const root = rootRef.current!;
     const host = hostRef.current!;
     const controller = new AbortController();
-    setFallback(false);
-    const player = createVideoPlayer({ url: source.url, type: source.type, loop: source.loop }, setStatus);
-    player.setMuted(mutedRef.current);
+    const player = createYouTubePlayer(screenRef.current!, videoId, setState);
     playerRef.current = player;
+    const frog = createFrogSender(setFrogMessage);
+    const resize = () => {
+      const { screen } = getSceneLayout(root.clientWidth, root.clientHeight);
+      for (const [key, value] of Object.entries(screen)) root.style.setProperty(`--screen-${key}`, `${value}px`);
+    };
+    const observer = new ResizeObserver(resize);
+    resize(); observer.observe(root);
     void import("../../scene/createScene").then(({ createScene }) => {
       if (controller.signal.aborted) return;
-      return createScene(host, player.video, controller.signal);
-    }).then((scene) => {
-      if (controller.signal.aborted) return;
-      sceneRef.current = scene;
-      scene?.setEffects(effectsRef.current);
+      return createScene(host, controller.signal, (action) => {
+        if (action === "toggle-playback") player.togglePlayback();
+        if (action === "toggle-sound") player.toggleSound();
+        if (action === "frog-hop") void frog.send();
+      });
     }).catch((error: unknown) => {
       if (controller.signal.aborted) return;
       console.error("Scene could not initialize", error);
-      setFallback(true);
-      // A native player remains usable if WebGL or an artwork asset fails.
-      player.video.controls = true;
-      player.video.className = "scene-native-video";
-      host.replaceChildren(player.video);
+      setSceneFailed(true);
     });
-    return () => {
-      controller.abort();
-      sceneRef.current = undefined;
-      playerRef.current = undefined;
-      player.destroy();
-      host.replaceChildren();
-    };
-  }, [source.url, source.type, source.loop, attempt]);
-
-  const canPlay = Boolean(source.url);
-  const retry = () => { setMuted(true); setAttempt((previous) => previous + 1); };
-
+    return () => { controller.abort(); frog.destroy(); observer.disconnect(); player.destroy(); playerRef.current = null; };
+  }, [videoId, attempt]);
+  const playing = state.status === "playing" || state.status === "buffering";
+  const label = state.status === "error" ? "Stream unavailable" : state.status === "unconfigured" ? "Stream offline"
+    : state.status === "loading" ? "Connecting…" : state.status === "blocked" ? "Press play to watch" : state.status;
   return (
-    <section data-testid="stream-embed-container" className={`scene-player ${className}`} aria-label="Live stream scene">
-      <div className="scene-viewport" style={{ aspectRatio: `${sceneConfig.width} / ${sceneConfig.height}` }}>
-        <div className="scene-canvas-host" ref={hostRef} />
-        {status !== "playing" && <div className="scene-status" role="status">{statusText[status]}</div>}
+    <div ref={rootRef} className="scene-player" data-testid="stream-embed-container" data-playback={state.status} data-scene-failed={sceneFailed}>
+      <div className="scene-canvas-host" ref={hostRef} />
+      <div className="scene-youtube-screen" ref={screenRef} />
+      <div className="tv-controls" role="group" aria-label="Television controls">
+        <button type="button" onClick={() => playerRef.current?.togglePlayback()} disabled={!state.ready} aria-label={playing ? "Pause stream" : "Play stream"}>
+          <span aria-hidden="true">{playing ? "Ⅱ" : "▶"}</span>
+        </button>
+        <button type="button" onClick={() => playerRef.current?.toggleSound()} disabled={!state.ready} aria-label={state.muted ? "Unmute stream" : "Mute stream"}>
+          {state.muted ? "Sound off" : "Sound on"}
+        </button>
+        <input aria-label="Stream volume" type="range" min="0" max="100" value={state.volume} disabled={!state.ready} onChange={(event) => playerRef.current?.setVolume(Number(event.target.value))} />
+        <span className="tv-status" role="status" aria-label="Stream status"><i data-lit={playing} aria-hidden="true" />{label}</span>
+        {state.status === "error" && <button type="button" onClick={() => setAttempt((n) => n + 1)}>Retry</button>}
+        <a href={`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`} target="_blank" rel="noreferrer" aria-label="Watch stream on YouTube">YouTube ↗</a>
       </div>
-      <div className="scene-controls">
-        <span role="status" className="scene-playback-status">{status === "playing" ? statusText[status] : ""}</span>
-        <button type="button" disabled={!canPlay} onClick={() => {
-          if (status === "error" || status === "ended") retry();
-          else if (status === "playing") playerRef.current?.pause();
-          else void playerRef.current?.play();
-        }}>
-          {status === "playing" ? "Pause" : status === "error" || status === "ended" ? "Reconnect" : "Play"}
-        </button>
-        <button type="button" disabled={!canPlay} aria-pressed={!muted} onClick={() => setMuted((previous) => !previous)}>
-          {muted ? "Unmute" : "Mute"}
-        </button>
-        <button type="button" disabled={fallback} aria-pressed={effects && !fallback} onClick={() => setEffects((previous) => !previous)}>
-          CRT effects
-        </button>
-      </div>
-    </section>
+      <p className="frog-message" role="status" aria-label="Frog color submission">{frogMessage}</p>
+    </div>
   );
 };
-
 export default StreamEmbed;
