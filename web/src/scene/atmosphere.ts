@@ -41,7 +41,7 @@ export function createRoomLight() {
   const resize = ({ screen: s, stand }: ReturnType<typeof getSceneLayout>, candles: Bounds[]) => {
     wall.clear(); reflected.clear(); candle.clear();
     const color = sceneConfig.ambience.color;
-    halo(wall, s.x - 12, s.y - 12, s.width + 24, s.height + 52, color, 0.12);
+    halo(wall, s.x - 12, s.y - 12, s.width + 24, s.height + 52, color, 0.09);
     // Tight edge reflections reduce the hard boundary between the video and its housing.
     for (const [thickness, alpha] of [[8, 0.035], [4, 0.06], [1, 0.13]]) {
       reflected.rect(s.x - thickness, s.y, thickness, s.height)
@@ -52,7 +52,7 @@ export function createRoomLight() {
     reflected.rect(s.x, s.y - 22, s.width, 3).fill({ color, alpha: 0.1 });
     reflected.rect(stand.x + 4, stand.y, stand.width - 8, 4).fill({ color, alpha: 0.15 });
     reflected.rect(stand.x + 18, stand.y + 14, stand.width - 36, 50).fill({ color, alpha: 0.025 });
-    for (const b of candles) halo(candle, b.x + b.width * 0.35, b.y + 6, b.width * 0.3, 18, 0xe9a45c, 0.28);
+    for (const b of candles) halo(candle, b.x + b.width * 0.35, b.y + 6, b.width * 0.3, 18, 0xf39b4b, 0.32);
   };
   const update = (dt: number, time: number, still: boolean, candlesLit: boolean) => {
     power = still ? target : power + (target - power) * Math.min(1, dt * 2);

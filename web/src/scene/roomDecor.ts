@@ -6,8 +6,8 @@ import { pixels, steppedRect } from "./pixelArt";
 export function drawRoomRug(g: Graphics, { x, y, width, height }: Bounds) {
   g.clear();
   steppedRect(g, x, y, width, height, 8, 0x2b2027);
-  steppedRect(g, x + 6, y + 4, width - 12, height - 8, 4, 0x61404d);
-  g.rect(x + 12, y + 9, width - 24, height - 18).fill(0x304943);
+  steppedRect(g, x + 6, y + 4, width - 12, height - 8, 4, 0x4a2f40);
+  g.rect(x + 12, y + 9, width - 24, height - 18).fill(0x223932);
   g.rect(x + 12, y + 9, width - 24, 2).fill(0x796446);
   g.rect(x + 12, y + height - 11, width - 24, 2).fill(0x796446);
   for (const row of [y + 16, y + height - 32]) {

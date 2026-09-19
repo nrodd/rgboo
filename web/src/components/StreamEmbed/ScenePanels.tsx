@@ -9,6 +9,7 @@ import { Switch } from "../ui/switch";
 import { colorFormSchema } from "../ColorForm/colorForm.schema";
 import { cooldownRemaining, createColorSender, type SubmissionResult } from "../../api/colorSubmission";
 import type { YouTubeHandle, YouTubeState } from "../../media/youtubePlayer";
+import { glassLensMap } from "../../scene/glassMaterial";
 import type { ScenePreferences } from "../../scene/preferences";
 
 interface Props {
@@ -43,8 +44,8 @@ export function ScenePanels({ panel, onClose, returnFocus, player, playback, vid
     <svg width="0" height="0" className="glass-filter-defs" aria-hidden="true" focusable="false">
       <defs>
         <filter id={glassId} x="-20%" y="-20%" width="140%" height="140%" colorInterpolationFilters="sRGB">
-          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="1" seed="8" result="refraction" />
-          <feDisplacementMap in="SourceGraphic" in2="refraction" scale="36" xChannelSelector="R" yChannelSelector="G" />
+          <feImage href={glassLensMap} x="0" y="0" width="100%" height="100%" preserveAspectRatio="none" result="refraction" />
+          <feDisplacementMap in="SourceGraphic" in2="refraction" scale="24" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </defs>
     </svg>

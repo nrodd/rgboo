@@ -18,7 +18,7 @@ export function createLoungingCat() {
     "...dcccccclllldllllldllllllld......",
     "..dcccccccclllllllllllllllld......",
     "..dddddddddddddddddddddddddd......",
-  ], { d: 0x38313e, l: 0x8f8084, c: 0xbeab8e }, 1, 0, -10);
+  ], { d: 0x38313e, l: 0x65576f, c: 0x9b8875 }, 1, 0, -10);
   // Blue reflected light along the paws facing the screen.
   body.rect(4, -1, 23, 1).fill(0x8595aa);
   let previousPose = "";
@@ -39,12 +39,12 @@ export function createLoungingCat() {
         if (sleepyBlink) face.rect(x, -6, 1, 1).fill(0x8ea5a7);
       }
       face.rect(6, -3, 1, 1).fill(0x926d77);
-      if (earTwitch) face.rect(7, -11, 1, 2).fill(0x8f8084);
+      if (earTwitch) face.rect(7, -11, 1, 2).fill(0x65576f);
       tail.clear();
       const rise = [0, 0, 1, 2, 2, 1, 0, 0][tailFrame];
       pixelLine(tail, 26, -2, 30, -2, 0x554958, 2);
-      pixelLine(tail, 30, -2, 32, -4 - rise, 0x8f8084, 2);
-      tail.rect(31, -6 - rise, 2, 2).fill(0xbeab8e);
+      pixelLine(tail, 30, -2, 32, -4 - rise, 0x65576f, 2);
+      tail.rect(31, -6 - rise, 2, 2).fill(0x9b8875);
     }
     return sleepyBlink ? "blinking" : earTwitch ? "ear-twitch" : "lounging";
   };

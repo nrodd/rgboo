@@ -11,8 +11,8 @@ export interface SceneArtwork extends Bounds {
   motion?: "fog" | "float";
 }
 export const sceneConfig = {
-  width: 1600, height: 1000, background: 0x19151b,
-  ambience: { color: 0x7b9fd8 },
+  width: 1600, height: 1000, background: 0x100e16,
+  ambience: { color: 0x827ca8 },
   screen: { x: 215, y: 255, width: 900, height: 506.25 },
 };
 
@@ -29,6 +29,7 @@ export const sceneArtwork: SceneArtwork[] = [
   { id: "curtain-right", layer: "window", x: 1385, y: 97, width: 75, height: 533 },
   { id: "window-sill", layer: "window", x: 910, y: 635, width: 540, height: 28 },
   { id: "tea-mug", layer: "props", x: 1170, y: 579, width: 58, height: 56 },
+  { id: "pumpkin", layer: "foreground", x: 110, y: 810, width: 96, height: 96 },
   { id: "frog", layer: "props", x: 1280, y: 565, width: 95, height: 70, action: "frog-hop" },
   { id: "spider", layer: "foreground", x: 105, y: 0, width: 80, height: 240 },
   { id: "candle-left", layer: "foreground", x: 1190, y: 742, width: 55, height: 130, motion: "float", action: "toggle-candles" },

@@ -179,9 +179,10 @@ receiver badge and control strip have been removed.
 
 `ScenePanels.tsx` owns the color form, existing Twitch/GitHub/YouTube links, and
 playback/accessibility settings. Cards float on the right with content-sized
-height, a translucent tint, SVG backdrop displacement, a thin highlight and
-rounded corners. The displacement bends the background without distorting the
-controls. High-contrast and reduced-transparency modes use an opaque surface. They use
+height, a neutral translucent tint, native backdrop diffusion and a reflective
+lens rim. `glassMaterial.ts` supplies a displacement map with a neutral centre
+and inward displacement at the edges, replacing the earlier noise ripple.
+The edge effect is separate from the native blur and does not distort controls. High-contrast and reduced-transparency modes use an opaque surface. They use
 short labels without descriptive captions. The color picker has a compact
 saturation field, slim hue bar, preset swatches and an integrated hex field. Components in
 `src/components/ui` come from the official shadcn New York registry and are
@@ -204,3 +205,9 @@ resizing suspends animation frames. Portrait layouts put the window above the TV
 and candles at the free end of the shelf. Short viewports scroll to preserve
 YouTube's 200 × 200 minimum player. Browser tests sample rendered pixels through
 repeated resizes and exercise the panels with mocked color submissions.
+
+The Halloween palette uses ink/plum walls, burgundy curtains, faded teal fabric
+and warm amber light. Pixel paper bats hang above the TV, a cobweb sits in the
+upper corner, bare branches sit behind the rain, and a jack-o'-lantern lights
+the floor beside the stand. On narrow screens the pumpkin moves onto the rug
+below the tapes. Its `pumpkin` artwork slot accepts a custom sprite export.

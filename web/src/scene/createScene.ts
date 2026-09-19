@@ -108,6 +108,11 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
       if (image) { image.width = width; image.height = height; }
     }
     const s = layout.screen;
+    const pumpkin = objects.get("pumpkin")!;
+    const pumpkinScale = width < 760 ? .48 : .78;
+    pumpkin.scale.set(pumpkinScale / layout.scale);
+    pumpkin.position.set(((width < 760 ? Math.max(8, layout.stand.x) : Math.max(12, layout.stand.x - 94)) - layout.x) / layout.scale,
+      ((width < 760 ? layout.stand.y + layout.stand.height - 6 : layout.stand.y + layout.stand.height - 64) - layout.y) / layout.scale);
     drawRoomRug(rug, layout.rug);
     drawTelevision(tv, layout);
     cat.root.scale.set(layout.cat.pixelSize);
@@ -195,7 +200,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
   app.canvas.tabIndex = 0;
   app.canvas.dataset.candles = "lit";
   app.canvas.setAttribute("role", "group");
-  app.canvas.setAttribute("aria-label", "Interactive scene: CRT television, rainy moonlit window with fog, animated frog on the sill, a lounging cat on the TV, clustered candles, a fixed spider and VHS tapes on the television stand. Space plays or pauses, M toggles sound, F makes the frog hop and sends green to the stream, L dims the candles.");
+  app.canvas.setAttribute("aria-label", "Interactive scene: CRT television, rainy moonlit window with fog, animated frog on the sill, a lounging cat on the TV, clustered candles, a glowing pumpkin, paper bats, a fixed spider and VHS tapes on the television stand. Space plays or pauses, M toggles sound, F makes the frog hop and sends green to the stream, L dims the candles.");
   app.canvas.addEventListener("keydown", onKeyDown);
   document.addEventListener("visibilitychange", onVisibility);
   host.appendChild(app.canvas);
