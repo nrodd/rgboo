@@ -88,8 +88,11 @@ frog and sends green, and L dims the candles. Clicking candles also dims them.
 Production requests use the existing same-origin Worker route. Vite defaults
 to the local API at `127.0.0.1:8080`; start the local backend from the repository
 root with `./scripts/dev.sh --api-only` after completing its setup instructions.
-The browser never receives the backend API key. The scene does not silently
-redirect local development writes to production.
+The browser never receives the backend API key. To explicitly test scene actions against the live stream, set
+`RGBOO_PUBLIC_API_URL=https://rgboo.com` in `.env.development.local` and restart
+Vite. This routes public API calls through the existing deployed Worker without
+putting backend credentials in the browser. Admin calls still target the local
+backend. Leave the setting empty to use the local backend for everything.
 
 ## Validation
 
