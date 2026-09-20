@@ -46,6 +46,24 @@ function label(data) {
   return data;
 }
 
+/**
+ * Format a color update: a truecolor swatch of what's on the LEDs plus whose
+ * request it is. Falls back to the raw payload if it isn't the expected JSON.
+ */
+function colorLabel(data) {
+  try {
+    const { username, r, g, b } = JSON.parse(data);
+    if ([r, g, b].every((v) => Number.isFinite(v))) {
+      const swatch = `\x1b[48;2;${r};${g};${b}m  \x1b[0m`;
+      const rgb = `rgb(${r}, ${g}, ${b})`;
+      return username ? `${swatch} ${username} ${rgb}` : `${swatch} ${rgb}`;
+    }
+  } catch {
+    // not JSON; fall through to the raw string
+  }
+  return data;
+}
+
 async function listen(streamUrl) {
   const res = await fetch(streamUrl, {
     headers: { Accept: 'text/event-stream', ...accessHeaders() }
@@ -83,9 +101,7 @@ async function listen(streamUrl) {
         .join('\n');
       if (!data) continue;
       if (channel === 'color') {
-        // Rendering the color/username on the terminal is the next step; for now
-        // just surface that it arrived so the stream is verifiably wired up.
-        console.log(`● ${data}`);
+        console.log(colorLabel(data));
       } else {
         console.log(`♪ ${label(data)}`);
       }
