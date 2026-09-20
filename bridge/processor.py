@@ -33,6 +33,7 @@ class ColorProcessor:
         store,
         serial_controller,
         obs_update_callback: Optional[Callable[[str], bool]] = None,
+        display_callback: Optional[Callable[[str, int, int, int], None]] = None,
         idle_wait_seconds: float = 5.0,
         max_wait_seconds: float = 30.0,
         clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
@@ -40,6 +41,7 @@ class ColorProcessor:
         self._store = store
         self._serial_controller = serial_controller
         self._obs_update_callback = obs_update_callback
+        self._display_callback = display_callback
         self._idle_wait = idle_wait_seconds
         # Cap on one wait, so a far-future slot is re-evaluated periodically.
         self._max_wait = max_wait_seconds
@@ -177,8 +179,10 @@ class ColorProcessor:
             logger.error(f"ERROR: Failed to send color for {fresh.username}: {message}")
 
         # Update OBS regardless of the serial result, matching the old
-        # worker loop -- the overlay reflects whose turn it was.
+        # worker loop -- the overlay reflects whose turn it was. The SSE
+        # display push mirrors that: it's who/what is on the LEDs right now.
         self._update_obs(fresh.username)
+        self._publish_display(fresh)
 
         try:
             if success:
@@ -189,6 +193,15 @@ class ColorProcessor:
             # Leaving it pending is the safe failure: it will be retried
             # rather than silently dropped.
             logger.error(f"Failed to record status for {fresh.request_id}: {e}")
+
+    def _publish_display(self, request: ColorRequest) -> None:
+        if not self._display_callback:
+            return
+        try:
+            self._display_callback(request.username, request.r, request.g, request.b)
+        except Exception as error:
+            # Best-effort, exactly like OBS: never let it break dispatch.
+            logger.error("Failed to publish display update: %s", error)
 
     def _update_obs(self, username: str) -> None:
         if not self._obs_update_callback:

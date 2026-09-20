@@ -32,6 +32,14 @@ class Config:
     )
     NOW_PLAYING_PUSH_SECRET = os.getenv('BRIDGE_PUSH_SECRET')
 
+    # The color + username currently on the LEDs is POSTed here and fanned out
+    # over the same /api/stream SSE endpoint (as a named `color` event). Shares
+    # the push secret above; it's one secret for every bridge push channel.
+    COLOR_URL = os.getenv(
+        'BRIDGE_COLOR_URL',
+        'https://rgboo.com/api/update-color',
+    )
+
     # Optional explicit serial device; empty means auto-detect by VID/PID.
     SERIAL_PORT = os.getenv('BRIDGE_SERIAL_PORT') or None
 

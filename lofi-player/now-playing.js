@@ -46,6 +46,24 @@ function label(data) {
   return data;
 }
 
+/**
+ * Format a color update: a truecolor swatch of what's on the LEDs plus whose
+ * request it is. Falls back to the raw payload if it isn't the expected JSON.
+ */
+function colorLabel(data) {
+  try {
+    const { username, r, g, b } = JSON.parse(data);
+    if ([r, g, b].every((v) => Number.isFinite(v))) {
+      const swatch = `\x1b[48;2;${r};${g};${b}m  \x1b[0m`;
+      const rgb = `rgb(${r}, ${g}, ${b})`;
+      return username ? `${swatch} ${username} ${rgb}` : `${swatch} ${rgb}`;
+    }
+  } catch {
+    // not JSON; fall through to the raw string
+  }
+  return data;
+}
+
 async function listen(streamUrl) {
   const res = await fetch(streamUrl, {
     headers: { Accept: 'text/event-stream', ...accessHeaders() }
@@ -72,12 +90,21 @@ async function listen(streamUrl) {
     while ((split = buffer.indexOf('\n\n')) !== -1) {
       const event = buffer.slice(0, split);
       buffer = buffer.slice(split + 2);
-      const data = event
-        .split('\n')
+      const lines = event.split('\n');
+      // The song is the default (unnamed) event; color rides a named `color`
+      // event on the same stream. Route by name so one isn't shown as the other.
+      const name = lines.find((line) => line.startsWith('event:'));
+      const channel = name ? name.slice(6).trim() : 'message';
+      const data = lines
         .filter((line) => line.startsWith('data:'))
         .map((line) => line.slice(5).trimStart())
         .join('\n');
-      if (data) console.log(`♪ ${label(data)}`);
+      if (!data) continue;
+      if (channel === 'color') {
+        console.log(colorLabel(data));
+      } else {
+        console.log(`♪ ${label(data)}`);
+      }
     }
   }
 }
