@@ -1,7 +1,7 @@
 import { useDevEmbed } from "../../libs/useDevEmbed";
 
 const devVideoUrl = "/dev-assets/dev-embed.mp4";
-const youtubeStreamId = "6LVM4iQfMX4";
+const youtubeStreamId = "jHNzjTOfluM";
 
 interface StreamEmbedProps {
   className?: string;
