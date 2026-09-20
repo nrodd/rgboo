@@ -1,3 +1,4 @@
+import roomBackgroundUrl from "../assets/background.png";
 import candleFatUrl from "../assets/candle_fat.png";
 import candleTallUrl from "../assets/candle_tall.png";
 import windowUrl from "../assets/window.png";
@@ -30,7 +31,7 @@ export const windowOpening = { x: windowArtwork.x + 8 * windowPixel, y: windowAr
 
 /** Back-to-front order within each layer. All art uses these design-pixel bounds. */
 export const sceneArtwork: SceneArtwork[] = [
-  { id: "wall", layer: "background", x: 0, y: 0, width: 1600, height: 1000 },
+  { id: "wall", layer: "background", x: 0, y: 0, width: 1600, height: 1000, src: roomBackgroundUrl },
   { id: "night-sky", layer: "outside", x: 950, y: 125, width: 460, height: 490 },
   { id: "moon", layer: "outside", x: 1180, y: 165, width: 130, height: 130 },
   { id: "fog-back", layer: "outside", x: 960, y: 315, width: 460, height: 130, motion: "fog" },
