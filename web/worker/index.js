@@ -1,26 +1,27 @@
 /**
  * Cloudflare Worker for rgboo.com.
  *
- * Serves the static app and proxies /api/* and /admin-api/* to whichever middleware is
- * currently live, adding the credentials that upstream expects. The
- * frontend never holds an API secret. The Worker authenticates both public
- * and admin API calls to Cloud Run with its API key.
+ * Serves the static app and proxies /api/* and /admin-api/* to the Cloud Run
+ * API, adding the API key that upstream expects. The frontend never holds a
+ * secret: both public and admin API calls are authenticated here.
  *
- * Cutover and rollback (see docs/gcp-migration-plan.md) are a config
- * change, not a code change:
- *
- *   to GCP:  set the API_UPSTREAM var to the Cloud Run URL, put the
- *            API_KEY secret, deploy
- *   back:    set API_UPSTREAM back to https://api.rgboo.com, deploy
- *
- * Credentials are sent when configured, so both sets can coexist during
- * the migration: the old middleware ignores X-Api-Key, and the Cloud Run
- * API ignores the CF-Access headers.
+ * Which API it targets is the API_UPSTREAM var in wrangler.jsonc, so
+ * pointing at a different deployment is a config change, not a code change.
  */
 
-const DEFAULT_API_UPSTREAM = "https://api.rgboo.com";
+import { NowPlaying } from "./now-playing.js";
+
+export { NowPlaying };
+
+const DEFAULT_API_UPSTREAM =
+  "https://rgboo-api-186324327580.us-east1.run.app";
 
 const ALLOWED_ORIGINS = ["https://rgboo.com"];
+
+/** Route now-playing traffic to the single shared Durable Object instance. */
+function nowPlayingStub(env) {
+  return env.NOW_PLAYING.get(env.NOW_PLAYING.idFromName("global"));
+}
 
 /** The origin to echo back, or null when it isn't one we allow. */
 function allowedOrigin(request) {
@@ -35,12 +36,6 @@ function upstreamHeaders(env) {
   // Cloud Run: a shared secret checked in-app.
   if (env.API_KEY) {
     headers["X-Api-Key"] = env.API_KEY;
-  }
-
-  // Cloudflare Tunnel + Access: service token for the home machine.
-  if (env.CF_ACCESS_ID && env.CF_ACCESS_SECRET) {
-    headers["CF-Access-Client-Id"] = env.CF_ACCESS_ID;
-    headers["CF-Access-Client-Secret"] = env.CF_ACCESS_SECRET;
   }
 
   return headers;
@@ -67,6 +62,20 @@ export default {
           ? await request.text()
           : undefined,
       });
+    }
+
+    // Terminals and the web UI subscribe here; the bridge posts track changes.
+    // Both hit the same Durable Object so a post fans out to every listener.
+    if (url.pathname === "/api/stream" && request.method === "GET") {
+      return nowPlayingStub(env).fetch(request);
+    }
+    if (url.pathname === "/api/update-song" && request.method === "POST") {
+      // Shared secret so only the bridge can push. Generic on purpose: the same
+      // secret will guard future pushes (color, etc). Unset in dev = open.
+      if (env.PUSH_SECRET && request.headers.get("X-Push-Secret") !== env.PUSH_SECRET) {
+        return new Response("unauthorized\n", { status: 401 });
+      }
+      return nowPlayingStub(env).fetch(request);
     }
 
     // Handle API requests

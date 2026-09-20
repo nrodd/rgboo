@@ -17,7 +17,7 @@ bool transitionInProgress = false;
 void updateLEDColor(uint8_t r, uint8_t g, uint8_t b, uint8_t brightness)
 {
     // Always keep brightness at 20% (ignore incoming brightness parameter)
-    FastLED.setBrightness(51); // 20% of 255 = 51
+    FastLED.setBrightness(LED_BRIGHTNESS); // 20% of 255 = 51
 
     // Set the target color for transition
     targetColor = CRGB(r, g, b);
@@ -64,17 +64,19 @@ void setup()
     // Initialize serial communication
     Serial.begin(SERIAL_BAUD_RATE);
 
-    // Wait for serial port to connect
-    while (!Serial)
+    // Give Windows a chance to enumerate USB serial, but still start the LEDs
+    // when the controller application is not running.
+    const unsigned long serialWaitStarted = millis();
+    while (!Serial && (millis() - serialWaitStarted) < SERIAL_CONNECT_TIMEOUT)
     {
         delay(10);
     }
 
-    Serial.println("ESP32 RGB Controller Starting...");
+    Serial.println("Pico WS2811 Controller Starting...");
 
-    // Initialize FastLED
-    FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, MAX_LEDS);
-    FastLED.setBrightness(51); // 20% of 255 = 51
+    // The PAUTIX 5 m COB strip has 50 WS2811-controlled segments in GRB order.
+    FastLED.addLeds<WS2811, LED_PIN, GRB>(leds, MAX_LEDS);
+    FastLED.setBrightness(LED_BRIGHTNESS);
 
     // Set all LEDs to blue and initialize color state
     currentColor = CRGB::Blue;

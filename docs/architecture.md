@@ -5,8 +5,7 @@ person at a time. This describes the GCP-based system: what runs where, how a
 request becomes light, and why the pieces are split the way they are.
 
 Related: [local-setup.md](local-setup.md) (running it yourself),
-[gcp-migration-plan.md](gcp-migration-plan.md) (how we got here),
-[gcp-setup.md](gcp-setup.md) (provisioning), [deploying.md](deploying.md) (shipping changes).
+[deploying.md](deploying.md) (shipping changes).
 
 ## The constraint that shapes everything
 
@@ -240,15 +239,16 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 
 ## Current state
 
-`API_UPSTREAM` in `web/wrangler.jsonc` points at Cloud Run, so the HTTP half of
-the cutover is done: colours travel Worker → Cloud Run → Firestore.
+The GCP migration is complete: every colour travels Worker → Cloud Run →
+Firestore → bridge → USB. The old always-on Flask middleware that used to
+serve this path over a Cloudflare Tunnel has been removed.
 
 | Piece | State |
 |---|---|
-| `cloud_api/` on Cloud Run | Live |
+| `cloud_api/` on Cloud Run | Live, serving all traffic |
 | Firestore + composite index | Live |
-| `web/worker/` | Live, pointing at Cloud Run |
-| `bridge/` | Confirm before relying on the stats: they count `status: done`, which only the bridge writes |
+| `bridge/` | Live on the home machine under systemd |
+| `web/worker/` | Pointing at Cloud Run for both production and staging |
 | `/stats` page | Built and reachable, deliberately unlinked until a month of data exists |
 
 ## Cost

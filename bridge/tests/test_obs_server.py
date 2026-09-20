@@ -2,12 +2,12 @@ from ..obs_server import TEMPLATE_DIR, create_obs_app, make_obs_callback
 
 """
 Unit tests for the embedded OBS browser source (bridge/obs_server.py).
-The routes, local-IP check and template come from middleware/obs.py
-unchanged; these check the bridge wires them up correctly.
+The routes, local-IP check and template come from bridge/obs.py; these
+check the server wires them up correctly.
 """
 
 
-"""Test the reused middleware template is actually resolvable from here"""
+"""Test the OBS template is actually resolvable from here"""
 def test_template_directory_exists():
     assert (TEMPLATE_DIR / 'obs_browser_source.html').is_file()
 
