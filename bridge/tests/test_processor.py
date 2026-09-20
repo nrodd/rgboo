@@ -11,17 +11,34 @@ tiny so ticks return immediately.
 """
 
 
-def build(mock_store, mock_serial, obs_callback=None):
+def build(mock_store, mock_serial, obs_callback=None, display_callback=None):
     return ColorProcessor(
         mock_store,
         mock_serial,
         obs_update_callback=obs_callback,
+        display_callback=display_callback,
         idle_wait_seconds=0.01,
         max_wait_seconds=0.01,
     )
 
 
 """Test a request whose slot has arrived is sent to the Pico and marked done.
+"""Dispatching a due request publishes the re-read color/username, so the SSE
+display reflects what actually went to the LEDs, not the queued copy."""
+def test_dispatch_publishes_display(mock_store, mock_serial):
+    display = Mock()
+    processor = build(mock_store, mock_serial, display_callback=display)
+    processor.upsert(make_request(offset_seconds=-1))
+    mock_store.reload.side_effect = lambda doc_id: make_request(
+        doc_id=doc_id, username="alice", r=7, g=8, b=9
+    )
+
+    processor._tick()
+
+    display.assert_called_once_with("alice", 7, 8, 9)
+
+
+"""Test a request whose slot has arrived is sent to the ESP32 and marked done.
 The color sent is the re-read one, not the queued copy, so an edit between
 queueing and dispatch cannot send a stale value."""
 def test_due_request_is_sent_and_marked_done(mock_store, mock_serial):

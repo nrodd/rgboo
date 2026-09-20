@@ -45,6 +45,12 @@ The system consists of four main components working together:
 - Writes colors to the Pico 2 and serves the OBS overlay
 - Runs under systemd; updated by pulling on that machine
 
+### 💬 `stream_aggregator/`
+**Python stream chat worker**
+- Aggregates YouTube polling and Twitch EventSub chat
+- Forwards `!color` commands to the cloud API
+- Runs in Docker; see [stream_aggregator/README.md](stream_aggregator/README.md)
+
 ## 🧰 Running it locally
 
 ```bash

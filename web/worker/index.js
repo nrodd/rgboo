@@ -69,9 +69,12 @@ export default {
     if (url.pathname === "/api/stream" && request.method === "GET") {
       return nowPlayingStub(env).fetch(request);
     }
-    if (url.pathname === "/api/update-song" && request.method === "POST") {
-      // Shared secret so only the bridge can push. Generic on purpose: the same
-      // secret will guard future pushes (color, etc). Unset in dev = open.
+    if (
+      (url.pathname === "/api/update-song" || url.pathname === "/api/update-color") &&
+      request.method === "POST"
+    ) {
+      // Shared secret so only the bridge can push. One secret guards every
+      // push channel (song, color). Unset in dev = open.
       if (env.PUSH_SECRET && request.headers.get("X-Push-Secret") !== env.PUSH_SECRET) {
         return new Response("unauthorized\n", { status: 401 });
       }
