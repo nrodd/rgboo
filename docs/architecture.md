@@ -27,7 +27,7 @@ Neither half calls the other. They meet at a Firestore document.
 | `cloud_api/` | Cloud Run (`us-east1`, scale-to-zero) | Validation, pacing, the queue and its log |
 | Firestore | GCP (`us-east1`, Native mode) | The queue, the pacing clock, bridge liveness |
 | `bridge/` | Home machine (systemd) | Waiting for each slot, USB serial write, OBS overlay |
-| `firmware/` | ESP32 | Reads `RGB:r,g,b` from serial, drives the LEDs |
+| `firmware/` | Raspberry Pi Pico 2 | Reads `RGB:r,g,b` from serial, drives the LEDs |
 
 `shared/` holds the constants both halves must agree on: collection names,
 status values, and `SLOT_SECONDS = 20`.
@@ -51,7 +51,7 @@ flowchart LR
 
   subgraph home["Home machine · no inbound access"]
     BR["bridge daemon"]
-    E["ESP32"]
+    E["Raspberry Pi Pico 2"]
     O["OBS overlay<br/>:5001"]
   end
 
@@ -78,7 +78,7 @@ sequenceDiagram
   participant A as Cloud Run API
   participant FS as Firestore
   participant BR as Bridge
-  participant E as ESP32
+  participant E as Pico 2
 
   B->>W: POST /api/color (username + rgb)
   W->>A: forward + X-Api-Key
@@ -111,7 +111,7 @@ sequenceDiagram
   participant A as Cloud Run API
   participant FS as Firestore
   participant BR as Bridge
-  participant E as ESP32
+  participant E as Pico 2
 
   Note over BR: already holding a request,<br/>waiting for its slot
   A->>FS: POST /admin/queue/clear<br/>pending -> cancelled
@@ -223,7 +223,7 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 | Bridge crashes or reboots | Pending docs stay in Firestore; systemd restarts it and overdue slots dispatch immediately. Nothing is lost. |
 | Bridge stays down | API keeps accepting requests; `bridge_online` goes false after 2 min. Work queues rather than fails. |
 | API deploy mid-queue | Invisible. The queue is in Firestore, not in the API process. |
-| ESP32 unplugged | Request marked `failed` with the error; the queue keeps moving. |
+| Pico 2 unplugged | Request marked `failed` with the error; the queue keeps moving. |
 | Serial write fails after re-read | Doc left `pending`; the next resync retries rather than dropping it. |
 | Firestore unreachable from home | Bridge logs and retries; heartbeat goes stale, so the cloud reports it offline. |
 | The stats rollup has never run | `/api/stats` returns an all-zero window. No error. |
