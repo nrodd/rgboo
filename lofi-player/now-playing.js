@@ -72,12 +72,23 @@ async function listen(streamUrl) {
     while ((split = buffer.indexOf('\n\n')) !== -1) {
       const event = buffer.slice(0, split);
       buffer = buffer.slice(split + 2);
-      const data = event
-        .split('\n')
+      const lines = event.split('\n');
+      // The song is the default (unnamed) event; color rides a named `color`
+      // event on the same stream. Route by name so one isn't shown as the other.
+      const name = lines.find((line) => line.startsWith('event:'));
+      const channel = name ? name.slice(6).trim() : 'message';
+      const data = lines
         .filter((line) => line.startsWith('data:'))
         .map((line) => line.slice(5).trimStart())
         .join('\n');
-      if (data) console.log(`♪ ${label(data)}`);
+      if (!data) continue;
+      if (channel === 'color') {
+        // Rendering the color/username on the terminal is the next step; for now
+        // just surface that it arrived so the stream is verifiably wired up.
+        console.log(`● ${data}`);
+      } else {
+        console.log(`♪ ${label(data)}`);
+      }
     }
   }
 }

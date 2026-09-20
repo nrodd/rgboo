@@ -15,6 +15,7 @@ import signal
 import sys
 
 from .config import Config
+from .display import ColorPublisher
 from .dry_run import DryRunSerialController
 from .heartbeat import HeartbeatWriter
 from .listener import OverlayControlWatcher, PendingPoller, PendingWatcher
@@ -63,6 +64,11 @@ def parse_args(argv=None):
         '--no-now-playing',
         action='store_true',
         help="Skip publishing Windows media changes to Cloudflare.",
+    )
+    parser.add_argument(
+        '--no-color-publish',
+        action='store_true',
+        help="Skip publishing the current color/username to Cloudflare.",
     )
     parser.add_argument('--log-level', default=Config.LOG_LEVEL)
     return parser.parse_args(argv)
@@ -113,7 +119,20 @@ def main(argv=None) -> int:
         obs_callback = make_obs_callback(socketio)
         start_obs_server(app, socketio, args.obs_host, args.obs_port)
 
-    processor = ColorProcessor(store, serial_controller, obs_callback)
+    color_publisher = None
+    if not args.no_color_publish:
+        color_publisher = ColorPublisher(
+            Config.COLOR_URL,
+            Config.NOW_PLAYING_PUSH_SECRET,
+        )
+        color_publisher.start()
+
+    processor = ColorProcessor(
+        store,
+        serial_controller,
+        obs_callback,
+        display_callback=color_publisher.publish if color_publisher else None,
+    )
 
     # Admin clears arrive as a doc; primed so none is replayed at boot.
     overlay_controller = OverlayController(store, obs_callback)
@@ -165,6 +184,8 @@ def main(argv=None) -> int:
     finally:
         if now_playing is not None:
             now_playing.stop()
+        if color_publisher is not None:
+            color_publisher.stop()
         heartbeat.stop()
         poller.stop()
         if watcher is not None:
