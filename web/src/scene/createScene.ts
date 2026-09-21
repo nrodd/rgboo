@@ -118,7 +118,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     drawRoomRug(rug, layout.rug);
     drawTelevision(tv, layout);
     cat.root.scale.set(layout.cat.pixelSize);
-    cat.root.position.set(Math.round(layout.cat.x), layout.cat.y);
+    cat.root.position.set(Math.round(layout.cat.x - 30), layout.cat.y);
     const candles = sceneArtwork.filter((art) => art.id.startsWith("candle")).map((art, index) => {
       // In portrait layouts the candles float in the free end of the shelf.
       const position = width < 760 ? {

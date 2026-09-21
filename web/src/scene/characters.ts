@@ -1,7 +1,9 @@
 import { Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
-import { pixels } from "./pixelArt";
-import catDefaultUrl from "../assets/cat_default.png";
 import catAwakeUrl from "../assets/cat_awake.png";
+import catAwakeWagUrl from "../assets/cat_awake_wag.png";
+import catDefaultUrl from "../assets/cat_default.png";
+import catDefaultWagUrl from "../assets/cat_default_wag.png";
+import { pixels } from "./pixelArt";
 
 /** The resting and awake exports have different sizes but share a resting plane. */
 export function createLoungingCat() {
@@ -11,25 +13,35 @@ export function createLoungingCat() {
   const tail = root.addChild(new Sprite({ label: "cat-tail" }));
   body.anchor.set(0, 1);
   let frames: { body: Texture; tail: Texture }[] = [];
+  const baseScale = 68;
   const update = (time: number, still: boolean) => {
     const blink = !still && time % 20 > 18.6 && time % 20 < 18.9;
     const awake = !still && time % 20 > 17;
-    const frame = frames[awake && !blink ? 1 : 0];
+    const wagging = !still && time % 20 > 12 && time % 20 < 17;
+    const wagPose = wagging ? (Math.floor(time / 2.5) % 2 === 0 ? 2 : 3) : awake && !blink ? 1 : 0;
+    const frame = frames[wagPose] ?? frames[0];
     if (frame) {
       body.texture = frame.body; tail.texture = frame.tail;
-      body.scale.set(34 / frame.body.width);
-      tail.scale.set(34 / frame.tail.width);
+      body.scale.set(baseScale / 80);
+      tail.scale.set(baseScale / 80);
     }
     // Only the body expands upward; the paws and hanging tail stay in place.
     body.scale.y = body.scale.x * (still ? 1 : 1 + (Math.sin(time * 1.2) + 1) * .008);
-    return blink ? "blinking" : awake ? "awake" : "lounging";
+    return blink ? "blinking" : wagging ? "wagging" : awake ? "awake" : "lounging";
   };
-  const ready = Promise.all([Assets.load<Texture>(catDefaultUrl), Assets.load<Texture>(catAwakeUrl)]).then(([rest, awake]) => {
+  const ready = Promise.all([
+    Assets.load<Texture>(catDefaultUrl),
+    Assets.load<Texture>(catAwakeUrl),
+    Assets.load<Texture>(catDefaultWagUrl),
+    Assets.load<Texture>(catAwakeWagUrl),
+  ]).then(([rest, awake, restWag, awakeWag]) => {
     if (root.destroyed) return;
-    rest.source.scaleMode = awake.source.scaleMode = "nearest";
+    rest.source.scaleMode = awake.source.scaleMode = restWag.source.scaleMode = awakeWag.source.scaleMode = "nearest";
     const poses = [
-      { texture: rest, x: 10, y: 18, width: 80, contact: 64, bottom: 88 },
+      { texture: rest, x: 7, y: 12, width: 53, contact: 43, bottom: 59 },
       { texture: awake, x: 7, y: 12, width: 53, contact: 43, bottom: 59 },
+      { texture: restWag, x: 7, y: 12, width: 53, contact: 43, bottom: 59 },
+      { texture: awakeWag, x: 7, y: 12, width: 53, contact: 43, bottom: 59 },
     ];
     frames = poses.map(({ texture, x, y, width, contact, bottom }) => {
       const source = texture.source;
