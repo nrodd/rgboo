@@ -63,13 +63,17 @@ function parseColor(data) {
   return null;
 }
 
-// Everything the scene draws. Redrawn in place on every update rather than
-// logged, so the terminal stays a single tidy frame.
-const state = { color: null, username: null, current: null, previous: null };
+// Everything the scene draws. SSE events mutate this; the animation ticker
+// advances `frame` and repaints, so nothing is ever logged line-by-line.
+const state = { color: null, username: null, current: null, previous: null, frame: 0 };
+
+const FPS = 8;
 
 function draw() {
-  // Home, clear below, then paint the frame. Cheap enough at update cadence.
-  process.stdout.write('\x1b[H\x1b[0J' + scene.render(state) + '\n');
+  // Home, then clear each line as we overwrite it and wipe anything below, so
+  // the frame updates in place without the flicker of a full-screen clear.
+  const lines = scene.render(state).split('\n');
+  process.stdout.write('\x1b[H' + lines.map((l) => l + '\x1b[K').join('\n') + '\x1b[J');
 }
 
 async function listen(streamUrl) {
@@ -114,7 +118,6 @@ async function listen(streamUrl) {
         const { username, ...rgb } = color;
         state.color = rgb;
         state.username = username;
-        draw();
       } else {
         const track = label(data);
         // The worker replays the current track on connect; don't push a
@@ -122,9 +125,9 @@ async function listen(streamUrl) {
         if (track !== state.current) {
           state.previous = state.current;
           state.current = track;
-          draw();
         }
       }
+      // The animation ticker paints the next frame; we just update state here.
     }
   }
 }
@@ -140,7 +143,15 @@ async function start() {
   process.stdout.write('\x1b[?25l\x1b[2J'); // hide cursor, clear the screen
   process.on('exit', restoreCursor);
   process.on('SIGINT', () => process.exit(0));
-  draw(); // show the scene right away, before the first event lands
+
+  // Drive the animation on its own timer, independent of when events arrive.
+  const ticker = setInterval(() => {
+    state.frame++;
+    draw();
+  }, 1000 / FPS);
+  ticker.unref?.(); // don't keep the process alive just for the animation
+  draw(); // show the first frame right away
+
   for (;;) {
     try {
       await listen(streamUrl);

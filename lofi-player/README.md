@@ -18,11 +18,11 @@ npm start   # or: npx lofi
 
 Ctrl-C to stop.
 
-As it plays, the terminal draws a small live scene, a cat and a jack-o-lantern
-that glow in the latest LED color, with the username who requested it and the
-current and previous track. It redraws in place on each update rather than
-logging every change, all fed by the rgboo now-playing stream
-(`https://rgboo.com/api/stream`). Same feed by hand:
+As it plays, the terminal draws a small animated scene: a witch flying her broom
+under the moon while trees drift past below. The witch is tinted with the latest
+LED color, and the username who requested it plus the current and previous track
+sit underneath. It animates in place rather than logging every change, all fed by
+the rgboo now-playing stream (`https://rgboo.com/api/stream`). Same feed by hand:
 
 ```sh
 curl -N https://rgboo.com/api/stream
