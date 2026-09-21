@@ -16,10 +16,13 @@ npm install
 npm start   # or: npx lofi
 ```
 
-No prompts, no UI, just audio. Ctrl-C to stop.
+Ctrl-C to stop.
 
-As it plays, the current track is printed whenever it changes, fed by the rgboo
-now-playing stream (`https://rgboo.com/api/stream`). Same feed by hand:
+As it plays, the terminal draws a small live scene, a cat and a jack-o-lantern
+that glow in the latest LED color, with the username who requested it and the
+current and previous track. It redraws in place on each update rather than
+logging every change, all fed by the rgboo now-playing stream
+(`https://rgboo.com/api/stream`). Same feed by hand:
 
 ```sh
 curl -N https://rgboo.com/api/stream
