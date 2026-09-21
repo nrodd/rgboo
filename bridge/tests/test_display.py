@@ -57,3 +57,41 @@ def test_publish_failure_does_not_kill_the_worker():
         publisher.stop()
 
     assert len(calls) == 2
+
+
+def test_burst_keeps_only_latest_display_behind_slow_post():
+    entered = threading.Event()
+    release = threading.Event()
+    latest_sent = threading.Event()
+    calls = []
+
+    def poster(_url, _secret, display):
+        calls.append(display['username'])
+        if len(calls) == 1:
+            entered.set()
+            assert release.wait(5)
+        else:
+            latest_sent.set()
+
+    publisher = ColorPublisher('unused', poster=poster)
+    publisher.start()
+    try:
+        publisher.publish('first', 1, 2, 3)
+        assert entered.wait(2)
+        for index in range(20000):
+            publisher.publish(str(index), 4, 5, 6)
+        release.set()
+        assert latest_sent.wait(2)
+    finally:
+        release.set()
+        publisher.stop()
+    assert calls == ['first', '19999']
+    assert not publisher._thread.is_alive()
+
+
+def test_stop_discards_pending_display_and_rejects_late_updates():
+    publisher = ColorPublisher('unused', poster=Mock())
+    publisher.publish('pending', 1, 2, 3)
+    publisher.stop()
+    publisher.publish('late', 1, 2, 3)
+    assert publisher._pending is None
