@@ -155,7 +155,7 @@ class ColorProcessor:
         return min(self._pending.values(), key=lambda request: request.scheduled_time)
 
     def _dispatch(self, request: ColorRequest) -> None:
-        """Re-read, send to the ESP32, update OBS, and close the doc out."""
+        """Re-read, send to the Pico, update OBS, and close the doc out."""
         fresh = self._store.reload(request.doc_id)
         if fresh is None:
             logger.warning(f"Request {request.request_id} disappeared before dispatch")
@@ -173,7 +173,7 @@ class ColorProcessor:
         if success:
             logger.info(
                 f"SUCCESS: Sent color RGB({fresh.r}, {fresh.g}, {fresh.b}) "
-                f"to ESP32 for {fresh.username}"
+                f"to Pico for {fresh.username}"
             )
         else:
             logger.error(f"ERROR: Failed to send color for {fresh.username}: {message}")

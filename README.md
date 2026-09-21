@@ -8,7 +8,7 @@ A haunting collection of software that lets the community control RGB LEDs toget
 ## 🦇 Project Architecture
 
 ```
-Web Frontend → Cloud API → Firestore → Bridge → ESP32 Firmware → RGB LEDs
+Web Frontend → Cloud API → Firestore → Bridge → Pico 2 Firmware → RGB LEDs
 ```
 
 The system consists of four main components working together:
@@ -16,8 +16,8 @@ The system consists of four main components working together:
 ## 📁 Directory Overview
 
 ### 👻 `firmware/`
-**ESP32 C++ Application**
-- Runs on an ESP32 development board
+**Raspberry Pi Pico 2 C++ Application**
+- Runs on an RP2350 Raspberry Pi Pico 2
 - Listens for color commands over USB serial
 - Controls RGB LED strips connected to the board
 - Built with Arduino framework and PlatformIO
@@ -42,7 +42,7 @@ The system consists of four main components working together:
 **Python daemon on the home machine**
 - The half that cannot move to the cloud: it owns the USB cable
 - Watches Firestore for pending requests and waits for each one's turn
-- Writes colors to the ESP32 and serves the OBS overlay
+- Writes colors to the Pico 2 and serves the OBS overlay
 - Runs under systemd; updated by pulling on that machine
 
 ### 💬 `stream_aggregator/`
@@ -84,8 +84,8 @@ component and rolling it back.
 ## 🎭 Getting Started
 
 ### Quick Setup
-1. **Flash the firmware** to your ESP32
-2. **Connect** ESP32 via USB
+1. **Flash the firmware** to your Raspberry Pi Pico 2
+2. **Connect** the Pico 2 via USB
 3. **Run** `./scripts/setup.sh` then `./scripts/dev.sh`
 4. **Control** your RGB LEDs through the web!
 
@@ -94,7 +94,7 @@ component and rolling it back.
 - **Frontend**: React, Vite, Cloudflare worker
 - **Backend**: Python, Flask, pySerial
 - **Firmware**: C++, Arduino Framework, PlatformIO
-- **Hardware**: ESP32, RGB LED strips
+- **Hardware**: Raspberry Pi Pico 2, WS2811 RGBIC LED strip
 
 ## 👹 Contributing
 

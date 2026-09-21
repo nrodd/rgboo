@@ -164,7 +164,7 @@ fi
 
 if $RUN_BRIDGE; then
   bridge_args=(-m bridge.main --obs-port "$OBS_PORT")
-  # Dry run is the default on purpose: without the ESP32 attached, opening the
+  # Dry run is the default on purpose: without the Pico 2 attached, opening the
   # serial port either fails or fights whatever else owns it.
   $DRY_RUN && bridge_args+=(--dry-run)
   run_prefixed "$(printf '\033[35m[bridge]\033[0m ')" "$PY" "${bridge_args[@]}"

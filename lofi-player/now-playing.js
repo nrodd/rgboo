@@ -1,10 +1,14 @@
 'use strict';
 
-// Subscribe to the rgboo now-playing SSE stream and print each track change.
-// The bridge pushes updates to the Cloudflare Worker; we just listen. This is
-// best-effort: if the stream is unreachable, playback carries on regardless.
+// Subscribe to the rgboo now-playing SSE stream and draw a small live scene:
+// a cat and jack-o-lantern glowing in the latest LED color, who requested it,
+// and the current + previous track. The bridge pushes updates to the Cloudflare
+// Worker; we just listen. Best-effort: if the stream is unreachable, playback
+// carries on regardless.
 //
 // Equivalent one-liner without this app: `curl -N https://rgboo.com/api/stream`
+
+const scene = require('./scene');
 
 const HOSTS = {
   prod: 'https://rgboo.com',
@@ -46,22 +50,30 @@ function label(data) {
   return data;
 }
 
-/**
- * Format a color update: a truecolor swatch of what's on the LEDs plus whose
- * request it is. Falls back to the raw payload if it isn't the expected JSON.
- */
-function colorLabel(data) {
+/** Pull {username, r, g, b} out of a color event, or null if it isn't one. */
+function parseColor(data) {
   try {
     const { username, r, g, b } = JSON.parse(data);
     if ([r, g, b].every((v) => Number.isFinite(v))) {
-      const swatch = `\x1b[48;2;${r};${g};${b}m  \x1b[0m`;
-      const rgb = `rgb(${r}, ${g}, ${b})`;
-      return username ? `${swatch} ${username} ${rgb}` : `${swatch} ${rgb}`;
+      return { username: username || null, r, g, b };
     }
   } catch {
-    // not JSON; fall through to the raw string
+    // not JSON; not a color we can use
   }
-  return data;
+  return null;
+}
+
+// Everything the scene draws. SSE events mutate this; the animation ticker
+// advances `frame` and repaints, so nothing is ever logged line-by-line.
+const state = { color: null, username: null, current: null, previous: null, frame: 0 };
+
+const FPS = 8;
+
+function draw() {
+  // Home, then clear each line as we overwrite it and wipe anything below, so
+  // the frame updates in place without the flicker of a full-screen clear.
+  const lines = scene.render(state).split('\n');
+  process.stdout.write('\x1b[H' + lines.map((l) => l + '\x1b[K').join('\n') + '\x1b[J');
 }
 
 async function listen(streamUrl) {
@@ -101,18 +113,45 @@ async function listen(streamUrl) {
         .join('\n');
       if (!data) continue;
       if (channel === 'color') {
-        console.log(colorLabel(data));
+        const color = parseColor(data);
+        if (!color) continue;
+        const { username, ...rgb } = color;
+        state.color = rgb;
+        state.username = username;
       } else {
-        console.log(`♪ ${label(data)}`);
+        const track = label(data);
+        // The worker replays the current track on connect; don't push a
+        // duplicate into "previous" when nothing actually changed.
+        if (track !== state.current) {
+          state.previous = state.current;
+          state.current = track;
+        }
       }
+      // The animation ticker paints the next frame; we just update state here.
     }
   }
+}
+
+// Restore the cursor whichever way we leave, so we never strand a hidden one.
+function restoreCursor() {
+  process.stdout.write('\x1b[?25h');
 }
 
 // Retry with a slow backoff so a dropped connection reconnects on its own.
 async function start() {
   const streamUrl = resolveStreamUrl();
-  console.log(`now-playing: listening to ${streamUrl}`);
+  process.stdout.write('\x1b[?25l\x1b[2J'); // hide cursor, clear the screen
+  process.on('exit', restoreCursor);
+  process.on('SIGINT', () => process.exit(0));
+
+  // Drive the animation on its own timer, independent of when events arrive.
+  const ticker = setInterval(() => {
+    state.frame++;
+    draw();
+  }, 1000 / FPS);
+  ticker.unref?.(); // don't keep the process alive just for the animation
+  draw(); // show the first frame right away
+
   for (;;) {
     try {
       await listen(streamUrl);
