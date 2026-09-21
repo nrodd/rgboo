@@ -15,6 +15,11 @@
  * (unnamed) SSE event so existing subscribers are untouched; the color+username
  * currently on the LEDs rides a named `color` event alongside it. Each channel
  * keeps its own last value so a fresh listener gets both replayed at once.
+ *
+ * That last value is persisted to durable storage, not just held in memory: the
+ * DO is evicted when idle, and the bridge only re-POSTs on a change, so an
+ * in-memory-only value would leave a listener connecting to a cold DO blank
+ * until the next song/color actually changes.
  */
 
 const SSE_HEADERS = {
@@ -39,12 +44,18 @@ function sseEvent(text, event) {
 }
 
 export class NowPlaying {
-  constructor() {
+  constructor(state) {
+    this.storage = state.storage;
     this.encoder = new TextEncoder();
     this.clients = new Set();
-    // Last posted body per channel, replayed to new subscribers.
+    // Last posted body per channel, replayed to new subscribers. Hydrate from
+    // durable storage before serving any request so state survives eviction.
     this.currentSong = null;
     this.currentColor = null;
+    state.blockConcurrencyWhile(async () => {
+      this.currentSong = (await this.storage.get("song")) ?? null;
+      this.currentColor = (await this.storage.get("color")) ?? null;
+    });
   }
 
   async fetch(request) {
@@ -60,8 +71,10 @@ export class NowPlaying {
     // The color channel is a named SSE event; the song stays the default one.
     if (channel === "color") {
       this.currentColor = body;
+      await this.storage.put("color", body);
     } else {
       this.currentSong = body;
+      await this.storage.put("song", body);
     }
     const chunk = this.encoder.encode(
       channel === "color" ? sseEvent(body, "color") : sseEvent(body),
