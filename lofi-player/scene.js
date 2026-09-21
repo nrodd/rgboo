@@ -14,7 +14,7 @@ const DIM = '\x1b[2m';
 const DEFAULT_COLOR = { r: 255, g: 138, b: 0 };
 
 const W = 52; // canvas width
-const SKY_H = 10; // rows of sky above the ground line
+const SKY_H = 13; // rows of sky above the ground line
 const GROUND_Y = SKY_H - 1;
 
 function fg({ r, g, b }) {
@@ -31,11 +31,12 @@ const GROUND = fg({ r: 35, g: 30, b: 45 });
 // Space is transparent; every other glyph paints itself in the given color.
 
 const MOON_ART = [
-  '  _..',
-  ' ( `.',
-  ' |  |',
-  ' ( .`',
-  '  `-`'
+  '    _.._',
+  " .' .-'`",
+  '/  /',
+  '|  |',
+  '\\  \\',
+  " '._'-._"
 ];
 
 // Witch facing right (direction of travel), broom trailing off to the left.
@@ -159,9 +160,10 @@ function render(state = {}) {
   drawTreeLayer(canvas, TREE_NEAR_ART, TREE_NEAR, 17, 1, frame, 0);
 
   // Witch bobs gently as she flies, skimming the treetops. Drawn last so she
-  // sits in front of the trees where their tops overlap her legs.
+  // sits in front of the trees where their tops overlap her legs. Kept below
+  // the moon's rows so the two never crowd each other.
   const bob = [0, 0, -1, -1, 0, 0, 1, 1][frame % 8];
-  place(canvas, WITCH, 6, 2 + bob, fg(color));
+  place(canvas, WITCH, 6, 6 + bob, fg(color));
 
   const lines = serialize(canvas);
 
