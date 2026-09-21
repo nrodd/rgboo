@@ -37,15 +37,13 @@ const MOON_ART = [
   ' \\_/ '
 ];
 
-// Witch facing right (direction of travel); pointy hat up top, broom bristles
-// trailing off to the left, handle tipping forward to the right.
+// Witch facing right (direction of travel), broom trailing off to the left.
 const WITCH = [
-  '     /\\',
-  '    /  \\',
-  '   /____\\',
-  '    (o.)',
-  '~~=<{__}==>',
-  '    /  \\'
+  '   __/|__',
+  "   //'>",
+  ',,_//\\____',
+  "-' ) >",
+  "   ''"
 ];
 
 const TREE_NEAR_ART = [
@@ -162,7 +160,7 @@ function render(state = {}) {
   // Witch bobs gently as she flies, skimming the treetops. Drawn last so she
   // sits in front of the trees where their tops overlap her legs.
   const bob = [0, 0, -1, -1, 0, 0, 1, 1][frame % 8];
-  place(canvas, WITCH, 6, 1 + bob, fg(color));
+  place(canvas, WITCH, 6, 2 + bob, fg(color));
 
   const lines = serialize(canvas);
 
