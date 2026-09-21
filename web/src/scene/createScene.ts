@@ -1,13 +1,14 @@
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
-import { pixels } from "./pixelArt";
-import { layerNames, sceneArtwork, sceneConfig, tvArtwork, vhsTapes, windowOpening, type SceneAction, type SceneLayer } from "./scene.config";
-import { getSceneLayout } from "./layout";
-import { drawTelevision, drawTape, drawTapeGlow } from "./television";
-import { createLoungingCat, createIdleFrog } from "./characters";
+import spiderWebUrl from "../assets/spiderweb.png";
 import { createRain, createRoomLight } from "./atmosphere";
-import { drawRoomRug } from "./roomDecor";
-import type { ScenePreferences } from "./preferences";
+import { createIdleFrog, createLoungingCat } from "./characters";
+import { getSceneLayout } from "./layout";
+import { pixels } from "./pixelArt";
 import { makePlaceholder } from "./placeholders";
+import type { ScenePreferences } from "./preferences";
+import { drawRoomRug } from "./roomDecor";
+import { layerNames, sceneArtwork, sceneConfig, tvArtwork, vhsTapes, windowOpening, type SceneAction, type SceneLayer } from "./scene.config";
+import { drawTape, drawTapeGlow, drawTelevision } from "./television";
 export interface SceneHandle { destroy: () => void; hoverTape: (index: number | null) => void; setPlaying: (playing: boolean) => void; setPreferences: (preferences: ScenePreferences) => void }
 
 /** Pixi owns the room; the official YouTube iframe remains a separate DOM surface. */
@@ -17,6 +18,10 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     autoDensity: true, resolution: 1, autoStart: false, preserveDrawingBuffer: true });
   if (signal.aborted) { app.destroy(true, { children: true }); return; }
   const backdrop = app.stage.addChild(new Container({ label: "backdrop" }));
+  const spiderWeb = backdrop.addChild(new Sprite({ label: "spider-web" }));
+  spiderWeb.anchor.set(0, 0);
+  spiderWeb.position.set(0, 0);
+  spiderWeb.eventMode = "none";
   const rug = app.stage.addChild(new Graphics({ label: "woven-rug" }));
   rug.eventMode = "none";
   const light = createRoomLight();
@@ -52,6 +57,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     }
     objects.set(art.id, object);
   }
+  backdrop.addChild(spiderWeb);
   const frogArt = sceneArtwork.find((art) => art.id === "frog")!;
   const frog = frogArt.src ? undefined : createIdleFrog(frogArt.width);
   if (frog) {
@@ -207,6 +213,13 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
   document.addEventListener("visibilitychange", onVisibility);
   host.appendChild(app.canvas);
   redraw(); observer.observe(host); onVisibility();
+  void Assets.load<Texture>(spiderWebUrl).then((texture) => {
+    if (disposed) return;
+    texture.source.scaleMode = "nearest";
+    spiderWeb.texture = texture;
+    spiderWeb.width = 256;
+    spiderWeb.height = 256;
+  }).catch((error: unknown) => console.warn("Could not load spider web art", error));
   // A failed art export keeps its placeholder; it must never remove the player.
   void Promise.all(sceneArtwork.filter((art) => art.src).map(async (art) => {
     try {

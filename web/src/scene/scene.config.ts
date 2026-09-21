@@ -2,6 +2,7 @@ import roomBackgroundUrl from "../assets/background.png";
 import candleFatUrl from "../assets/candle_fat.png";
 import candleTallUrl from "../assets/candle_tall.png";
 import moonUrl from "../assets/moon.png";
+import spiderWebUrl from "../assets/spiderweb.png";
 import windowUrl from "../assets/window.png";
 
 export const layerNames = ["background", "outside", "window", "props", "foreground"] as const;
