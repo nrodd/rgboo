@@ -54,6 +54,9 @@ class NowPlayingPublisher:
         self._stop_requested = threading.Event()
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._stop_event: Optional[asyncio.Event] = None
+        self._refresh_event: Optional[asyncio.Event] = None
+        self._schedule_lock = threading.Lock()
+        self._wake_pending = False
         self._manager = None
         self._manager_token = None
         self._session = None
@@ -65,6 +68,8 @@ class NowPlayingPublisher:
         if sys.platform != 'win32':
             logger.info("Now-playing publisher skipped (Windows only)")
             return
+        if self._thread is not None or self._stop_requested.is_set():
+            return
         self._thread = threading.Thread(
             target=self._run,
             name='now-playing',
@@ -74,8 +79,9 @@ class NowPlayingPublisher:
 
     def stop(self) -> None:
         self._stop_requested.set()
-        if self._loop is not None and self._stop_event is not None:
-            self._loop.call_soon_threadsafe(self._stop_event.set)
+        with self._schedule_lock:
+            if self._loop is not None and self._stop_event is not None:
+                self._loop.call_soon_threadsafe(self._stop_event.set)
         if self._thread is not None:
             self._thread.join(timeout=5)
 
@@ -97,54 +103,94 @@ class NowPlayingPublisher:
             GlobalSystemMediaTransportControlsSessionManager as Manager,
         )
 
-        self._loop = asyncio.get_running_loop()
+        worker = None
         self._stop_event = asyncio.Event()
-        if self._stop_requested.is_set():
-            self._stop_event.set()
-        self._manager = await Manager.request_async()
-        self._manager_token = self._manager.add_current_session_changed(
-            self._on_current_session_changed
-        )
-
-        await self._bind_current_session()
-        logger.info("Listening for Windows now-playing changes")
-        await self._stop_event.wait()
-        self._unbind_session()
-        self._manager.remove_current_session_changed(self._manager_token)
-
-    def _schedule(self, coroutine_factory) -> None:
-        """Schedule async work safely even if WinRT calls from another thread."""
-        if self._loop is not None:
-            self._loop.call_soon_threadsafe(
-                lambda: asyncio.create_task(coroutine_factory())
+        self._refresh_event = asyncio.Event()
+        with self._schedule_lock:
+            self._loop = asyncio.get_running_loop()
+        try:
+            if self._stop_requested.is_set():
+                return
+            self._manager = await Manager.request_async()
+            self._manager_token = self._manager.add_current_session_changed(
+                self._on_current_session_changed
             )
+            worker = asyncio.create_task(self._refresh_loop())
+            self._request_refresh()
+            logger.info("Listening for Windows now-playing changes")
+            await self._stop_event.wait()
+        finally:
+            # Reject late WinRT callbacks before the asyncio loop closes.
+            with self._schedule_lock:
+                self._loop = None
+                self._wake_pending = False
+            if worker is not None:
+                worker.cancel()
+                await asyncio.gather(worker, return_exceptions=True)
+            try:
+                self._unbind_session()
+            finally:
+                try:
+                    if self._manager is not None and self._manager_token is not None:
+                        self._manager.remove_current_session_changed(self._manager_token)
+                finally:
+                    self._manager = None
+                    self._manager_token = None
+
+    def _request_refresh(self) -> None:
+        """Coalesce before scheduling, including callbacks on native threads.
+
+        One worker reads the current session; events retain no media objects.
+        At most one wakeup waits behind an in-flight media read or POST.
+        """
+        with self._schedule_lock:
+            if (self._loop is None or self._stop_requested.is_set()
+                    or self._wake_pending):
+                return
+            self._wake_pending = True
+            self._loop.call_soon_threadsafe(self._refresh_event.set)
 
     def _on_current_session_changed(self, _sender, _args) -> None:
-        self._schedule(self._bind_current_session)
+        self._request_refresh()
 
-    def _on_media_properties_changed(self, sender, _args) -> None:
-        self._schedule(lambda: self._publish_session(sender))
+    def _on_media_properties_changed(self, _sender, _args) -> None:
+        self._request_refresh()
+
+    async def _refresh_loop(self) -> None:
+        while True:
+            await self._refresh_event.wait()
+            self._refresh_event.clear()
+            with self._schedule_lock:
+                self._wake_pending = False
+            try:
+                await self._bind_current_session()
+            except Exception:
+                logger.exception("Failed to refresh Windows media session")
 
     async def _bind_current_session(self) -> None:
-        self._unbind_session()
-        self._session = self._manager.get_current_session()
+        session = self._manager.get_current_session()
+        if session != self._session:
+            self._unbind_session()
+            self._session = session
         if self._session is None:
             logger.info("No active Windows media session")
             await self._publish_song({'artist': '', 'title': ''})
             return
 
-        self._session_token = self._session.add_media_properties_changed(
-            self._on_media_properties_changed
-        )
+        if self._session_token is None:
+            self._session_token = self._session.add_media_properties_changed(
+                self._on_media_properties_changed
+            )
         # Publish immediately at startup/session switch; do not wait for the
         # next track change to populate a newly connected SSE subscriber.
         await self._publish_session(self._session)
 
     def _unbind_session(self) -> None:
-        if self._session is not None and self._session_token is not None:
-            self._session.remove_media_properties_changed(self._session_token)
+        session, token = self._session, self._session_token
         self._session = None
         self._session_token = None
+        if session is not None and token is not None:
+            session.remove_media_properties_changed(token)
 
     async def _publish_session(self, session) -> None:
         try:

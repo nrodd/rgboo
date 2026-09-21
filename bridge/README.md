@@ -125,7 +125,12 @@ bridge picks them back up (overdue ones dispatch immediately). See
 - **`heartbeat.py`** writes `meta/bridge` every 60s; the cloud API reads
   it to answer `bridge_online` / `serial_connected`.
 - **`now_playing.py`** listens for Windows media/session changes and pushes
-  artist/title JSON to the Cloudflare SSE fan-out.
+  artist/title JSON to the Cloudflare SSE fan-out. One worker coalesces media
+  events into a single pending refresh, including while a read or POST is slow.
+- **`display.py`** publishes the current color/username with one in-flight POST
+  and at most one waiting update. New updates replace the waiting value, so a
+  slow endpoint cannot accumulate obsolete display states. Shutdown discards
+  the waiting update. LED dispatch still processes each queued request.
 
 ## Tests
 
