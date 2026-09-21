@@ -31,10 +31,12 @@ const GROUND = fg({ r: 35, g: 30, b: 45 });
 // Space is transparent; every other glyph paints itself in the given color.
 
 const MOON_ART = [
-  ' ___ ',
-  '/   \\',
-  '\\   /',
-  ' \\_/ '
+  '    _.._',
+  " .' .-'`",
+  '/  /',
+  '|  |',
+  '\\  \\',
+  " '._'-._"
 ];
 
 // Witch facing right (direction of travel), broom trailing off to the left.
@@ -148,7 +150,7 @@ function render(state = {}) {
   }
 
   // Moon, parked top-right.
-  place(canvas, MOON_ART, W - 8, 0, MOON);
+  place(canvas, MOON_ART, W - 10, 0, MOON);
 
   // The ground line the trees stand on.
   place(canvas, [Array(W).fill('_').join('')], 0, GROUND_Y, GROUND);
