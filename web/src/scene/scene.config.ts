@@ -1,6 +1,7 @@
 import roomBackgroundUrl from "../assets/background.png";
 import candleFatUrl from "../assets/candle_fat.png";
 import candleTallUrl from "../assets/candle_tall.png";
+import moonUrl from "../assets/moon.png";
 import windowUrl from "../assets/window.png";
 
 export const layerNames = ["background", "outside", "window", "props", "foreground"] as const;
@@ -33,7 +34,7 @@ export const windowOpening = { x: windowArtwork.x + 8 * windowPixel, y: windowAr
 export const sceneArtwork: SceneArtwork[] = [
   { id: "wall", layer: "background", x: 0, y: 0, width: 1600, height: 1000, src: roomBackgroundUrl },
   { id: "night-sky", layer: "outside", x: 950, y: 125, width: 460, height: 490 },
-  { id: "moon", layer: "outside", x: 1180, y: 165, width: 130, height: 130 },
+  { id: "moon", layer: "outside", x: 1180, y: 165, width: 130, height: 130, src: moonUrl },
   { id: "fog-back", layer: "outside", x: 960, y: 315, width: 460, height: 130, motion: "fog" },
   { id: "fog-front", layer: "outside", x: 925, y: 465, width: 510, height: 110, motion: "fog" },
   { id: "window-frame", layer: "window", ...windowArtwork },
