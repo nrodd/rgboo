@@ -5,9 +5,8 @@ const { spawn } = require('child_process');
 const path = require('path');
 const nowPlaying = require('./now-playing');
 
-// Lofi Girl live radio. The /live endpoint points at the current broadcast;
-// the plain channel URL (/c/LofiGirl) expands to a playlist of all uploads instead.
-const STREAM_URL = 'https://www.youtube.com/@LofiGirl/live';
+// Use the same live broadcast as the web stream embed.
+const STREAM_URL = 'https://www.youtube.com/watch?v=n7PhqM770oM';
 
 // yt-dlp binary shipped by youtube-dl-exec, so we don't rely on a system install.
 const ytDlpPath = path.join(
@@ -17,7 +16,7 @@ const ytDlpPath = path.join(
   process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp'
 );
 
-console.log('lofi-player: now playing Lofi Girl. Ctrl-C to stop.');
+console.log('lofi-player: now playing RGBoo. Ctrl-C to stop.');
 
 // Print track changes as the bridge pushes them. Never blocks playback.
 nowPlaying.start();
