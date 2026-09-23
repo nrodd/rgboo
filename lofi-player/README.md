@@ -1,6 +1,6 @@
 # lofi-player
 
-Streams the [RGBoo live broadcast](https://www.youtube.com/watch?v=n7PhqM770oM) to your
+Streams the [RGBoo live broadcast](https://www.youtube.com/live/KbZBcBE0Nw4) to your
 speakers. yt-dlp is bundled via npm; mpv is the one system dependency.
 
 ## Setup

@@ -111,7 +111,7 @@ build.
 1. Enable **YouTube Data API v3** in your Google Cloud project.
 2. Create a server API key, restrict it to that API (and your egress IP if fixed),
    and set `YOUTUBE_API_KEY`.
-3. Set `YOUTUBE_VIDEO_ID=n7PhqM770oM` for the current broadcast (use the video ID,
+3. Set `YOUTUBE_VIDEO_ID=KbZBcBE0Nw4` for the current broadcast (use the video ID,
    not its full URL). Clear `YOUTUBE_LIVE_CHAT_ID` when switching broadcasts so
    an old chat ID does not override the video ID. The worker
    obtains `liveStreamingDetails.activeLiveChatId` through `videos.list` and waits

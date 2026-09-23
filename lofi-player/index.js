@@ -6,7 +6,7 @@ const path = require('path');
 const nowPlaying = require('./now-playing');
 
 // Use the same live broadcast as the web stream embed.
-const STREAM_URL = 'https://www.youtube.com/watch?v=n7PhqM770oM';
+const STREAM_URL = 'https://www.youtube.com/live/KbZBcBE0Nw4';
 
 // yt-dlp binary shipped by youtube-dl-exec, so we don't rely on a system install.
 const ytDlpPath = path.join(
