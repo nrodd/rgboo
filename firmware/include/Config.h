@@ -12,6 +12,8 @@
 #define MAX_LEDS 50
 #define LED_PIN 4
 #define LED_BRIGHTNESS 51
+// Convert screen-style RGB values to LED output; 1.0 disables correction.
+#define LED_GAMMA 2.2f
 
 // Do not wait forever for Windows to open the Pico's USB serial port.
 #define SERIAL_CONNECT_TIMEOUT 3000

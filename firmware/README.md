@@ -2,7 +2,8 @@
 
 This firmware receives color commands from the Windows bridge over USB serial
 and drives the PAUTIX 24 V RGBIC COB strip. The strip uses WS2811 signaling,
-has 50 addressable 10 cm segments across 5 m, and uses GRB color order.
+has 50 addressable 10 cm segments across 5 m, and uses RGB color order
+(verified with pure red, green, and blue commands on the connected strip).
 
 ## Hardware
 
@@ -121,4 +122,11 @@ brightness limit. The current hardware configuration is:
 #define MAX_LEDS 50
 #define LED_PIN 4
 #define LED_BRIGHTNESS 51
+#define LED_GAMMA 2.2f
 ```
+
+Send original screen RGB values: the firmware applies gamma correction to the
+LED output after blending, then FastLED applies the brightness limit. For example,
+`RGB:216,102,21` becomes approximately `177,34,1` before brightness scaling.
+Do not pre-correct commands in the bridge or serial monitor. Serial logs retain
+the original RGB values. Set `LED_GAMMA` to `1.0f` to disable correction.
