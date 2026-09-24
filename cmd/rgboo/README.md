@@ -78,13 +78,20 @@ prints one line per track change instead, so `rgboo | tee log` stays readable.
 
 ## Releasing
 
-Push a semver tag; [`.github/workflows/release-rgboo.yaml`](../../.github/workflows/release-rgboo.yaml)
-runs [GoReleaser](https://goreleaser.com) and does the rest.
+Actions -> **release rgboo** -> **Run workflow**, then type the version
+(`v0.1.1`). The tag is created by the workflow, from `main`, which is the whole
+point: a local `git tag` can silently land on an unmerged branch, and this
+can't. [`.github/workflows/release-rgboo.yaml`](../../.github/workflows/release-rgboo.yaml)
+then runs [GoReleaser](https://goreleaser.com) and does the rest.
+
+Pushing a tag by hand still works, and still releases:
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.1.1 && git push origin v0.1.1
 ```
+
+Either way the version must be `vX.Y.Z` (optionally `-rc.1`) and must not
+already exist. Versions are never reused.
 
 That builds macOS/Linux/Windows binaries, attaches them to a GitHub release
 with checksums, and pushes an updated cask to `nrodd/homebrew-tap`. Dry run the

@@ -1,25 +1,72 @@
 name: release rgboo
 
-# Cut a release by pushing a semver tag:
-#   git tag v0.1.0 && git push origin v0.1.0
+# Two ways in:
+#
+#   1. Actions -> "release rgboo" -> Run workflow, and type a version. The tag
+#      is created here, from main, which is the point: it cannot accidentally
+#      land on an unmerged branch the way a local `git tag` can.
+#   2. Push a semver tag yourself: git tag v0.1.1 && git push origin v0.1.1
 on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. v0.1.1"
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+# Two releases at once would race each other pushing the Homebrew cask.
+concurrency:
+  group: release-rgboo
+  cancel-in-progress: false
 
 jobs:
   goreleaser:
     name: "👻 release rgboo"
     runs-on: ubuntu-latest
     steps:
+      - name: Releases come from main
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main'
+        run: |
+          echo "::error::Dispatch a release from main, not ${{ github.ref_name }}."
+          exit 1
+
       - uses: actions/checkout@v4
         with:
           # GoReleaser builds the changelog from git log, so it needs history
           # and tags, not the default shallow clone.
           fetch-depth: 0
+
+      - name: Tag it
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if ! printf '%s' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::'$VERSION' is not a vX.Y.Z version."
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/$VERSION" >/dev/null; then
+            echo "::error::Tag $VERSION already exists. Versions are never reused."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "rgboo $VERSION"
+          # Pushed with GITHUB_TOKEN, and GitHub deliberately does not start a
+          # workflow run from a GITHUB_TOKEN event, so this cannot re-enter the
+          # `push: tags` trigger above and release twice.
+          git push origin "$VERSION"
+
+          echo "Tagged $(git rev-parse --short HEAD) as $VERSION" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-go@v5
         with:
