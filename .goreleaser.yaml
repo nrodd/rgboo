@@ -1,0 +1,93 @@
+# Release config for the rgboo terminal player (cmd/rgboo).
+# Cut a release by pushing a tag:  git tag v0.1.0 && git push origin v0.1.0
+# Try it without releasing:        goreleaser release --snapshot --clean
+version: 2
+
+project_name: rgboo
+
+builds:
+  - id: rgboo
+    main: ./cmd/rgboo
+    binary: rgboo
+    # No cgo, so every target cross-compiles from one Linux runner.
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      # windows/arm64 mpv builds are basically nonexistent; don't ship a binary
+      # that can't find a player.
+      - goos: windows
+        goarch: arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: rgboo
+    ids: [rgboo]
+    name_template: >-
+      rgboo_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - src: cmd/rgboo/README.md
+        dst: README.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge branch"
+
+release:
+  github:
+    owner: nrodd
+    name: rgboo
+  name_template: "rgboo {{ .Tag }}"
+  footer: |
+    ## Install
+
+    ```sh
+    brew install nrodd/tap/rgboo      # macOS
+    curl -fsSL https://rgboo.com/install.sh | sh   # macOS + Linux
+    ```
+
+    Needs `mpv` and `yt-dlp` on PATH (Homebrew pulls them in for you).
+
+# macOS install. A cask rather than a formula because GoReleaser deprecated
+# formula output for binaries. Casks are macOS-only, so Linux takes install.sh.
+#
+# Deliberately no quarantine-stripping postflight hook: Go's linker ad-hoc
+# signs the darwin binaries, and quarantine only gates LaunchServices, not a
+# binary run from a shell. Verified by setting com.apple.quarantine by hand on
+# an installed rgboo, which ran fine. The hook bought nothing and made
+# Homebrew print a deprecation warning twice per install.
+homebrew_casks:
+  - name: rgboo
+    ids: [rgboo]
+    repository:
+      owner: nrodd
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://rgboo.com
+    description: Stream the RGBoo live broadcast to your speakers with an animated terminal scene
+    commit_author:
+      name: goreleaser
+      email: noreply@rgboo.com
+    dependencies:
+      - formula: mpv
+      - formula: yt-dlp
