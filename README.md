@@ -11,7 +11,7 @@ A haunting collection of software that lets the community control RGB LEDs toget
 Web Frontend → Cloud API → Firestore → Bridge → Pico 2 Firmware → RGB LEDs
 ```
 
-The system consists of four main components working together:
+The system consists of these components working together:
 
 ## 📁 Directory Overview
 
@@ -50,6 +50,13 @@ The system consists of four main components working together:
 - Aggregates YouTube polling and Twitch EventSub chat
 - Forwards `!color` commands to the cloud API
 - Runs in Docker; see [stream_aggregator/README.md](stream_aggregator/README.md)
+
+### 💻 `cmd/rgboo/`
+**Go terminal player**
+- A single binary that streams the live broadcast to your speakers
+- Draws an animated terminal scene tinted with the latest LED color
+- `brew install nrodd/tap/rgboo` or `curl -fsSL https://rgboo.com/install.sh | sh`
+- Released by GoReleaser on a tag; see [cmd/rgboo/README.md](cmd/rgboo/README.md)
 
 ## 🧰 Running it locally
 
@@ -94,6 +101,7 @@ component and rolling it back.
 - **Frontend**: React, Vite, Cloudflare worker
 - **Backend**: Python, Flask, pySerial
 - **Firmware**: C++, Arduino Framework, PlatformIO
+- **Terminal player**: Go, mpv, yt-dlp
 - **Hardware**: Raspberry Pi Pico 2, WS2811 RGBIC LED strip
 
 ## 👹 Contributing
