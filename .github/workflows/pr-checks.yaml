@@ -121,7 +121,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
-          cache: true
+          # No go.sum (zero dependencies), so there is nothing to key a cache on.
+          cache: false
       - run: gofmt -l ./cmd && test -z "$(gofmt -l ./cmd)"
       - run: go vet ./cmd/...
       - run: go test ./cmd/...

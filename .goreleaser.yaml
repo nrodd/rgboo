@@ -68,9 +68,14 @@ release:
 
     Needs `mpv` and `yt-dlp` on PATH (Homebrew pulls them in for you).
 
-# macOS install. A cask rather than a formula because casks can strip the
-# Gatekeeper quarantine flag from an unsigned binary; without that, a
-# downloaded rgboo is refused on first run. Linux users take install.sh.
+# macOS install. A cask rather than a formula because GoReleaser deprecated
+# formula output for binaries. Casks are macOS-only, so Linux takes install.sh.
+#
+# Deliberately no quarantine-stripping postflight hook: Go's linker ad-hoc
+# signs the darwin binaries, and quarantine only gates LaunchServices, not a
+# binary run from a shell. Verified by setting com.apple.quarantine by hand on
+# an installed rgboo, which ran fine. The hook bought nothing and made
+# Homebrew print a deprecation warning twice per install.
 homebrew_casks:
   - name: rgboo
     ids: [rgboo]
@@ -86,9 +91,3 @@ homebrew_casks:
     dependencies:
       - formula: mpv
       - formula: yt-dlp
-    hooks:
-      post:
-        install: |
-          if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/rgboo"]
-          end
