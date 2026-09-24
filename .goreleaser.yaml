@@ -71,11 +71,21 @@ release:
 # macOS install. A cask rather than a formula because GoReleaser deprecated
 # formula output for binaries. Casks are macOS-only, so Linux takes install.sh.
 #
-# Deliberately no quarantine-stripping postflight hook: Go's linker ad-hoc
-# signs the darwin binaries, and quarantine only gates LaunchServices, not a
-# binary run from a shell. Verified by setting com.apple.quarantine by hand on
-# an installed rgboo, which ran fine. The hook bought nothing and made
-# Homebrew print a deprecation warning twice per install.
+# The quarantine hook is load-bearing, however much Homebrew complains about
+# it. Homebrew stamps every cask download with com.apple.quarantine, and
+# these binaries are only ad-hoc signed (no Apple Developer ID), so Gatekeeper
+# SIGKILLs them on first run: "Apple could not verify rgboo is free of
+# malware". Worse, that dialog's default button is Move to Trash, which
+# deletes the binary and leaves brew still reporting it as installed.
+#
+# Homebrew deprecated `postflight` in favour of `postflight_steps` and warns
+# twice per install, but `postflight_steps` cannot replace this. It is a
+# declarative, JSON-serialisable step list with no system_command and no
+# quarantine step, so it cannot shell out to xattr at all. Deprecated and
+# working beats modern and broken.
+#
+# The real fix is notarizing with an Apple Developer ID ($99/yr), which would
+# drop the quarantine problem entirely and let this go away.
 homebrew_casks:
   - name: rgboo
     ids: [rgboo]
@@ -91,3 +101,9 @@ homebrew_casks:
     dependencies:
       - formula: mpv
       - formula: yt-dlp
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/rgboo"]
+          end
