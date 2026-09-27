@@ -18,6 +18,12 @@ The worker sends `POST {CLOUD_API_URL}/api/color` with `X-Api-Key: CLOUD_API_KEY
 Display names are preserved, so existing cloud moderation and overlay behavior
 apply. Platform/message IDs are used locally for duplicate suppression. The cloud
 API remains responsible for scheduling colors and forwarding them to the bridge.
+After a successful queued response, the worker posts an acknowledgement in the
+originating chat, for example: `@ViewerName your color is queued! Estimated wait: 42 seconds.`
+The estimate comes from `estimated_wait_seconds` (fractional seconds round up).
+Twitch replies are attached to the original message and mention the user login;
+YouTube messages address the author with `@displayName` text. YouTube does not
+provide a structured mention field, so a notification is not guaranteed.
 
 ## Docker deployment
 
@@ -117,7 +123,16 @@ build.
    obtains `liveStreamingDetails.activeLiveChatId` through `videos.list` and waits
    if the scheduled stream has not started. Alternatively set `YOUTUBE_LIVE_CHAT_ID`
    directly; this takes precedence over the video ID.
-4. The stream must expose an accessible live chat. This API-key setup targets
+4. Authorize the account that will post estimates using Google OAuth with the
+   `https://www.googleapis.com/auth/youtube.force-ssl` scope. Set
+   `YOUTUBE_ACCESS_TOKEN` for a short-lived session, or (recommended) set
+   `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REFRESH_TOKEN`
+   from an authorization-code flow with offline access. The worker refreshes
+   access tokens automatically before posting; an access-token-only setup needs
+   manual replacement and a restart when it expires. The API key alone cannot
+   post chat messages. See [Google OAuth setup](https://developers.google.com/identity/protocols/oauth2/web-server)
+   and [posting live chat messages](https://developers.google.com/youtube/v3/live/docs/liveChatMessages/insert).
+5. The stream must expose an accessible live chat. This API-key setup targets
    public streams; private broadcasts requiring OAuth are not supported.
 
 Polling uses `liveChatMessages.list`, follows `nextPageToken`, and waits at least
@@ -136,7 +151,8 @@ uses `list` as requested. Check your project's quota before a long stream.
 
 1. Register an application in the [Twitch developer console](https://dev.twitch.tv/console/apps).
 2. Authorize the account that reads chat (your account or a bot) with a **user access
-   token** granting `user:read:chat`. Use the authorization-code flow if you want a
+   token** granting both `user:read:chat` and `user:write:chat`.
+   Existing read-only tokens must be reauthorized with both scopes. Use the authorization-code flow if you want a
    refresh token. An app/client-credentials access token will not work here.
 3. Set `TWITCH_CLIENT_ID`, `TWITCH_ACCESS_TOKEN` (raw token, without `oauth:` or
    `Bearer`), `TWITCH_BOT_USER_ID` (the token owner's numeric user ID), and
@@ -168,6 +184,11 @@ replace expired access tokens manually and restart.
   and uncertain deliveries are logged, without chat text or credentials. The API
   has no idempotency support, so retrying a timeout or 5xx could duplicate a color
   already queued. Cloud authentication failures stop the worker.
+- Chat replies are attempted only after a queued response with a valid nonnegative
+  estimate. Rejected requests and missing/invalid estimates produce no reply.
+  Reply failures (including platform rate limits) are logged without retrying
+  either the reply or the accepted color. Replies consume platform quota and
+  are included in the shutdown drain deadline.
 - This is best-effort delivery: queued messages/deduplication state are not durable,
   platform outages can lose messages, and restarts/multiple instances do not give
   exactly-once delivery. The Twitch API does not replay events missed while offline.

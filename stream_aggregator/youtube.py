@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import time
+from functools import partial
 
 import aiohttp
 
@@ -16,6 +18,25 @@ class YouTube:
         self.page_token = None
         self.started = False
         self.interval = 5.0
+        self.token = config.youtube_token
+        self.token_expires = 0
+        self.reply_lock = asyncio.Lock()
+
+    async def send_reply(self, chat_id, text):
+        async with self.reply_lock:
+            if self.config.youtube_refresh and time.monotonic() >= self.token_expires:
+                result = await request(self.session, "POST", "https://oauth2.googleapis.com/token", data={
+                    "grant_type": "refresh_token", "refresh_token": self.config.youtube_refresh,
+                    "client_id": self.config.youtube_client, "client_secret": self.config.youtube_secret,
+                })
+                self.token = result["access_token"]
+                self.token_expires = time.monotonic() + max(0, result.get("expires_in", 3600) - 60)
+            await request(
+                self.session, "POST", BASE + "liveChat/messages",
+                headers={"Authorization": f"Bearer {self.token}"}, params={"part": "snippet"},
+                json={"snippet": {"liveChatId": chat_id, "type": "textMessageEvent",
+                                  "textMessageDetails": {"messageText": text}}},
+            )
 
     async def get(self, resource, **params):
         return await request(self.session, "GET", BASE + resource,
@@ -43,6 +64,7 @@ class YouTube:
                     self.forwarder.submit(
                         "youtube", item.get("id"), item.get("authorDetails", {}).get("displayName"),
                         snippet.get("textMessageDetails", {}).get("messageText", ""),
+                        reply=partial(self.send_reply, self.chat_id),
                     )
         self.page_token = result.get("nextPageToken")
         self.started = bool(self.page_token)

@@ -49,6 +49,9 @@ def test_config(monkeypatch):
     with pytest.raises(ValueError, match="YOUTUBE_API_KEY"):
         Config.from_env()
     monkeypatch.setenv("YOUTUBE_API_KEY", "key")
+    with pytest.raises(ValueError, match="YOUTUBE_ACCESS_TOKEN"):
+        Config.from_env()
+    monkeypatch.setenv("YOUTUBE_ACCESS_TOKEN", "oauth-token")
     assert Config.from_env().youtube_video == "video"
 
 
@@ -188,7 +191,7 @@ def test_twitch_expired_token_refreshes_and_persists(monkeypatch, tmp_path):
     async def scenario():
         path = tmp_path / "tokens.json"
         post = AsyncMock(side_effect=[APIError(401), {"access_token": "new", "refresh_token": "rotated"},
-                                     {"client_id": "client", "user_id": "123", "scopes": ["user:read:chat"],
+                                     {"client_id": "client", "user_id": "123", "scopes": ["user:read:chat", "user:write:chat"],
                                       "expires_in": 10000}])
         monkeypatch.setattr("stream_aggregator.twitch.request", post)
         config = twitch_config(twitch_refresh="refresh", twitch_secret="secret", twitch_token_file=str(path))
@@ -390,4 +393,145 @@ def test_forwarder_cleans_up_all_in_flight_requests(monkeypatch, fatal):
         finally:
             worker.cancel()
             await asyncio.gather(worker, return_exceptions=True)
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("seconds,estimate", [(42, "42 seconds"), (1, "1 second"),
+                                              (0, "less than a second"), (1.2, "2 seconds")])
+def test_forwarder_replies_after_acceptance(monkeypatch, seconds, estimate):
+    async def scenario():
+        accepted = asyncio.Event()
+        async def post(*args, **kwargs):
+            await accepted.wait()
+            return {"status": "queued", "estimated_wait_seconds": seconds}
+        monkeypatch.setattr("stream_aggregator.forwarder.request", post)
+        reply = AsyncMock()
+        forwarder = Forwarder(None, CONFIG)
+        forwarder.submit("twitch", "1", "DisplayName", "!red", reply=reply, mention="login")
+        forwarder.submit("twitch", "1", "DisplayName", "!red", reply=reply, mention="login")
+        worker = asyncio.create_task(forwarder.run())
+        try:
+            await asyncio.sleep(0)
+            reply.assert_not_awaited()
+            accepted.set()
+            await asyncio.wait_for(forwarder.queue.join(), 1)
+            reply.assert_awaited_once_with(f"@login your color is queued! Estimated wait: {estimate}.")
+        finally:
+            worker.cancel()
+            await asyncio.gather(worker, return_exceptions=True)
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("response", [{}, None, {"status": "rejected", "estimated_wait_seconds": 10},
+    *[{"status": "queued", "estimated_wait_seconds": value}
+      for value in (None, "10", True, -1, float("nan"), float("inf"))]])
+def test_invalid_estimate_does_not_reply(response):
+    async def scenario():
+        reply = AsyncMock()
+        await Forwarder(None, CONFIG).reply_with_estimate(response, reply, "Alice")
+        reply.assert_not_awaited()
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("error", [APIError(401), APIError(403), APIError(429),
+                                  asyncio.TimeoutError(), aiohttp.ClientError()])
+def test_chat_failure_does_not_retry_color_or_stop_worker(monkeypatch, error):
+    async def scenario():
+        post = AsyncMock(return_value={"status": "queued", "estimated_wait_seconds": 12})
+        monkeypatch.setattr("stream_aggregator.forwarder.request", post)
+        reply = AsyncMock(side_effect=error)
+        forwarder = Forwarder(None, CONFIG)
+        worker = asyncio.create_task(forwarder.run())
+        try:
+            for index in range(2):
+                forwarder.submit("twitch", str(index), "Alice", "!red", reply=reply)
+                await asyncio.wait_for(forwarder.queue.join(), 1)
+                assert not worker.done()
+            assert post.await_count == reply.await_count == 2
+        finally:
+            worker.cancel()
+            await asyncio.gather(worker, return_exceptions=True)
+    asyncio.run(scenario())
+
+
+def test_rejected_cloud_command_has_no_reply(monkeypatch):
+    async def scenario():
+        monkeypatch.setattr("stream_aggregator.forwarder.request", AsyncMock(side_effect=APIError(400)))
+        reply = AsyncMock()
+        forwarder = Forwarder(None, CONFIG)
+        forwarder.submit("youtube", "1", "Alice", "!red", reply=reply)
+        worker = asyncio.create_task(forwarder.run())
+        try:
+            await asyncio.wait_for(forwarder.queue.join(), 1)
+            reply.assert_not_awaited()
+        finally:
+            worker.cancel()
+            await asyncio.gather(worker, return_exceptions=True)
+    asyncio.run(scenario())
+
+
+def test_platform_replies_route_to_original_chat_and_user(monkeypatch):
+    async def scenario():
+        monkeypatch.setattr("stream_aggregator.forwarder.request", AsyncMock(
+            return_value={"status": "queued", "estimated_wait_seconds": 15}))
+        twitch_post = AsyncMock(return_value={"data": [{"is_sent": True}]})
+        youtube_post = AsyncMock(return_value={"id": "sent"})
+        monkeypatch.setattr("stream_aggregator.twitch.request", twitch_post)
+        monkeypatch.setattr("stream_aggregator.youtube.request", youtube_post)
+        forwarder = Forwarder(None, CONFIG)
+        twitch = Twitch(None, twitch_config(), forwarder)
+        event = notification()
+        event["payload"]["event"]["chatter_user_login"] = "bob_login"
+        twitch.notification(event)
+        youtube = YouTube(None, replace(CONFIG, youtube_token="yt-token", youtube_chat="original-chat"), forwarder)
+        youtube.started = True
+        youtube.get = AsyncMock(return_value={"items": [youtube_message("yt-message")], "nextPageToken": "next"})
+        await youtube.poll()
+        youtube.chat_id = "different-chat"
+        worker = asyncio.create_task(forwarder.run())
+        try:
+            await asyncio.wait_for(forwarder.queue.join(), 1)
+        finally:
+            worker.cancel()
+            await asyncio.gather(worker, return_exceptions=True)
+        assert twitch_post.call_args.args[1:] == ("POST", "https://api.twitch.tv/helix/chat/messages")
+        assert twitch_post.call_args.kwargs == {
+            "headers": {"Authorization": "Bearer token", "Client-Id": "client"},
+            "json": {"broadcaster_id": "456", "sender_id": "123", "reply_parent_message_id": "message",
+                     "message": "@bob_login your color is queued! Estimated wait: 15 seconds."}}
+        assert youtube_post.call_args.args[1:] == ("POST", "https://www.googleapis.com/youtube/v3/liveChat/messages")
+        assert youtube_post.call_args.kwargs == {
+            "headers": {"Authorization": "Bearer yt-token"}, "params": {"part": "snippet"},
+            "json": {"snippet": {"liveChatId": "original-chat", "type": "textMessageEvent",
+                     "textMessageDetails": {"messageText": "@Alice your color is queued! Estimated wait: 15 seconds."}}}}
+    asyncio.run(scenario())
+
+
+def test_twitch_unsent_reply_is_failure(monkeypatch):
+    async def scenario():
+        monkeypatch.setattr("stream_aggregator.twitch.request", AsyncMock(return_value={
+            "data": [{"is_sent": False, "drop_reason": {"code": "rate_limit"}}]}))
+        with pytest.raises(APIError):
+            await Twitch(None, twitch_config(), None).send_reply("message", "hello")
+    asyncio.run(scenario())
+
+
+def test_youtube_refresh_is_shared_by_concurrent_replies(monkeypatch):
+    async def scenario():
+        calls = []
+        async def request(*args, **kwargs):
+            calls.append((args, kwargs))
+            await asyncio.sleep(0)
+            return {"access_token": "fresh", "expires_in": 3600} if args[2].endswith("/token") else {"id": "sent"}
+        monkeypatch.setattr("stream_aggregator.youtube.request", request)
+        youtube = YouTube(None, replace(CONFIG, youtube_client="client", youtube_secret="secret",
+                                       youtube_refresh="refresh"), None)
+        await asyncio.gather(youtube.send_reply("chat", "one"), youtube.send_reply("chat", "two"))
+        assert len(calls) == 3
+        assert calls[0][1]["data"] == {"grant_type": "refresh_token", "refresh_token": "refresh",
+                                         "client_id": "client", "client_secret": "secret"}
+        assert all(call[1]["headers"]["Authorization"] == "Bearer fresh" for call in calls[1:])
+        youtube.token_expires = 0
+        await youtube.send_reply("chat", "three")
+        assert len(calls) == 5
     asyncio.run(scenario())

@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from functools import partial
 
 import aiohttp
 
@@ -50,8 +51,8 @@ class Twitch:
                                        headers={"Authorization": f"OAuth {self.token}"})
             if (result.get("client_id") != self.config.twitch_client
                     or result.get("user_id") != self.config.twitch_user
-                    or "user:read:chat" not in result.get("scopes", [])):
-                raise RuntimeError("Twitch token must match client/bot IDs and include user:read:chat")
+                    or not {"user:read:chat", "user:write:chat"}.issubset(result.get("scopes", []))):
+                raise RuntimeError("Twitch token must match client/bot IDs and include user:read:chat and user:write:chat")
             expires = result.get("expires_in", 3600)
             if expires < 300 and self.refresh_token:
                 await self.refresh()
@@ -80,6 +81,17 @@ class Twitch:
                               "user_id": self.config.twitch_user,
                           }, "transport": {"method": "websocket", "session_id": session_id}})
 
+    async def send_reply(self, message_id, text):
+        async with self.lock:
+            result = await request(
+                self.session, "POST", "https://api.twitch.tv/helix/chat/messages",
+                headers={"Authorization": f"Bearer {self.token}", "Client-Id": self.config.twitch_client},
+                json={"broadcaster_id": self.config.twitch_channel, "sender_id": self.config.twitch_user,
+                      "message": text, "reply_parent_message_id": message_id},
+            )
+        if not result.get("data") or not result["data"][0].get("is_sent"):
+            raise APIError(200, "chatMessageNotSent")
+
     def notification(self, message):
         payload = message["payload"]
         subscription = payload.get("subscription", {})
@@ -89,7 +101,9 @@ class Twitch:
         if event.get("broadcaster_user_id") != self.config.twitch_channel:
             return
         self.forwarder.submit("twitch", event.get("message_id"), event.get("chatter_user_name"),
-                              event.get("message", {}).get("text", ""))
+                              event.get("message", {}).get("text", ""),
+                              reply=partial(self.send_reply, event.get("message_id")),
+                              mention=event.get("chatter_user_login"))
 
     async def open_socket(self, url):
         # aiohttp handles protocol pings automatically; don't send client pings.
