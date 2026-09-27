@@ -535,3 +535,43 @@ def test_youtube_refresh_is_shared_by_concurrent_replies(monkeypatch):
         await youtube.send_reply("chat", "three")
         assert len(calls) == 5
     asyncio.run(scenario())
+
+
+def test_reply_diagnostics_show_platform_and_outcome_without_secrets(caplog):
+    async def scenario():
+        forwarder = Forwarder(None, CONFIG)
+        response = {"status": "queued", "estimated_wait_seconds": 42}
+        with caplog.at_level("INFO"):
+            await forwarder.reply_with_estimate(response, AsyncMock(), "private-user", "youtube")
+            await forwarder.reply_with_estimate(response, AsyncMock(side_effect=APIError(403, "quotaExceeded")),
+                                               "private-user", "youtube")
+            await forwarder.reply_with_estimate(response, AsyncMock(side_effect=APIError(400, "secret-token")),
+                                               "private-user", "youtube")
+        assert "Chat estimate reply sent (source=youtube)" in caplog.text
+        assert "HTTP 403, reason=quotaExceeded" in caplog.text
+        assert "HTTP 400, reason=unknown" in caplog.text
+        assert "private-user" not in caplog.text
+        assert "secret-token" not in caplog.text
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("body,reason", [({"error": "invalid_grant"}, "invalid_grant"),
+    ({"error": {"errors": [{"reason": "quotaExceeded"}]}}, "quotaExceeded")])
+def test_http_extracts_oauth_and_youtube_error_codes(body, reason):
+    from stream_aggregator.http import request
+    class Response:
+        status = 400
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *args):
+            pass
+        async def json(self, **kwargs):
+            return body
+    class Session:
+        def request(self, *args, **kwargs):
+            return Response()
+    async def scenario():
+        with pytest.raises(APIError) as caught:
+            await request(Session(), "POST", "https://example.test")
+        assert caught.value.log_reason == reason
+    asyncio.run(scenario())

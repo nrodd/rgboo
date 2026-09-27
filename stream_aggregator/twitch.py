@@ -21,6 +21,7 @@ class Twitch:
         if config.twitch_token_file and Path(config.twitch_token_file).exists():
             saved = json.loads(Path(config.twitch_token_file).read_text())
             self.token, self.refresh_token = saved["access_token"], saved["refresh_token"]
+            log.info("Twitch credentials loaded from saved token file; overriding environment tokens")
 
     async def refresh(self):
         if not self.refresh_token or not self.config.twitch_secret or not self.config.twitch_token_file:

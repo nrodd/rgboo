@@ -25,12 +25,14 @@ class YouTube:
     async def send_reply(self, chat_id, text):
         async with self.reply_lock:
             if self.config.youtube_refresh and time.monotonic() >= self.token_expires:
+                log.info("Refreshing YouTube reply access token")
                 result = await request(self.session, "POST", "https://oauth2.googleapis.com/token", data={
                     "grant_type": "refresh_token", "refresh_token": self.config.youtube_refresh,
                     "client_id": self.config.youtube_client, "client_secret": self.config.youtube_secret,
                 })
                 self.token = result["access_token"]
                 self.token_expires = time.monotonic() + max(0, result.get("expires_in", 3600) - 60)
+                log.info("YouTube reply access token refreshed")
             await request(
                 self.session, "POST", BASE + "liveChat/messages",
                 headers={"Authorization": f"Bearer {self.token}"}, params={"part": "snippet"},
@@ -55,6 +57,8 @@ class YouTube:
         if self.page_token:
             params["pageToken"] = self.page_token
         result = await self.get("liveChat/messages", **params)
+        if not self.started:
+            log.info("YouTube chat polling connected; skipping initial history")
         # First response contains history. Start at its cursor to avoid replaying
         # old colors when the container starts or a page token is invalidated.
         if self.started:
