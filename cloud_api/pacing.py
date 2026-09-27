@@ -14,10 +14,10 @@ from shared.schema import SLOT_SECONDS
 def next_slot(last_scheduled_time: Optional[datetime], now: datetime) -> datetime:
     """Return the scheduled_time for a new request given the pacing clock.
 
-    If the last scheduled slot is already in the past (or there isn't
-    one yet), the new request starts SLOT_SECONDS from now; otherwise
-    it's queued SLOT_SECONDS after the last slot.
+    An idle queue starts immediately. Otherwise, wait only until the
+    previous slot has had its full SLOT_SECONDS, including when that
+    slot started recently and is already in the past.
     """
-    if last_scheduled_time is None or last_scheduled_time <= now:
-        return now + timedelta(seconds=SLOT_SECONDS)
-    return last_scheduled_time + timedelta(seconds=SLOT_SECONDS)
+    if last_scheduled_time is None:
+        return now
+    return max(now, last_scheduled_time + timedelta(seconds=SLOT_SECONDS))

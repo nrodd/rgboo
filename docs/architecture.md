@@ -85,12 +85,12 @@ sequenceDiagram
   A->>A: constant-time key compare
   A->>A: validate rgb, profanity check
   A->>FS: transaction on meta/pacing
-  FS-->>A: slot = max(now, last) + 20s
+  FS-->>A: slot = max(now, last + 20s); now if no last slot
   A->>FS: create request doc, status=pending
   A-->>B: 200 request_id, queue_position, wait
   Note over A,FS: the HTTP request ends here.<br/>dispatch is a separate, later sequence.
   FS-->>BR: on_snapshot push
-  BR->>BR: wait until scheduled_time
+  BR->>BR: wait until scheduled_time and previous display has had 20s
   BR->>FS: re-read the doc
   FS-->>BR: still pending
   BR->>E: RGB:r,g,b over USB serial
@@ -99,7 +99,13 @@ sequenceDiagram
 
 The pacing transaction (5–6) is what guarantees one colour every 20 seconds
 even with concurrent requests and multiple API instances — it is the
-distributed replacement for a mutex.
+distributed replacement for a mutex. When the last slot is at least 20 seconds
+old (or there is no previous slot), a new request is due immediately and the
+existing Firestore snapshot stream wakes the bridge. If the previous slot
+started recently, only its remaining time is added. The bridge also enforces
+20 seconds from its last actual display update during the running session,
+so delayed delivery does not cut a turn short. Queue wait times are estimates;
+bridge delays can extend them.
 
 ## Cancelling
 

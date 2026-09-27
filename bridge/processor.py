@@ -15,10 +15,10 @@ difference below follows from that:
 
 import logging
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Callable, Iterable, Optional
 
-from shared.schema import STATUS_PENDING
+from shared.schema import SLOT_SECONDS, STATUS_PENDING
 
 from .store import ColorRequest
 
@@ -46,6 +46,7 @@ class ColorProcessor:
         # Cap on one wait, so a far-future slot is re-evaluated periodically.
         self._max_wait = max_wait_seconds
         self._now = clock
+        self._last_displayed_at = None
 
         self._pending = {}
         # Doc ids currently mid-dispatch. Kept out of _pending so a
@@ -126,7 +127,14 @@ class ColorProcessor:
                 self._cond.wait(timeout=self._idle_wait)
                 return None
 
-            wait_seconds = (request.scheduled_time - self._now()).total_seconds()
+            due_at = request.scheduled_time
+            if self._last_displayed_at is not None:
+                # Delivery or serial delays must not shorten someone's turn.
+                due_at = max(
+                    due_at,
+                    self._last_displayed_at + timedelta(seconds=SLOT_SECONDS),
+                )
+            wait_seconds = (due_at - self._now()).total_seconds()
             if wait_seconds > 0:
                 logger.debug(
                     f"Waiting {wait_seconds:.1f}s before processing "
@@ -183,6 +191,7 @@ class ColorProcessor:
         # display push mirrors that: it's who/what is on the LEDs right now.
         self._update_obs(fresh.username)
         self._publish_display(fresh)
+        self._last_displayed_at = self._now()
 
         try:
             if success:

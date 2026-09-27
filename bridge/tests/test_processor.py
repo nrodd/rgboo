@@ -198,3 +198,36 @@ def test_stop_ends_run_loop(mock_store, mock_serial):
     processor.run()  # returns immediately rather than hanging
 
     assert processor.pending_count() == 0
+
+
+def test_late_delivery_preserves_actual_display_duration(mock_store, mock_serial):
+    from shared.schema import SLOT_SECONDS
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    processor = ColorProcessor(
+        mock_store, mock_serial, clock=lambda: now, max_wait_seconds=0.001,
+    )
+    processor.upsert(make_request(doc_id='first', offset_seconds=-60))
+    assert processor._tick().doc_id == 'first'
+
+    # Even if both scheduled slots are overdue, the second gets its own turn.
+    processor.upsert(make_request(doc_id='second', offset_seconds=-30))
+    now += datetime.timedelta(seconds=SLOT_SECONDS - 1)
+    assert processor._tick() is None
+    assert mock_serial.send_color.call_count == 1
+    now += datetime.timedelta(seconds=1)
+    assert processor._tick().doc_id == 'second'
+    assert mock_serial.send_color.call_count == 2
+
+
+def test_idle_bridge_dispatches_new_request_immediately(mock_store, mock_serial):
+    from shared.schema import SLOT_SECONDS
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    processor = ColorProcessor(mock_store, mock_serial, clock=lambda: now)
+    processor.upsert(make_request(doc_id='first', offset_seconds=-60))
+    processor._tick()
+    now += datetime.timedelta(seconds=SLOT_SECONDS + 1)
+    processor.upsert(make_request(doc_id='second', offset_seconds=-1))
+    assert processor._tick().doc_id == 'second'
+    assert mock_serial.send_color.call_count == 2
