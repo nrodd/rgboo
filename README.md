@@ -1,5 +1,5 @@
+<img width="2560" height="1440" alt="Frame (2)" src="https://github.com/user-attachments/assets/f8325e2c-f813-47d0-a4d9-cf007b3723a7" />
 
-<img width="1280" height="640" alt="Frame 1" src="https://github.com/user-attachments/assets/eb4006a3-cf0b-45b5-ba8a-ae0744f52fe7" />
 
 # 🎃 RGBoo 👻
 
