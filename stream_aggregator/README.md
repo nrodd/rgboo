@@ -50,7 +50,7 @@ Set `CLOUD_API_URL` to the API **base URL**, without `/api/color`, and
 use a local API URL and local key for development. Inside Docker, a host API can
 be reached at `http://host.docker.internal:8080` on Docker Desktop.
 
-The image runs as non-root (UID 10001). The named volume stores rotated Twitch
+The image runs as non-root (UID 10001). The named volume stores YouTube quota counters and rotated Twitch
 credentials; a bind mount instead must be writable by this UID. Secrets are never
 copied into the image. Do not commit `.env` or token files.
 
@@ -86,7 +86,7 @@ docker run -d --name rgboo-stream-aggregator --restart unless-stopped \
   rgboo-stream-aggregator
 ```
 
-The `/data` mapping preserves refreshed Twitch credentials in Unraid's appdata
+The `/data` mapping preserves YouTube quota counters and refreshed Twitch credentials in Unraid's appdata
 share. The container runs as UID/GID `10001:10001`, so this directory must be
 writable by that identity. Keep `TWITCH_TOKEN_FILE=/data/twitch-tokens.json` when
 using automatic refresh. No inbound port mappings or privileged access are needed;
@@ -135,17 +135,66 @@ build.
 5. The stream must expose an accessible live chat. This API-key setup targets
    public streams; private broadcasts requiring OAuth are not supported.
 
-Polling uses `liveChatMessages.list`, follows `nextPageToken`, and waits at least
-`pollingIntervalMillis`. The first page is skipped because it contains history;
-messages arriving before this first response can therefore also be skipped.
-Network/rate-limit failures back off. Invalid page tokens reset to a fresh cursor
-and skip history again. Ended/disabled chat stops the YouTube listener while
-Twitch continues. Change the video/chat ID and restart for the next broadcast;
-channel-wide discovery is not implemented. Quota/access errors exit visibly for
-operator correction instead of continuing to consume quota.
+Chat ingestion uses Google's `liveChatMessages.streamList` gRPC service over a
+long-lived TLS connection to `youtube.googleapis.com:443`. There is no REST chat
+polling fallback and no periodic reconnect for a quiet chat. Network failures
+reconnect with exponential backoff (5 seconds up to 5 minutes), passing the last
+`nextPageToken`. Initial history can span multiple batches: only messages with a
+publication timestamp at or after this worker's startup are accepted. Keep the
+host clock synchronized. Invalid resume cursors reset that cutoff to the current
+time so old commands are not replayed. Deduplication still applies across reconnects.
 
-Google now recommends `streamList` to reduce polling/quota overhead; this service
-uses `list` as requested. Check your project's quota before a long stream.
+If the configured video has no active chat, discovery uses `videos.list` once
+every five minutes. Ended/disabled chats stop the YouTube listener. Change the
+video/chat ID and recreate the container for the next broadcast; channel-wide
+broadcast discovery is not implemented. Twitch can continue independently.
+
+### Daily quota protection
+
+Streamed reads reduce request volume, but **posting each estimate still costs 50
+quota units**. Replies are therefore best-effort, subject to these local limits:
+
+| Variable | Default | Behavior |
+| --- | --- | --- |
+| `YOUTUBE_DAILY_REPLIES` | `160` | Maximum reply attempts per Pacific day (8,000 units). Set `0` to disable replies. |
+| `YOUTUBE_DAILY_READS` | `1000` | Maximum video discovery calls and stream connection attempts per Pacific day. |
+| `YOUTUBE_BUDGET_FILE` | `/data/youtube-budget.sqlite3` | SQLite counters and quota-exhaustion state; persist this file across restarts. |
+
+Limits may be lowered but cannot exceed these ceilings. Keep the existing `/data`
+volume mounted and writable by UID 10001. For a local run, set the budget file to
+a writable persistent path. Counters reserve attempts **before** sending, including
+failed/uncertain deliveries; restarting does not restore the allowance. Counters
+reset at midnight America/Los_Angeles, including daylight-saving changes.
+
+When replies reach their cap, colors continue to be forwarded without a YouTube
+acknowledgement. When the read budget is reached, discovery/reconnections pause
+until the next Pacific day. An already-open stream can continue receiving messages.
+A Google quota-exhaustion response blocks further local attempts until the next
+reset plus one minute. gRPC `RESOURCE_EXHAUSTED` may mean a rate or quota limit;
+we conservatively pause until reset for either rather than repeatedly reconnect.
+The listener waits without exiting, so quota exhaustion does not create a Docker
+restart loop and Twitch remains available.
+
+These are **local request safeguards, not a reading of Google's project quota**.
+Other programs, separate budget files/containers, usage before this deployment,
+and changes to Google's streaming accounting can still exhaust the project quota.
+Use one aggregator, inspect the project's quota metrics, and lower the reply cap
+if the project is shared. A fresh budget file does not know today's earlier usage.
+More than 160 daily acknowledgements requires a separately planned quota increase
+or a different acknowledgement design; do not reset/delete counters to bypass caps.
+
+References: [streamList](https://developers.google.com/youtube/v3/live/docs/liveChatMessages/streamList),
+[streaming client/schema](https://developers.google.com/youtube/v3/live/streaming-live-chat),
+[quota costs and reset time](https://developers.google.com/youtube/v3/determine_quota_cost).
+
+`stream_list.proto` is the minimal wire-compatible subset needed for text commands.
+The generated `stream_list_pb2.py` is committed and copied into the Docker image;
+no compiler is required at runtime. To regenerate after changing the schema:
+
+```sh
+python -m pip install grpcio-tools==1.78.0
+python -m grpc_tools.protoc -I stream_aggregator --python_out=stream_aggregator stream_aggregator/stream_list.proto
+```
 
 ## Twitch setup
 
@@ -208,7 +257,7 @@ python3 -m venv .venv-stream
 
 Tests use fakes and do not read your credentials or submit real colors.
 
-Protocol references: [YouTube polling](https://developers.google.com/youtube/v3/live/docs/liveChatMessages/list),
+Protocol references: [YouTube streaming](https://developers.google.com/youtube/v3/live/docs/liveChatMessages/streamList),
 [Twitch WebSockets](https://dev.twitch.tv/docs/eventsub/handling-websocket-events/),
 [Twitch token validation](https://dev.twitch.tv/docs/authentication/validate-tokens/),
 [Twitch OAuth authorization code flow](https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#authorization-code-grant-flow).

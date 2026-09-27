@@ -7,6 +7,7 @@ import aiohttp
 
 from .colors import parse_color
 from .http import APIError, request
+from .youtube_budget import BudgetExhausted
 
 log = logging.getLogger(__name__)
 MAX_IN_FLIGHT = 10
@@ -80,6 +81,8 @@ class Forwarder:
             log.info("Sending chat estimate reply (source=%s, estimated_wait_seconds=%s)", source, seconds)
             await reply(text)
             log.info("Chat estimate reply sent (source=%s)", source)
+        except BudgetExhausted:
+            log.info("Chat estimate reply skipped: daily YouTube budget exhausted")
         except APIError as error:
             log.warning("Chat estimate reply rejected (source=%s, HTTP %s, reason=%s); not retried",
                         source, error.status, error.log_reason)

@@ -115,31 +115,11 @@ def youtube_message(identifier, text="!red", kind="textMessageEvent"):
             "snippet": {"type": kind, "textMessageDetails": {"messageText": text}}}
 
 
-def test_youtube_history_cursor_interval_and_end():
-    async def scenario():
-        forwarder = Forwarder(None, CONFIG)
-        youtube = YouTube(None, CONFIG, forwarder)
-        youtube.get = AsyncMock(side_effect=[
-            {"items": [{"liveStreamingDetails": {"activeLiveChatId": "chat"}}]},
-            {"items": [youtube_message("old")], "nextPageToken": "page2", "pollingIntervalMillis": 7000},
-            {"items": [youtube_message("new"), youtube_message("other", kind="superChatEvent")],
-             "nextPageToken": "page3", "pollingIntervalMillis": 9000},
-            {"items": [], "offlineAt": "ended"},
-        ])
-        assert await youtube.poll() == 7
-        assert forwarder.queue.empty()
-        assert await youtube.poll() == 9
-        assert youtube.get.call_args.kwargs["pageToken"] == "page2"
-        assert forwarder.queue.qsize() == 1
-        assert await youtube.poll() is None
-    asyncio.run(scenario())
-
-
 def test_youtube_waits_for_scheduled_video():
     async def scenario():
         youtube = YouTube(None, CONFIG, None)
         youtube.get = AsyncMock(return_value={"items": []})
-        assert await youtube.poll() == 60
+        assert await youtube.discover() is False
     asyncio.run(scenario())
 
 
@@ -276,18 +256,6 @@ def test_real_http_delivery_to_local_api():
                 assert received == [("secret", {"username": "Bob", "color": {"r": 0, "g": 0, "b": 255}})]
         finally:
             await runner.cleanup()
-    asyncio.run(scenario())
-
-
-def test_youtube_error_backoff_respects_last_poll_interval(monkeypatch):
-    async def scenario():
-        youtube = YouTube(None, CONFIG, None)
-        youtube.interval = 17
-        youtube.poll = AsyncMock(side_effect=[APIError(429), APIError(403, "liveChatEnded")])
-        sleep = AsyncMock()
-        monkeypatch.setattr("stream_aggregator.youtube.asyncio.sleep", sleep)
-        await youtube.run()
-        sleep.assert_awaited_once_with(17)
     asyncio.run(scenario())
 
 
@@ -484,9 +452,12 @@ def test_platform_replies_route_to_original_chat_and_user(monkeypatch):
         event["payload"]["event"]["chatter_user_login"] = "bob_login"
         twitch.notification(event)
         youtube = YouTube(None, replace(CONFIG, youtube_token="yt-token", youtube_chat="original-chat"), forwarder)
-        youtube.started = True
-        youtube.get = AsyncMock(return_value={"items": [youtube_message("yt-message")], "nextPageToken": "next"})
-        await youtube.poll()
+        from stream_aggregator import stream_list_pb2 as proto
+        from datetime import datetime, timezone
+        youtube.consume(proto.LiveChatMessageListResponse(items=[proto.LiveChatMessage(
+            id="yt-message", author_details=proto.LiveChatMessageAuthorDetails(display_name="Alice"),
+            snippet=proto.LiveChatMessageSnippet(type=1, published_at=datetime.now(timezone.utc).isoformat(),
+                text_message_details=proto.LiveChatTextMessageDetails(message_text="!red")))]))
         youtube.chat_id = "different-chat"
         worker = asyncio.create_task(forwarder.run())
         try:

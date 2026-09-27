@@ -22,6 +22,10 @@ class Config:
     youtube_secret: str = ""
     youtube_refresh: str = ""
 
+    youtube_budget_file: str = ":memory:"
+    youtube_daily_replies: int = 160
+    youtube_daily_reads: int = 1000
+
     @classmethod
     def from_env(cls):
         fields = {
@@ -34,7 +38,20 @@ class Config:
             "youtube_token": "YOUTUBE_ACCESS_TOKEN", "youtube_client": "YOUTUBE_CLIENT_ID",
             "youtube_secret": "YOUTUBE_CLIENT_SECRET", "youtube_refresh": "YOUTUBE_REFRESH_TOKEN",
         }
-        config = cls(**{key: os.getenv(env, "").strip() for key, env in fields.items()})
+        values = {key: os.getenv(env, "").strip() for key, env in fields.items()}
+        values["youtube_budget_file"] = os.getenv("YOUTUBE_BUDGET_FILE", "/data/youtube-budget.sqlite3").strip()
+        for field, env, default, maximum in (
+            ("youtube_daily_replies", "YOUTUBE_DAILY_REPLIES", 160, 160),
+            ("youtube_daily_reads", "YOUTUBE_DAILY_READS", 1000, 1000),
+        ):
+            try:
+                value = int(os.getenv(env, str(default)))
+            except ValueError:
+                raise ValueError(f"{env} must be an integer") from None
+            if not 0 <= value <= maximum:
+                raise ValueError(f"{env} must be between 0 and {maximum}")
+            values[field] = value
+        config = cls(**values)
         url = urlparse(config.cloud_url)
         if url.scheme not in ("http", "https") or not url.hostname or url.query or url.fragment or url.username:
             raise ValueError("CLOUD_API_URL must be an HTTP(S) base URL without credentials or query")
@@ -44,6 +61,8 @@ class Config:
         twitch = bool(config.twitch_channel)
         if not youtube and not twitch:
             raise ValueError("Configure a YouTube video/chat ID or TWITCH_BROADCASTER_ID")
+        if youtube and config.youtube_budget_file in ("", ":memory:"):
+            raise ValueError("YOUTUBE_BUDGET_FILE must be a persistent file path")
         if youtube and not config.youtube_key:
             raise ValueError("YOUTUBE_API_KEY is required for YouTube")
         if youtube and not (config.youtube_token or config.youtube_refresh):

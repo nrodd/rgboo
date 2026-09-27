@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 async def run(config):
-    log.info("Stream aggregator starting (chat_estimate_replies=v2, youtube=%s, twitch=%s)",
+    log.info("Stream aggregator starting (youtube_ingestion=streamList, chat_estimate_replies=v3, youtube=%s, twitch=%s)",
              bool(config.youtube_video or config.youtube_chat), bool(config.twitch_channel))
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
