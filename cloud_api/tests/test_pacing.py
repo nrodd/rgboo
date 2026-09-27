@@ -1,37 +1,31 @@
+"""Idle requests start immediately; active slots keep their full duration."""
 from datetime import datetime, timedelta, timezone
+
+import pytest
 
 from ..pacing import next_slot
 from shared.schema import SLOT_SECONDS
 
-"""
-Unit tests for the pacing slot-assignment math (cloud_api/pacing.py).
-"""
 
-"""Test no prior schedule starts SLOT_SECONDS from now"""
-def test_no_prior_schedule_starts_from_now():
+@pytest.mark.parametrize('elapsed', [None, SLOT_SECONDS, SLOT_SECONDS + 100])
+def test_idle_request_starts_immediately(elapsed):
     now = datetime.now(timezone.utc)
-    result = next_slot(None, now)
-    assert result == now + timedelta(seconds=SLOT_SECONDS)
+    last = None if elapsed is None else now - timedelta(seconds=elapsed)
+    assert next_slot(last, now) == now
 
-"""Test a prior schedule already in the past is treated like no schedule"""
-def test_prior_schedule_in_the_past_starts_from_now():
+
+@pytest.mark.parametrize('elapsed', [0, 5, SLOT_SECONDS - 0.001, -5])
+def test_active_slot_gets_its_remaining_time(elapsed):
     now = datetime.now(timezone.utc)
-    last = now - timedelta(seconds=100)
-    result = next_slot(last, now)
-    assert result == now + timedelta(seconds=SLOT_SECONDS)
+    last = now - timedelta(seconds=elapsed)
+    assert next_slot(last, now) == last + timedelta(seconds=SLOT_SECONDS)
 
-"""Test a prior schedule in the future stacks the new slot after it"""
-def test_prior_schedule_in_the_future_stacks_after_it():
-    now = datetime.now(timezone.utc)
-    last = now + timedelta(seconds=5)
-    result = next_slot(last, now)
-    assert result == last + timedelta(seconds=SLOT_SECONDS)
 
-"""Test consecutive slots are exactly SLOT_SECONDS apart"""
 def test_consecutive_slots_are_evenly_spaced():
     now = datetime.now(timezone.utc)
     first = next_slot(None, now)
     second = next_slot(first, now)
     third = next_slot(second, now)
+    assert first == now
     assert (second - first).total_seconds() == SLOT_SECONDS
     assert (third - second).total_seconds() == SLOT_SECONDS
