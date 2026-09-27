@@ -17,6 +17,10 @@ class Config:
     twitch_secret: str = ""
     twitch_refresh: str = ""
     twitch_token_file: str = ""
+    youtube_token: str = ""
+    youtube_client: str = ""
+    youtube_secret: str = ""
+    youtube_refresh: str = ""
 
     @classmethod
     def from_env(cls):
@@ -27,6 +31,8 @@ class Config:
             "twitch_user": "TWITCH_BOT_USER_ID", "twitch_channel": "TWITCH_BROADCASTER_ID",
             "twitch_token": "TWITCH_ACCESS_TOKEN", "twitch_secret": "TWITCH_CLIENT_SECRET",
             "twitch_refresh": "TWITCH_REFRESH_TOKEN", "twitch_token_file": "TWITCH_TOKEN_FILE",
+            "youtube_token": "YOUTUBE_ACCESS_TOKEN", "youtube_client": "YOUTUBE_CLIENT_ID",
+            "youtube_secret": "YOUTUBE_CLIENT_SECRET", "youtube_refresh": "YOUTUBE_REFRESH_TOKEN",
         }
         config = cls(**{key: os.getenv(env, "").strip() for key, env in fields.items()})
         url = urlparse(config.cloud_url)
@@ -40,6 +46,10 @@ class Config:
             raise ValueError("Configure a YouTube video/chat ID or TWITCH_BROADCASTER_ID")
         if youtube and not config.youtube_key:
             raise ValueError("YOUTUBE_API_KEY is required for YouTube")
+        if youtube and not (config.youtube_token or config.youtube_refresh):
+            raise ValueError("YouTube chat replies require YOUTUBE_ACCESS_TOKEN or YOUTUBE_REFRESH_TOKEN")
+        if config.youtube_refresh and not all((config.youtube_client, config.youtube_secret)):
+            raise ValueError("YouTube refresh requires YOUTUBE_CLIENT_ID and YOUTUBE_CLIENT_SECRET")
         if any((config.twitch_client, config.twitch_user, config.twitch_token)) and not twitch:
             raise ValueError("TWITCH_BROADCASTER_ID is required for Twitch")
         if twitch and not all((config.twitch_client, config.twitch_user, config.twitch_token)):
