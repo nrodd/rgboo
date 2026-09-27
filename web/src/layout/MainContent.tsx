@@ -13,7 +13,7 @@ export const MainContent = () => (
     <div>
       <StreamEmbed />
     </div>
-    <div className="lg:absolute lg:bottom-0 lg:right-0 md:w-auto md:flex-shrink-0 w-full mt-12 mb-16 z-40">
+    <div className="lg:absolute lg:bottom-0 lg:right-0 md:w-auto md:flex-shrink-0 w-full mt-12 mb-8 lg:mb-28 z-40">
       <ColorForm />
     </div>
   </div>

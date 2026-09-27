@@ -2,6 +2,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Footer, MainContent } from "./layout";
 import InfoButton from "./components/InfoButton";
 import Admin from "./Admin";
+import Privacy from "./Legal/Privacy";
+import Terms from "./Legal/Terms";
 
 const Home = () => (
     <div className="flex flex-col min-h-dvh justify-between">
@@ -16,6 +18,8 @@ const App = () => (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/admin" element={<Admin />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
     </Routes>
   </BrowserRouter>
 );
