@@ -1,6 +1,7 @@
 import roomBackgroundUrl from "../assets/background.png";
 import candleFatUrl from "../assets/candle_fat.png";
 import candleTallUrl from "../assets/candle_tall.png";
+import ghostUrl from "../assets/ghost.png";
 import moonUrl from "../assets/moon.png";
 import spiderTwoUrl from "../assets/spider_2.png";
 import spiderThreeUrl from "../assets/spider_3.png";
@@ -48,6 +49,7 @@ export const sceneArtwork: SceneArtwork[] = [
   { id: "pumpkin", layer: "foreground", x: 110, y: 810, width: 96, height: 96 },
   { id: "frog", layer: "props", x: 1280, y: 510, width: 95, height: 70, action: "frog-hop" },
   { id: "spider", layer: "foreground", x: -20, y: 0, width: 240, height: 240, frames: [spiderDefaultUrl, spiderTwoUrl, spiderThreeUrl, spiderFourUrl] },
+  { id: "ghost", layer: "foreground", x: -250, y: 400, width: 460, height: 460, src: ghostUrl },
   { id: "candle-left", src: candleFatUrl, crop: { x: 8, y: 7, width: 17, height: 25 }, layer: "foreground", x: 1190, y: 742, width: 68, height: 132, motion: "float", action: "toggle-candles" },
   { id: "candle-right", src: candleTallUrl, crop: { x: 9, y: 2, width: 15, height: 30 }, layer: "foreground", x: 1272, y: 705, width: 68, height: 168, motion: "float", action: "toggle-candles" },
 ];

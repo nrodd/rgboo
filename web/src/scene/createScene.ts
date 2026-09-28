@@ -189,6 +189,20 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
         object.y = art.y - height;
         app.canvas.dataset.frog = frog?.update(elapsed, still, height > 0) ?? (height > 0 ? "hopping" : "resting");
       }
+      if (art.id === "ghost") {
+        const cycle = (elapsed % 180);
+        let fade = 0;
+        if (cycle <= 5) {
+          fade = cycle / 5;
+        } else if (cycle <= 55) {
+          fade = 1;
+        } else if (cycle <= 60) {
+          fade = (60 - cycle) / 5;
+        }
+        object.alpha = fade;
+        object.x = art.x + Math.sin(elapsed * 0.5) * 10;
+        object.y = art.y + Math.sin(elapsed * 1.1) * 12;
+      }
     }
     for (const animation of animatedArt.values()) {
       animation.elapsed += dt;
