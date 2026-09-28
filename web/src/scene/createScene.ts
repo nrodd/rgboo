@@ -94,6 +94,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     return { object, glow, body };
   });
   let tvSprite: Sprite | undefined;
+  const animatedArt = new Map<string, { sprite: Sprite; textures: Texture[]; frameIndex: number; elapsed: number; frameDelays: number[] }>();
   let disposed = false;
   const resize = () => {
     if (disposed || !host.clientWidth || !host.clientHeight) return;
@@ -105,7 +106,11 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     layers.foreground.scale.set(layout.scale);
     layers.foreground.position.set(layout.x, layout.y);
     const spider = objects.get("spider")!;
-    spider.position.set(width < 760 ? (24 - layout.x) / layout.scale : 105, width < 760 ? -layout.y / layout.scale : 0);
+    const spiderArt = sceneArtwork.find((art) => art.id === "spider")!;
+    spider.position.set(
+      width < 760 ? (spiderArt.x - layout.x / layout.scale) / layout.scale : spiderArt.x,
+      width < 760 ? (-layout.y / layout.scale) : 0,
+    );
     const wall = objects.get("wall")!;
     const wallArt = sceneArtwork.find((art) => art.id === "wall")!;
     if (!wallArt.src) {
@@ -185,6 +190,15 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
         app.canvas.dataset.frog = frog?.update(elapsed, still, height > 0) ?? (height > 0 ? "hopping" : "resting");
       }
     }
+    for (const animation of animatedArt.values()) {
+      animation.elapsed += dt;
+      const frameDelay = animation.frameDelays[animation.frameIndex] ?? 0.18;
+      if (animation.elapsed >= frameDelay) {
+        animation.elapsed = 0;
+        animation.frameIndex = (animation.frameIndex + 1) % animation.textures.length;
+        animation.sprite.texture = animation.textures[animation.frameIndex];
+      }
+    }
   });
   const onVisibility = () => { if (document.hidden) app.stop(); else { redraw(); app.start(); } };
   const onKeyDown = (event: KeyboardEvent) => {
@@ -221,16 +235,29 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     spiderWeb.height = 256;
   }).catch((error: unknown) => console.warn("Could not load spider web art", error));
   // A failed art export keeps its placeholder; it must never remove the player.
-  void Promise.all(sceneArtwork.filter((art) => art.src).map(async (art) => {
+  void Promise.all(sceneArtwork.filter((art) => art.src || art.frames).map(async (art) => {
     try {
-      const texture = await Assets.load<Texture>(art.src!);
-      texture.source.scaleMode = "nearest";
+      const sources = art.frames && art.frames.length > 0 ? art.frames : [art.src!];
+      const textures = await Promise.all(sources.map(async (src) => {
+        const texture = await Assets.load<Texture>(src);
+        texture.source.scaleMode = "nearest";
+        return texture;
+      }));
       if (disposed) return;
       const object = objects.get(art.id)!;
       object.removeChildren().forEach((child) => child.destroy());
-      const cropped = art.crop ? new Texture({ source: texture.source, frame: new Rectangle(art.crop.x, art.crop.y, art.crop.width, art.crop.height) }) : texture;
+      const primary = textures[0];
+      const cropped = art.crop ? new Texture({ source: primary.source, frame: new Rectangle(art.crop.x, art.crop.y, art.crop.width, art.crop.height) }) : primary;
       if (art.crop) object.on("destroyed", () => cropped.destroy());
       const sprite = object.addChild(new Sprite({ texture: cropped }));
+      if (art.frames && art.frames.length > 1) {
+        const frameDelays = art.id === "spider" ? [3.6, 1.2, 1.2, 3.6] : Array(textures.length).fill(0.18);
+        animatedArt.set(art.id, { sprite, textures: textures.map((texture) => art.crop ? new Texture({ source: texture.source, frame: new Rectangle(art.crop.x, art.crop.y, art.crop.width, art.crop.height) }) : texture), frameIndex: 0, elapsed: 0, frameDelays });
+        object.on("destroyed", () => {
+          for (const texture of animatedArt.get(art.id)?.textures ?? []) texture.destroy();
+          animatedArt.delete(art.id);
+        });
+      }
       if (art.id.startsWith("candle")) {
         // The supplied wax exports are unlit. Keep a separate flame above the wick,
         // and scale the cropped art uniformly so its pixels retain their proportions.
@@ -240,6 +267,10 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
         const flame = object.addChild(new Graphics({ label: "candle-flame" }));
         pixels(flame, ["...a...", "..aaa..", "..aba..", ".abbba.", "..aba..", "...b...", "...w...", "...w..."],
           { a: 0xdd9460, b: 0xffe8ad, w: 0x30202b }, 4, art.width / 2 - 14, 0);
+      } else if (art.frames && art.frames.length > 1) {
+        const scale = Math.min(art.width / cropped.width, art.height / cropped.height);
+        sprite.scale.set(scale);
+        sprite.position.set((art.width - cropped.width * scale) / 2, (art.height - cropped.height * scale) / 2);
       } else { sprite.width = art.width; sprite.height = art.height; }
       if (art.id === "wall") resize();
       if (!disposed) app.render();
