@@ -3,6 +3,8 @@ import { Footer, MainContent } from "./layout";
 import InfoButton from "./components/InfoButton";
 import Admin from "./Admin";
 import Stats from "./Stats";
+import Privacy from "./Legal/Privacy";
+import Terms from "./Legal/Terms";
 
 const Home = () => (
     <div className="flex flex-col min-h-dvh justify-between">
@@ -19,6 +21,8 @@ const App = () => (
       <Route path="/admin" element={<Admin />} />
       {/* Admin-only until there's a plan for public load on Firestore. */}
       <Route path="/admin/stats" element={<Stats />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
     </Routes>
   </BrowserRouter>
 );

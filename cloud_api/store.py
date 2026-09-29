@@ -1,8 +1,7 @@
 """Firestore-backed color-request queue and pacing clock.
 
-Mirrors the interface of the old in-process ColorQueue
-(middleware/color_queue.py) so cloud_api/routes.py ports over almost
-unchanged, and so tests can swap in a fake/mock store.
+A narrow interface over Firestore so cloud_api/routes.py stays free of
+query details, and so tests can swap in a fake/mock store.
 """
 
 import hashlib
@@ -24,7 +23,6 @@ from shared.schema import (
     PACING_DOC,
     REDACTED_USERNAME,
     REQUESTS_COLLECTION,
-    SLOT_SECONDS,
     STATUS_CANCELLED,
     STATUS_PENDING,
 )
@@ -100,13 +98,13 @@ class RequestStore:
         now = datetime.now(timezone.utc)
         pacing = self._pacing_ref.get()
         last_scheduled_time = pacing.to_dict().get('last_scheduled_time') if pacing.exists else None
-        next_available = max(last_scheduled_time, now) if last_scheduled_time else now
+        next_available = next_slot(last_scheduled_time, now)
 
         return {
             'queue_size': self._pending_count(),
             'worker_running': self.get_bridge_status()['bridge_online'],
             'next_available_slot': next_available.isoformat(),
-            'estimated_wait_for_new_request': int((next_available - now).total_seconds()) + SLOT_SECONDS,
+            'estimated_wait_for_new_request': int((next_available - now).total_seconds()),
         }
 
     def get_queue_contents(self, limit: Optional[int] = None) -> list:

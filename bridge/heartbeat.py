@@ -1,8 +1,8 @@
 """Periodic liveness write to meta/bridge.
 
 The cloud API reads this doc to answer `bridge_online`, `serial_connected`,
-and `serial_port` on GET / and GET /api/status -- the replacement for the
-old middleware inspecting its own serial handle in-process.
+and `serial_port` on GET / and GET /api/status. The API has no other way to
+see the serial port: only this machine holds it.
 """
 
 import logging

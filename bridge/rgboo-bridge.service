@@ -9,15 +9,15 @@
 # See bridge/README.md.
 
 [Unit]
-Description=RGBoo bridge (Firestore queue -> USB serial -> ESP32)
+Description=RGBoo bridge (Firestore queue -> USB serial -> Raspberry Pi Pico 2)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=rgboo
-# Repo root, not bridge/ -- the daemon imports the shared/ and middleware/
-# packages as siblings.
+# Repo root, not bridge/ -- the daemon imports the shared/ package as a
+# sibling.
 WorkingDirectory=/opt/rgboo
 Environment=PYTHONUNBUFFERED=1
 Environment=GOOGLE_APPLICATION_CREDENTIALS=/etc/rgboo/bridge-sa-key.json

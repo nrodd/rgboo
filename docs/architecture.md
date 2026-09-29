@@ -5,8 +5,7 @@ person at a time. This describes the GCP-based system: what runs where, how a
 request becomes light, and why the pieces are split the way they are.
 
 Related: [local-setup.md](local-setup.md) (running it yourself),
-[gcp-migration-plan.md](gcp-migration-plan.md) (how we got here),
-[gcp-setup.md](gcp-setup.md) (provisioning), [deploying.md](deploying.md) (shipping changes).
+[deploying.md](deploying.md) (shipping changes).
 
 ## The constraint that shapes everything
 
@@ -28,7 +27,7 @@ Neither half calls the other. They meet at a Firestore document.
 | `cloud_api/` | Cloud Run (`us-east1`, scale-to-zero) | Validation, pacing, the queue and its log |
 | Firestore | GCP (`us-east1`, Native mode) | The queue, the pacing clock, bridge liveness |
 | `bridge/` | Home machine (systemd) | Waiting for each slot, USB serial write, OBS overlay |
-| `firmware/` | ESP32 | Reads `RGB:r,g,b` from serial, drives the LEDs |
+| `firmware/` | Raspberry Pi Pico 2 | Reads `RGB:r,g,b` from serial, drives the LEDs |
 
 `shared/` holds the constants both halves must agree on: collection names,
 status values, and `SLOT_SECONDS = 20`.
@@ -52,7 +51,7 @@ flowchart LR
 
   subgraph home["Home machine · no inbound access"]
     BR["bridge daemon"]
-    E["ESP32"]
+    E["Raspberry Pi Pico 2"]
     O["OBS overlay<br/>:5001"]
   end
 
@@ -79,19 +78,19 @@ sequenceDiagram
   participant A as Cloud Run API
   participant FS as Firestore
   participant BR as Bridge
-  participant E as ESP32
+  participant E as Pico 2
 
   B->>W: POST /api/color (username + rgb)
   W->>A: forward + X-Api-Key
   A->>A: constant-time key compare
   A->>A: validate rgb, profanity check
   A->>FS: transaction on meta/pacing
-  FS-->>A: slot = max(now, last) + 20s
+  FS-->>A: slot = max(now, last + 20s); now if no last slot
   A->>FS: create request doc, status=pending
   A-->>B: 200 request_id, queue_position, wait
   Note over A,FS: the HTTP request ends here.<br/>dispatch is a separate, later sequence.
   FS-->>BR: on_snapshot push
-  BR->>BR: wait until scheduled_time
+  BR->>BR: wait until scheduled_time and previous display has had 20s
   BR->>FS: re-read the doc
   FS-->>BR: still pending
   BR->>E: RGB:r,g,b over USB serial
@@ -100,7 +99,13 @@ sequenceDiagram
 
 The pacing transaction (5–6) is what guarantees one colour every 20 seconds
 even with concurrent requests and multiple API instances — it is the
-distributed replacement for a mutex.
+distributed replacement for a mutex. When the last slot is at least 20 seconds
+old (or there is no previous slot), a new request is due immediately and the
+existing Firestore snapshot stream wakes the bridge. If the previous slot
+started recently, only its remaining time is added. The bridge also enforces
+20 seconds from its last actual display update during the running session,
+so delayed delivery does not cut a turn short. Queue wait times are estimates;
+bridge delays can extend them.
 
 ## Cancelling
 
@@ -112,7 +117,7 @@ sequenceDiagram
   participant A as Cloud Run API
   participant FS as Firestore
   participant BR as Bridge
-  participant E as ESP32
+  participant E as Pico 2
 
   Note over BR: already holding a request,<br/>waiting for its slot
   A->>FS: POST /admin/queue/clear<br/>pending -> cancelled
@@ -224,7 +229,7 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 | Bridge crashes or reboots | Pending docs stay in Firestore; systemd restarts it and overdue slots dispatch immediately. Nothing is lost. |
 | Bridge stays down | API keeps accepting requests; `bridge_online` goes false after 2 min. Work queues rather than fails. |
 | API deploy mid-queue | Invisible. The queue is in Firestore, not in the API process. |
-| ESP32 unplugged | Request marked `failed` with the error; the queue keeps moving. |
+| Pico 2 unplugged | Request marked `failed` with the error; the queue keeps moving. |
 | Serial write fails after re-read | Doc left `pending`; the next resync retries rather than dropping it. |
 | Firestore unreachable from home | Bridge logs and retries; heartbeat goes stale, so the cloud reports it offline. |
 | The stats rollup has never run | `/admin/stats` returns an all-zero window. No error. |
@@ -240,15 +245,16 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 
 ## Current state
 
-`API_UPSTREAM` in `web/wrangler.jsonc` points at Cloud Run, so the HTTP half of
-the cutover is done: colours travel Worker → Cloud Run → Firestore.
+The GCP migration is complete: every colour travels Worker → Cloud Run →
+Firestore → bridge → USB. The old always-on Flask middleware that used to
+serve this path over a Cloudflare Tunnel has been removed.
 
 | Piece | State |
 |---|---|
-| `cloud_api/` on Cloud Run | Live |
+| `cloud_api/` on Cloud Run | Live, serving all traffic |
 | Firestore + composite index | Live |
-| `web/worker/` | Live, pointing at Cloud Run |
-| `bridge/` | Confirm before relying on the stats: they count `status: done`, which only the bridge writes |
+| `bridge/` | Live on the home machine under systemd |
+| `web/worker/` | Pointing at Cloud Run for both production and staging |
 | `/admin/stats` page | Built, behind Cloudflare Access until there's a plan for public load on Firestore |
 
 ## Cost

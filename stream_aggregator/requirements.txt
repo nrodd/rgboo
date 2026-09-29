@@ -1,0 +1,5 @@
+aiohttp>=3.12.15,<4
+webcolors>=24.11.1,<26
+grpcio>=1.78,<2
+protobuf>=6.33.5,<7
+tzdata>=2025.2

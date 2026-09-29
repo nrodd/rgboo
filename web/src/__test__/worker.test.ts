@@ -2,14 +2,13 @@ import { test, expect, vi, afterEach } from "vitest";
 import worker from "../../worker/index.js";
 
 /**
- * Tests for the Cloudflare Worker that proxies /api/* to the middleware.
+ * Tests for the Cloudflare Worker that proxies /api/* to the Cloud Run API.
  *
  * The upstream fetch is stubbed, so these assert what the Worker *sends* --
- * which upstream URL and which credentials. That is exactly what the GCP
- * cutover changes, and what a rollback has to change back.
+ * which upstream URL and which credentials.
  */
 
-const OLD_UPSTREAM = "https://api.rgboo.com";
+const DEFAULT_UPSTREAM = "https://rgboo-api-186324327580.us-east1.run.app";
 const NEW_UPSTREAM = "https://rgboo-api-abc123.run.app";
 
 /** Stub the upstream and return the spy, so tests can inspect the call. */
@@ -74,7 +73,7 @@ test("when API_UPSTREAM is unset then it falls back to the current upstream", as
 
   await worker.fetch(colorRequest(), {});
 
-  expect(spy.mock.calls[0][0]).toBe(`${OLD_UPSTREAM}/api/color`);
+  expect(spy.mock.calls[0][0]).toBe(`${DEFAULT_UPSTREAM}/api/color`);
 });
 
 test("when API_UPSTREAM has a trailing slash then the path is not doubled", async () => {
@@ -96,42 +95,13 @@ test("when API_KEY is configured then it is sent as X-Api-Key", async () => {
   expect(sentHeaders(spy)["X-Api-Key"]).toBe("cloud-run-secret");
 });
 
-test("when Access service tokens are configured then they are sent", async () => {
-  const spy = stubUpstream();
-
-  await worker.fetch(colorRequest(), {
-    CF_ACCESS_ID: "access-id",
-    CF_ACCESS_SECRET: "access-secret",
-  });
-
-  const headers = sentHeaders(spy);
-  expect(headers["CF-Access-Client-Id"]).toBe("access-id");
-  expect(headers["CF-Access-Client-Secret"]).toBe("access-secret");
-});
-
-test("when both credential sets are configured then both are sent, so cutover and rollback need no code change", async () => {
-  const spy = stubUpstream();
-
-  await worker.fetch(colorRequest(), {
-    API_UPSTREAM: NEW_UPSTREAM,
-    API_KEY: "cloud-run-secret",
-    CF_ACCESS_ID: "access-id",
-    CF_ACCESS_SECRET: "access-secret",
-  });
-
-  const headers = sentHeaders(spy);
-  expect(headers["X-Api-Key"]).toBe("cloud-run-secret");
-  expect(headers["CF-Access-Client-Id"]).toBe("access-id");
-});
-
-test("when no credentials are configured then no credential headers are sent", async () => {
+test("when no API key is configured then no credential header is sent", async () => {
   const spy = stubUpstream();
 
   await worker.fetch(colorRequest(), {});
 
   const headers = sentHeaders(spy);
   expect(headers).not.toHaveProperty("X-Api-Key");
-  expect(headers).not.toHaveProperty("CF-Access-Client-Id");
   expect(headers["Content-Type"]).toBe("application/json");
 });
 

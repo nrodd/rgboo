@@ -48,10 +48,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
-middleware/middleware.log
-
-# SQLite request log (retired by the GCP migration; see docs/gcp-migration-plan.md)
-middleware/requests.db
 
 # Environment variables
 .env
@@ -68,3 +64,7 @@ middleware/requests.db
 
 # Dependencies
 node_modules/
+
+# Stream aggregator local environment and rotated OAuth credentials
+.venv-stream/
+stream_aggregator/*tokens*.json

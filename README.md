@@ -1,5 +1,5 @@
+<img width="2560" height="1440" alt="Frame (2)" src="https://github.com/user-attachments/assets/f8325e2c-f813-47d0-a4d9-cf007b3723a7" />
 
-<img width="1280" height="640" alt="Frame 1" src="https://github.com/user-attachments/assets/eb4006a3-cf0b-45b5-ba8a-ae0744f52fe7" />
 
 # 🎃 RGBoo 👻
 
@@ -8,42 +8,32 @@ A haunting collection of software that lets the community control RGB LEDs toget
 ## 🦇 Project Architecture
 
 ```
-Web Frontend → Flask API → ESP32 Firmware → RGB LEDs
+Web Frontend → Cloud API → Firestore → Bridge → Pico 2 Firmware → RGB LEDs
 ```
 
-The system consists of three main components working together:
+The system consists of these components working together:
 
 ## 📁 Directory Overview
 
 ### 👻 `firmware/`
-**ESP32 C++ Application**
-- Runs on an ESP32 development board
+**Raspberry Pi Pico 2 C++ Application**
+- Runs on an RP2350 Raspberry Pi Pico 2
 - Listens for color commands over USB serial
 - Controls RGB LED strips connected to the board
 - Built with Arduino framework and PlatformIO
 - Handles RGB color formats
-
-### 🧙‍♀️ `middleware/`
-**Python Flask API**
-- REST API that bridges web and hardware
-- Receives color requests from the web frontend
-- Communicates with ESP32 via USB serial
-- Starts a webssocket to communicate with OBS
-- Handles user tracking and logging
-- Auto-detects ESP32 connections
-- Supports RGB colors
 
 ### 🕸️ `web/`
 **React Web Interface**
 - Modern React application built with Vite
 - User-friendly color picker interface
 - Deployed with Cloudflare workers
-- Sends color commands to the middleware API
+- Sends color commands to the cloud API
 - Real-time color preview and control
 
 ### ☁️ `cloud_api/`
 **Python Flask API on Cloud Run**
-- The middleware's HTTP half, moved to Google Cloud
+- The HTTP half of the system, running on Google Cloud
 - Validates color requests and paces them one per 20 seconds
 - Stores the queue in Firestore, so it survives restarts
 - Deployed on demand from Actions -> Deploy API
@@ -52,8 +42,21 @@ The system consists of three main components working together:
 **Python daemon on the home machine**
 - The half that cannot move to the cloud: it owns the USB cable
 - Watches Firestore for pending requests and waits for each one's turn
-- Writes colors to the ESP32 and serves the OBS overlay
+- Writes colors to the Pico 2 and serves the OBS overlay
 - Runs under systemd; updated by pulling on that machine
+
+### 💬 `stream_aggregator/`
+**Python stream chat worker**
+- Aggregates YouTube polling and Twitch EventSub chat
+- Forwards `!color` commands to the cloud API
+- Runs in Docker; see [stream_aggregator/README.md](stream_aggregator/README.md)
+
+### 💻 `cmd/rgboo/`
+**Go terminal player**
+- A single binary that streams the live broadcast to your speakers
+- Draws an animated terminal scene tinted with the latest LED color
+- `brew install nrodd/tap/rgboo` or `curl -fsSL https://rgboo.com/install.sh | sh`
+- Released by GoReleaser on a tag; see [cmd/rgboo/README.md](cmd/rgboo/README.md)
 
 ## 🧰 Running it locally
 
@@ -83,24 +86,23 @@ Everything else -- bridge, web, firmware -- is a deliberate command.
 
 See **[docs/architecture.md](docs/architecture.md)** for how the system fits
 together, and **[docs/deploying.md](docs/deploying.md)** for shipping each
-component and rolling it back. The migration from the old always-on middleware to GCP is
-described in [docs/gcp-migration-plan.md](docs/gcp-migration-plan.md)
+component and rolling it back.
 
 ## 🎭 Getting Started
 
 ### Quick Setup
-1. **Flash the firmware** to your ESP32
-2. **Start the middleware** API server
-3. **Launch the web** interface
-4. **Connect** ESP32 via USB
-5. **Control** your RGB LEDs through the web!
+1. **Flash the firmware** to your Raspberry Pi Pico 2
+2. **Connect** the Pico 2 via USB
+3. **Run** `./scripts/setup.sh` then `./scripts/dev.sh`
+4. **Control** your RGB LEDs through the web!
 
 ## 🦴 Technology Stack
 
 - **Frontend**: React, Vite, Cloudflare worker
 - **Backend**: Python, Flask, pySerial
 - **Firmware**: C++, Arduino Framework, PlatformIO
-- **Hardware**: ESP32, RGB LED strips
+- **Terminal player**: Go, mpv, yt-dlp
+- **Hardware**: Raspberry Pi Pico 2, WS2811 RGBIC LED strip
 
 ## 👹 Contributing
 
