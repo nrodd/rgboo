@@ -85,8 +85,11 @@ func run() error {
 		return fmt.Errorf("starting mpv: %w", err)
 	}
 
-	mpvDone := make(chan error, 1)
-	go func() { mpvDone <- mpv.Wait() }()
+	// Closed rather than sent to: both the UI loop and the check below need to
+	// see mpv exit, and a single buffered value only ever reaches one of them.
+	var mpvErr error
+	mpvDone := make(chan struct{})
+	go func() { mpvErr = mpv.Wait(); close(mpvDone) }()
 
 	if isTerminal(os.Stdout) {
 		animate(ctx, os.Stdout, state, mpvDone)
@@ -95,18 +98,20 @@ func run() error {
 		logChanges(ctx, os.Stdout, state, mpvDone)
 	}
 
+	<-mpvDone // on Ctrl-C the UI loop returns first; let the process finish going
+
 	// A non-zero mpv exit after we asked it to stop is just the kill landing.
-	if err := <-mpvDone; err != nil && ctx.Err() == nil {
+	if mpvErr != nil && ctx.Err() == nil {
 		if out := strings.TrimSpace(stderr.String()); out != "" {
-			return fmt.Errorf("mpv exited: %w\n%s", err, out)
+			return fmt.Errorf("mpv exited: %w\n%s", mpvErr, out)
 		}
-		return fmt.Errorf("mpv exited: %w", err)
+		return fmt.Errorf("mpv exited: %w", mpvErr)
 	}
 	return nil
 }
 
 // animate drives the scene on its own timer, independent of when events arrive.
-func animate(ctx context.Context, out io.Writer, state *State, mpvDone <-chan error) {
+func animate(ctx context.Context, out io.Writer, state *State, mpvDone <-chan struct{}) {
 	io.WriteString(out, altScreenOn+cursorHide)
 	defer io.WriteString(out, cursorShow+altScreenOff)
 
@@ -143,7 +148,7 @@ func draw(out io.Writer, s Snapshot) {
 }
 
 // logChanges is the non-TTY fallback: one line per track change, no animation.
-func logChanges(ctx context.Context, out io.Writer, state *State, mpvDone <-chan error) {
+func logChanges(ctx context.Context, out io.Writer, state *State, mpvDone <-chan struct{}) {
 	fmt.Fprintln(out, "rgboo: now playing. Ctrl-C to stop.")
 
 	ticker := time.NewTicker(time.Second)

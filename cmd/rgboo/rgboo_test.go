@@ -1,9 +1,16 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"io"
+	"math"
+	"net/http"
+	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestResolveStreamURL(t *testing.T) {
@@ -192,5 +199,125 @@ func TestShortErr(t *testing.T) {
 		if got := shortErr(tt.err); got != tt.want {
 			t.Errorf("shortErr(%v) = %q, want %q", tt.err, got, tt.want)
 		}
+	}
+}
+
+func TestUILoopsLeaveMpvExitReadable(t *testing.T) {
+	// Regression: these used to receive the one value off a buffered channel,
+	// so run's own receive blocked forever and Ctrl-C did nothing.
+	loops := map[string]func(context.Context, io.Writer, *State, <-chan struct{}){
+		"animate":    animate,
+		"logChanges": logChanges,
+	}
+	for name, loop := range loops {
+		t.Run(name, func(t *testing.T) {
+			mpvDone := make(chan struct{})
+			close(mpvDone)
+			loop(context.Background(), io.Discard, &State{}, mpvDone)
+			select {
+			case <-mpvDone:
+			case <-time.After(time.Second):
+				t.Fatal("mpv exit signal was swallowed; run would hang here")
+			}
+		})
+	}
+}
+
+func TestTreeLayersKeepEvenSpacing(t *testing.T) {
+	// A seam in the tree line is the tell that positions wrapped individually.
+	for _, tt := range []struct {
+		spacing int
+		speed   float64
+		offset  int
+	}{{11, 0.5, 5}, {17, 1, 0}} {
+		for frame := 0; frame < 200; frame++ {
+			shift := int(math.Floor(float64(frame)*tt.speed)) - tt.offset
+			first := -tt.spacing - ((shift%tt.spacing)+tt.spacing)%tt.spacing
+			if first > -tt.spacing || first <= -2*tt.spacing {
+				t.Fatalf("spacing %d frame %d: first tree at %d is outside the left gutter",
+					tt.spacing, frame, first)
+			}
+			if last := first + ((canvasW-first-1)/tt.spacing)*tt.spacing; last < canvasW-tt.spacing {
+				t.Fatalf("spacing %d frame %d: last tree at %d leaves a gap at the right edge",
+					tt.spacing, frame, last)
+			}
+		}
+	}
+}
+
+func TestStreamClientRefusesCrossHostRedirect(t *testing.T) {
+	// net/http forwards custom headers across hosts, so following one would
+	// hand the CF Access token to the redirect target.
+	mustURL := func(raw string) *url.URL {
+		u, err := url.Parse(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return u
+	}
+	via := []*http.Request{{URL: mustURL("https://staging.rgboo.com/api/stream")}}
+
+	if err := streamClient.CheckRedirect(&http.Request{URL: mustURL("https://evil.example/x")}, via); err == nil {
+		t.Error("cross-host redirect should be refused")
+	}
+	if err := streamClient.CheckRedirect(&http.Request{URL: mustURL("https://staging.rgboo.com/v2")}, via); err != nil {
+		t.Errorf("same-host redirect should be allowed: %v", err)
+	}
+}
+
+func TestParseColorClampsChannels(t *testing.T) {
+	color, _, ok := parseColor(`{"r":1e30,"g":-5,"b":300}`)
+	if !ok || color != (RGB{255, 0, 255}) {
+		t.Fatalf("got %v %v, want {255 0 255}", color, ok)
+	}
+	if got := fg(color); strings.ContainsAny(got, "-") {
+		t.Errorf("negative channel reached the escape sequence: %q", got)
+	}
+	if color, _, _ := parseColor(`{"r":1,"g":2,"b":3}`); color != (RGB{1, 2, 3}) {
+		t.Errorf("clamping mangled an ordinary color: %v", color)
+	}
+}
+
+func TestParseEventsDropsOversizedEvent(t *testing.T) {
+	// The scanner caps a single line; this is the other half, an event built
+	// from many lines that never reaches its terminating blank one.
+	flood := strings.Repeat("data: "+strings.Repeat("x", 1000)+"\n", 2*maxEventBytes/1000)
+
+	var got []string
+	if err := parseEvents(strings.NewReader(flood+"\n"+"data: still here\n\n"), func(_, data string) {
+		got = append(got, data)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != "still here" {
+		t.Errorf("want only the small event through, got %d events", len(got))
+	}
+}
+
+func TestIdleReaderTracksDelivery(t *testing.T) {
+	const window = 400 * time.Millisecond
+
+	var fired atomic.Bool
+	watchdog := time.AfterFunc(window, func() { fired.Store(true) })
+	defer watchdog.Stop()
+
+	pr, pw := io.Pipe()
+	go func() {
+		for i := 0; i < 6; i++ {
+			time.Sleep(window / 4)
+			pw.Write([]byte("x"))
+		}
+		pw.Close()
+	}()
+	// Well past the window in total, but never silent for a whole one.
+	io.Copy(io.Discard, &idleReader{r: pr, watchdog: watchdog, every: window})
+	if fired.Load() {
+		t.Error("watchdog fired while bytes were still arriving")
+	}
+
+	watchdog.Reset(window / 8)
+	time.Sleep(window / 2)
+	if !fired.Load() {
+		t.Error("watchdog never fired once the stream went silent")
 	}
 }

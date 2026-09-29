@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -26,7 +27,30 @@ const (
 	streamPath  = "/api/stream"
 
 	retryDelay = 5 * time.Second
+
+	// No overall request timeout: an SSE connection is meant to stay open
+	// indefinitely. What we do insist on is progress, so a connection that
+	// dies quietly (a dropped NAT entry, say) gets cut and retried instead of
+	// leaving the read blocked forever.
+	connectTimeout = 20 * time.Second
+	idleTimeout    = 90 * time.Second
+
+	// A server that never sends the blank line ending an event would otherwise
+	// grow the buffer without limit.
+	maxEventBytes = 1 << 20
 )
+
+// streamClient replaces http.DefaultClient for one reason: net/http strips
+// only Authorization and Cookie when a redirect crosses hosts, so our CF
+// Access token would happily ride along to wherever we got pointed.
+var streamClient = &http.Client{
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		if req.URL.Host != via[0].URL.Host {
+			return fmt.Errorf("refusing redirect to another host (%s)", req.URL.Host)
+		}
+		return nil
+	},
+}
 
 // Snapshot is everything Render needs: a consistent copy of the state taken
 // under the lock, so the SSE goroutine can keep writing while a frame draws.
@@ -139,6 +163,21 @@ func (c *Client) Run(ctx context.Context) {
 }
 
 func (c *Client) listen(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// The watchdog covers the connect first, then every gap between bytes.
+	// Cancelling the context is what unblocks a stalled read.
+	var stalled atomic.Bool
+	watchdog := time.AfterFunc(connectTimeout, func() { stalled.Store(true); cancel() })
+	defer watchdog.Stop()
+	quiet := func(err error) error {
+		if stalled.Load() {
+			return errors.New("stream: went quiet")
+		}
+		return err
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.URL, nil)
 	if err != nil {
 		return err
@@ -148,10 +187,9 @@ func (c *Client) listen(ctx context.Context) error {
 		req.Header.Set(k, v)
 	}
 
-	// No client timeout: an SSE connection is meant to stay open indefinitely.
-	res, err := http.DefaultClient.Do(req)
+	res, err := streamClient.Do(req)
 	if err != nil {
-		return err
+		return quiet(err)
 	}
 	defer res.Body.Close()
 
@@ -165,7 +203,24 @@ func (c *Client) listen(ctx context.Context) error {
 	}
 
 	c.State.setStatus("")
-	return parseEvents(res.Body, c.handle)
+	watchdog.Reset(idleTimeout)
+	return quiet(parseEvents(&idleReader{r: res.Body, watchdog: watchdog, every: idleTimeout}, c.handle))
+}
+
+// idleReader pushes the watchdog back on every byte that arrives, so it only
+// fires when the stream has actually gone silent.
+type idleReader struct {
+	r        io.Reader
+	watchdog *time.Timer
+	every    time.Duration
+}
+
+func (i *idleReader) Read(p []byte) (int, error) {
+	n, err := i.r.Read(p)
+	if n > 0 {
+		i.watchdog.Reset(i.every)
+	}
+	return n, err
 }
 
 func (c *Client) handle(event, data string) {
@@ -187,19 +242,21 @@ func parseEvents(r io.Reader, handle func(event, data string)) error {
 
 	var name string
 	var data []string
+	size := 0
+	oversized := false
 
 	for sc.Scan() {
 		line := strings.TrimSuffix(sc.Text(), "\r")
 
 		if line == "" { // blank line terminates an event
-			if len(data) > 0 {
+			if len(data) > 0 && !oversized {
 				event := name
 				if event == "" {
 					event = "message"
 				}
 				handle(event, strings.Join(data, "\n"))
 			}
-			name, data = "", nil
+			name, data, size, oversized = "", nil, 0, false
 			continue
 		}
 
@@ -209,7 +266,14 @@ func parseEvents(r io.Reader, handle func(event, data string)) error {
 			name = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
 		case strings.HasPrefix(line, "data:"):
 			// Per the SSE spec, exactly one leading space is stripped.
-			data = append(data, strings.TrimPrefix(strings.TrimPrefix(line, "data:"), " "))
+			field := strings.TrimPrefix(strings.TrimPrefix(line, "data:"), " ")
+			// Drop the whole event rather than a truncated tail, which would
+			// fail to parse and get shown as a garbled track name.
+			if size += len(field); size > maxEventBytes {
+				data, oversized = nil, true
+				continue
+			}
+			data = append(data, field)
 		}
 	}
 	return sc.Err()
@@ -245,7 +309,20 @@ func parseColor(data string) (RGB, string, bool) {
 	if payload.R == nil || payload.G == nil || payload.B == nil {
 		return RGB{}, "", false
 	}
-	return RGB{R: int(*payload.R), G: int(*payload.G), B: int(*payload.B)}, payload.Username, true
+	return RGB{R: clamp8(*payload.R), G: clamp8(*payload.G), B: clamp8(*payload.B)}, payload.Username, true
+}
+
+// clamp8 keeps a channel in range. Out-of-range float-to-int conversion is
+// implementation-defined in Go, so an absurd payload could otherwise emit
+// something like `\x1b[38;2;9223372036854775807;-5;99999m`.
+func clamp8(f float64) int {
+	switch {
+	case !(f >= 0): // NaN lands here too
+		return 0
+	case f > 255:
+		return 255
+	}
+	return int(f)
 }
 
 // shortErr keeps the status line to one tidy phrase; the full URL and Go's
