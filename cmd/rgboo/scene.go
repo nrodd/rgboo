@@ -126,12 +126,13 @@ func (c *canvas) place(sprite []string, x0, y0 int, color string) {
 }
 
 // A row of trees scrolling right-to-left. speed in columns/frame gives the
-// parallax: near trees move faster than far ones.
+// parallax: near trees move faster than far ones. Only the first tree's
+// position wraps, so the gaps stay exactly `spacing` apart; wrapping each tree
+// separately leaves a seam wherever the cycle restarts.
 func (c *canvas) treeLayer(art []string, color string, spacing int, speed float64, frame, offset int) {
-	period := canvasW + spacing
-	shift := int(math.Floor(float64(frame) * speed))
-	for base := -spacing; base < canvasW+spacing; base += spacing {
-		x := (((base-shift+offset)%period)+period)%period - spacing
+	shift := int(math.Floor(float64(frame)*speed)) - offset
+	first := -spacing - ((shift%spacing)+spacing)%spacing
+	for x := first; x < canvasW; x += spacing {
 		c.place(art, x, groundY-len(art)+1, color)
 	}
 }
