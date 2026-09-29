@@ -123,6 +123,45 @@ def test_youtube_waits_for_scheduled_video():
     asyncio.run(scenario())
 
 
+def test_youtube_resolves_video_from_channel():
+    async def scenario():
+        config = replace(CONFIG, youtube_video="", youtube_channel="channel")
+        youtube = YouTube(None, config, None)
+        youtube.get = AsyncMock(side_effect=[
+            {"items": [{"id": {"videoId": "found"}}]},
+            {"items": [{"liveStreamingDetails": {"activeLiveChatId": "chat"}}]},
+        ])
+        assert await youtube.discover() is True
+        assert youtube.chat_id == "chat"
+        assert youtube.get.call_args_list[0].args == ("search",)
+        assert youtube.get.call_args_list[0].kwargs["channelId"] == "channel"
+        assert youtube.get.call_args_list[1].kwargs["id"] == "found"
+    asyncio.run(scenario())
+
+
+def test_youtube_waits_when_channel_has_nothing_live():
+    async def scenario():
+        config = replace(CONFIG, youtube_video="", youtube_channel="channel")
+        youtube = YouTube(None, config, None)
+        youtube.get = AsyncMock(return_value={"items": []})
+        assert await youtube.discover() is False
+        youtube.get.assert_awaited_once_with("search", part="id", channelId="channel",
+                                              eventType="live", type="video", maxResults=1)
+    asyncio.run(scenario())
+
+
+def test_config_accepts_channel_id_alone(monkeypatch):
+    for key in list(__import__("os").environ):
+        if key.startswith(("CLOUD_API_", "YOUTUBE_", "TWITCH_")):
+            monkeypatch.delenv(key)
+    monkeypatch.setenv("CLOUD_API_URL", "https://cloud.example")
+    monkeypatch.setenv("CLOUD_API_KEY", "secret")
+    monkeypatch.setenv("YOUTUBE_CHANNEL_ID", "channel")
+    monkeypatch.setenv("YOUTUBE_API_KEY", "key")
+    monkeypatch.setenv("YOUTUBE_ACCESS_TOKEN", "oauth-token")
+    assert Config.from_env().youtube_channel == "channel"
+
+
 def twitch_config(**kwargs):
     return replace(CONFIG, twitch_client="client", twitch_user="123", twitch_channel="456",
                    twitch_token="token", **kwargs)

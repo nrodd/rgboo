@@ -57,10 +57,25 @@ class YouTube:
         return await request(self.session, "GET", BASE + resource,
                              params={"key": self.config.youtube_key, **params})
 
+    async def find_live_video(self):
+        # search.list is the only way to go from a channel to whatever it's
+        # currently streaming, and costs far more quota than videos.list, so
+        # this only runs once to seed chat_id, not on every discover() call.
+        result = await self.get("search", part="id", channelId=self.config.youtube_channel,
+                                eventType="live", type="video", maxResults=1)
+        items = result.get("items", [])
+        return items[0].get("id", {}).get("videoId", "") if items else ""
+
     async def discover(self):
         if self.chat_id:
             return True
-        result = await self.get("videos", part="liveStreamingDetails", id=self.config.youtube_video)
+        video_id = self.config.youtube_video
+        if not video_id and self.config.youtube_channel:
+            video_id = await self.find_live_video()
+        if not video_id:
+            log.info("YouTube channel has nothing live; checking again in 5 minutes")
+            return False
+        result = await self.get("videos", part="liveStreamingDetails", id=video_id)
         items = result.get("items", [])
         self.chat_id = (items[0].get("liveStreamingDetails", {}).get("activeLiveChatId", "")
                         if items else "")
