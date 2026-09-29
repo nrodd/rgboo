@@ -2,6 +2,8 @@ import LogoIcon from "../assets/pumpkin.svg?react";
 import ColorForm from "../components/ColorForm";
 import { StreamEmbed } from "../components/StreamEmbed";
 
+//test coment to trigger deployement lol
+
 export const MainContent = () => (
   <div className="main-content">
     <div className="flex lg:absolute py-4 left-0 right-0 justify-center items-center gap-4 z-50">
