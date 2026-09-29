@@ -7,6 +7,9 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -319,5 +322,102 @@ func TestIdleReaderTracksDelivery(t *testing.T) {
 	time.Sleep(window / 2)
 	if !fired.Load() {
 		t.Error("watchdog never fired once the stream went silent")
+	}
+}
+
+func TestResolveBroadcastURL(t *testing.T) {
+	if got := resolveBroadcastURL(""); got != broadcastURL {
+		t.Errorf("default should be the channel live URL, got %q", got)
+	}
+	if !strings.HasSuffix(broadcastURL, "/live") {
+		t.Errorf("default must resolve whatever is live now, got %q", broadcastURL)
+	}
+	if got := resolveBroadcastURL("https://youtu.be/abc"); got != "https://youtu.be/abc" {
+		t.Errorf("env should win, got %q", got)
+	}
+}
+
+func TestBroadcastID(t *testing.T) {
+	// stderr samples are real yt-dlp output, captured from the live tool.
+	notLive := "ERROR: [youtube:tab] UC2GJYmn0WCqW8k1NFp1W7KQ: The channel is not currently live\n"
+	gone := "ERROR: [youtube] KbZBcBE0Nw4: This live stream recording is not available.\n"
+
+	tests := []struct {
+		name           string
+		stdout, stderr string
+		runErr         error
+		wantID         string
+		wantNotLive    bool
+	}{
+		{"live now", "nI725iVsyoQ|is_live\n", "", nil, "nI725iVsyoQ", false},
+		{"channel offline", "", notLive, errors.New("exit status 1"), "", true},
+		{"pinned video gone", "", gone, errors.New("exit status 1"), "", true},
+		{"scheduled but not started", "abc123|is_upcoming\n", "", nil, "", true},
+		{"override plays a normal video", "xyz789|not_live\n", "", nil, "xyz789", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id, err := broadcastID(tt.stdout, tt.stderr, tt.runErr)
+			if tt.wantNotLive {
+				if !errors.Is(err, errNotLive) {
+					t.Fatalf("want errNotLive, got id=%q err=%v", id, err)
+				}
+				return
+			}
+			if err != nil || id != tt.wantID {
+				t.Fatalf("got id=%q err=%v, want %q", id, err, tt.wantID)
+			}
+		})
+	}
+}
+
+func TestBroadcastIDSurfacesRealFailures(t *testing.T) {
+	// A genuine problem must not be mistaken for "not live", or the user gets
+	// told to check back later forever.
+	stderr := "ERROR: [youtube:tab] @x: Unable to download API page: HTTP Error 404: Not Found\n"
+	_, err := broadcastID("", stderr, errors.New("exit status 1"))
+	if errors.Is(err, errNotLive) {
+		t.Fatal("a 404 was reported as merely not live")
+	}
+	if !strings.Contains(err.Error(), "HTTP Error 404") {
+		t.Errorf("lost the reason: %v", err)
+	}
+	if strings.Contains(err.Error(), "youtube:tab") {
+		t.Errorf("extractor tag leaked into the message: %v", err)
+	}
+
+	if _, err := broadcastID("", "", errors.New("exec: not started")); err == nil {
+		t.Error("a bare exec failure should still be an error")
+	}
+	if _, err := broadcastID("", "", nil); err == nil {
+		t.Error("empty output with no error should still be an error")
+	}
+}
+
+func TestResolveBroadcastWaitsForTheTool(t *testing.T) {
+	// Every broadcastID test above passes whether or not resolveBroadcast
+	// actually waits for yt-dlp before reading its output. It once didn't:
+	// the buffers were read as call arguments, so they were always empty.
+	if runtime.GOOS == "windows" {
+		t.Skip("stub is a shell script")
+	}
+	stub := func(name, body string) string {
+		path := filepath.Join(t.TempDir(), name)
+		if err := os.WriteFile(path, []byte("#!/bin/sh\n"+body+"\n"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+
+	live := stub("live", `printf 'nI725iVsyoQ|is_live\n'`)
+	got, err := resolveBroadcast(context.Background(), live, "https://example.invalid/live")
+	if err != nil || got != "https://www.youtube.com/watch?v=nI725iVsyoQ" {
+		t.Fatalf("got %q, %v", got, err)
+	}
+
+	offline := stub("offline",
+		`echo 'ERROR: [youtube:tab] UC2GJYmn0WCqW8k1NFp1W7KQ: The channel is not currently live' >&2; exit 1`)
+	if _, err := resolveBroadcast(context.Background(), offline, "https://example.invalid/live"); !errors.Is(err, errNotLive) {
+		t.Fatalf("want errNotLive, got %v", err)
 	}
 }
