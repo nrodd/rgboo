@@ -113,5 +113,3 @@ Feel free to contribute to the project! Whether it's adding new features, fixing
 This project is open source - see the LICENSE file for details.
 
 ---
-
-*May your LEDs glow bright and your code run without fright!* 🎃✨ 
