@@ -1,5 +1,5 @@
 /**
- * Styles for the /stats page, imported by Stats.tsx so the page's chrome
+ * Styles for the /admin/stats page, imported by Stats.tsx so the page's chrome
  * travels with its components.
  *
  * Raw CSS rather than @apply: theme.css sets `--color-*: initial`, which

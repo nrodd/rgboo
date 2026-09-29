@@ -44,7 +44,7 @@ const statsBody = {
 };
 
 const mockStats = (worker: SetupWorker, body: object = statsBody) =>
-  worker.use(http.get("*/api/stats", () => HttpResponse.json(body)));
+  worker.use(http.get("*/admin-api/stats", () => HttpResponse.json(body)));
 
 const renderStats = () => render(<MemoryRouter><Stats /></MemoryRouter>);
 
@@ -117,7 +117,7 @@ test("shows all twenty-four hours, busy or not", async ({ worker }: { worker: Se
 
 test("always asks for the 30-day window", async ({ worker }: { worker: SetupWorker }) => {
   const requested: string[] = [];
-  worker.use(http.get("*/api/stats", ({ request }) => {
+  worker.use(http.get("*/admin-api/stats", ({ request }) => {
     requested.push(new URL(request.url).searchParams.get("days") ?? "");
     return HttpResponse.json(statsBody);
   }));
@@ -172,7 +172,7 @@ test("shows the coming-soon placeholder before there is any data", async ({ work
 test("shows the same placeholder when the stats cannot be fetched", async ({ worker }: { worker: SetupWorker }) => {
   // A visitor can do nothing about a 503, and cannot tell it apart from
   // "no data yet" anyway. The error goes to the console instead.
-  worker.use(http.get("*/api/stats", () =>
+  worker.use(http.get("*/admin-api/stats", () =>
     HttpResponse.json({ error: "Stats are not available" }, { status: 503 })));
   renderStats();
 

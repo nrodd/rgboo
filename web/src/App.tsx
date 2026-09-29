@@ -17,9 +17,8 @@ const App = () => (
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/admin" element={<Admin />} />
-      {/* Deliberately unlinked until a month of data exists; publish it by
-          adding the footer link. */}
-      <Route path="/stats" element={<Stats />} />
+      {/* Admin-only until there's a plan for public load on Firestore. */}
+      <Route path="/admin/stats" element={<Stats />} />
     </Routes>
   </BrowserRouter>
 );

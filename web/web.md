@@ -40,7 +40,7 @@ yarn deploy
 | --- | --- |
 | `/` | Public colour form and stream |
 | `/admin` | Cloudflare Access only |
-| `/stats` | Public, but deliberately not linked from anywhere yet. Publish it by adding a link to `src/layout/Footer.tsx`. |
+| `/admin/stats` | Cloudflare Access only, until there's a plan for public load on Firestore. Its data comes from `/admin-api/stats`. |
 
 ## API proxy
 

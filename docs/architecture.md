@@ -199,7 +199,7 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 | `POST /api/color` | Validate → assign slot → create pending doc |
 | `GET /api/status` | Queue size, next free slot, hardware state |
 | `GET /api/queue` | Pending requests in slot order |
-| `GET /api/stats` | 30-day colour aggregates for the stats page. Cacheable |
+| `GET /admin/stats` | 30-day colour aggregates for the admin stats page. **Worker `X-Api-Key`** |
 | `POST /admin/queue/clear` | Cancel **all** pending. **Worker `X-Api-Key`** |
 | `POST /admin/queue/remove` | Cancel one request by ID. **Worker `X-Api-Key`** |
 | `POST /admin/clear-current` | Pull one user off the overlay. **Worker `X-Api-Key`** |
@@ -227,9 +227,9 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 | ESP32 unplugged | Request marked `failed` with the error; the queue keeps moving. |
 | Serial write fails after re-read | Doc left `pending`; the next resync retries rather than dropping it. |
 | Firestore unreachable from home | Bridge logs and retries; heartbeat goes stale, so the cloud reports it offline. |
-| The stats rollup has never run | `/api/stats` returns an all-zero window. No error. |
+| The stats rollup has never run | `/admin/stats` returns an all-zero window. No error. |
 | `STATS_TIMEZONE` changes | Existing aggregates are wrong until the rollup is re-run over the full range. |
-| The API has no stats store | `/api/stats` answers 503; the rest of the API is unaffected. |
+| The API has no stats store | `/admin/stats` answers 503; the rest of the API is unaffected. |
 
 ## Security
 
@@ -249,7 +249,7 @@ the cutover is done: colours travel Worker → Cloud Run → Firestore.
 | Firestore + composite index | Live |
 | `web/worker/` | Live, pointing at Cloud Run |
 | `bridge/` | Confirm before relying on the stats: they count `status: done`, which only the bridge writes |
-| `/stats` page | Built and reachable, deliberately unlinked until a month of data exists |
+| `/admin/stats` page | Built, behind Cloudflare Access until there's a plan for public load on Firestore |
 
 ## Cost
 

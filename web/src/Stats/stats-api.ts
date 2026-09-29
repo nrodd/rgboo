@@ -1,6 +1,7 @@
 /**
- * Public stats API client. Relative path, so it goes through the Worker in
- * production and Vite's proxy in dev, like the colour form.
+ * Stats API client. Goes through /admin-api, so Cloudflare Access gates it
+ * like the rest of the admin page; the Worker and Vite's proxy both rewrite
+ * it to the API's /admin/stats.
  */
 
 /** One colour family, ranked across the whole window. It is a grid row. */
@@ -52,7 +53,7 @@ export type StatsResponse = {
 const STATS_DAYS = 30;
 
 export const fetchStats = async (): Promise<StatsResponse> => {
-  const response = await fetch(`/api/stats?days=${STATS_DAYS}`);
+  const response = await fetch(`/admin-api/stats?days=${STATS_DAYS}`);
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || "Unable to load stats");
   return body as StatsResponse;
