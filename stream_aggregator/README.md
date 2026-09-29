@@ -117,12 +117,13 @@ build.
 1. Enable **YouTube Data API v3** in your Google Cloud project.
 2. Create a server API key, restrict it to that API (and your egress IP if fixed),
    and set `YOUTUBE_API_KEY`.
-3. Set `YOUTUBE_VIDEO_ID=KbZBcBE0Nw4` for the current broadcast (use the video ID,
-   not its full URL). Clear `YOUTUBE_LIVE_CHAT_ID` when switching broadcasts so
-   an old chat ID does not override the video ID. The worker
-   obtains `liveStreamingDetails.activeLiveChatId` through `videos.list` and waits
-   if the scheduled stream has not started. Alternatively set `YOUTUBE_LIVE_CHAT_ID`
-   directly; this takes precedence over the video ID.
+3. Set `YOUTUBE_CHANNEL_ID` to the channel's ID (not its `@handle`, which can be
+   renamed). The worker looks up whatever that channel is currently streaming
+   through `search.list`, then obtains `liveStreamingDetails.activeLiveChatId`
+   for it through `videos.list`, waiting if nothing is live yet. To pin a
+   specific broadcast instead, set `YOUTUBE_VIDEO_ID`; to skip both lookups, set
+   `YOUTUBE_LIVE_CHAT_ID` directly. Each takes precedence over the one before it
+   in that order.
 4. Authorize the account that will post estimates using Google OAuth with the
    `https://www.googleapis.com/auth/youtube.force-ssl` scope. Set
    `YOUTUBE_ACCESS_TOKEN` for a short-lived session, or (recommended) set
@@ -144,10 +145,11 @@ publication timestamp at or after this worker's startup are accepted. Keep the
 host clock synchronized. Invalid resume cursors reset that cutoff to the current
 time so old commands are not replayed. Deduplication still applies across reconnects.
 
-If the configured video has no active chat, discovery uses `videos.list` once
-every five minutes. Ended/disabled chats stop the YouTube listener. Change the
-video/chat ID and recreate the container for the next broadcast; channel-wide
-broadcast discovery is not implemented. Twitch can continue independently.
+If nothing is discovered yet (the channel isn't live, or the resolved video has
+no active chat), discovery retries every five minutes. The channel lookup
+(`search.list`) costs far more quota than `videos.list`, so it only re-runs on
+those retries rather than on every reconnect. Ended/disabled chats stop the
+YouTube listener; Twitch can continue independently.
 
 ### Daily quota protection
 

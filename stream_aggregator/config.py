@@ -8,6 +8,7 @@ class Config:
     cloud_url: str
     cloud_key: str
     youtube_key: str = ""
+    youtube_channel: str = ""
     youtube_video: str = ""
     youtube_chat: str = ""
     twitch_client: str = ""
@@ -30,7 +31,8 @@ class Config:
     def from_env(cls):
         fields = {
             "cloud_url": "CLOUD_API_URL", "cloud_key": "CLOUD_API_KEY",
-            "youtube_key": "YOUTUBE_API_KEY", "youtube_video": "YOUTUBE_VIDEO_ID",
+            "youtube_key": "YOUTUBE_API_KEY", "youtube_channel": "YOUTUBE_CHANNEL_ID",
+            "youtube_video": "YOUTUBE_VIDEO_ID",
             "youtube_chat": "YOUTUBE_LIVE_CHAT_ID", "twitch_client": "TWITCH_CLIENT_ID",
             "twitch_user": "TWITCH_BOT_USER_ID", "twitch_channel": "TWITCH_BROADCASTER_ID",
             "twitch_token": "TWITCH_ACCESS_TOKEN", "twitch_secret": "TWITCH_CLIENT_SECRET",
@@ -57,10 +59,10 @@ class Config:
             raise ValueError("CLOUD_API_URL must be an HTTP(S) base URL without credentials or query")
         if not config.cloud_key:
             raise ValueError("CLOUD_API_KEY is required")
-        youtube = bool(config.youtube_video or config.youtube_chat)
+        youtube = bool(config.youtube_video or config.youtube_chat or config.youtube_channel)
         twitch = bool(config.twitch_channel)
         if not youtube and not twitch:
-            raise ValueError("Configure a YouTube video/chat ID or TWITCH_BROADCASTER_ID")
+            raise ValueError("Configure a YouTube channel/video/chat ID or TWITCH_BROADCASTER_ID")
         if youtube and config.youtube_budget_file in ("", ":memory:"):
             raise ValueError("YOUTUBE_BUDGET_FILE must be a persistent file path")
         if youtube and not config.youtube_key:
