@@ -1,6 +1,6 @@
 # rgboo (terminal player)
 
-Streams the [RGBoo live broadcast](https://www.youtube.com/live/KbZBcBE0Nw4) to
+Streams the [RGBoo live broadcast](https://www.youtube.com/@na10_dev/live) to
 your speakers and draws a small animated scene while it plays: a witch flying
 her broom under the moon, trees drifting past below. The witch is tinted with
 the latest LED color, and the username who requested it plus the current and
@@ -45,6 +45,17 @@ rgboo
 
 Ctrl-C to stop. The scene runs in the alternate screen buffer, so your terminal
 comes back exactly as you left it.
+
+It plays whatever the channel is broadcasting at the time, looked up through
+yt-dlp when you start it, so a new stream needs no new release. When nothing is
+live you get one line and it exits:
+
+```
+the stream isn't live right now, check back later
+```
+
+To pin a particular stream, or point at something else entirely, set a full URL
+in `RGBOO_BROADCAST_URL`.
 
 ## Staging vs production
 

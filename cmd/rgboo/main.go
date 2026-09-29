@@ -8,7 +8,9 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -22,10 +24,20 @@ import (
 	"time"
 )
 
-// Use the same live broadcast as the web stream embed.
-const broadcastURL = "https://www.youtube.com/live/KbZBcBE0Nw4"
+// Whatever the channel is broadcasting right now, rather than a pinned video,
+// so starting a new stream doesn't need a new release. This is the @na10_dev
+// channel by ID, because the ID survives a handle rename and installed
+// binaries don't get to be re-released when one happens.
+const broadcastURL = "https://www.youtube.com/channel/UC2GJYmn0WCqW8k1NFp1W7KQ/live"
+
+// Nothing is playing, which is an ordinary state rather than a failure.
+var errNotLive = errors.New("the stream isn't live right now, check back later")
 
 const fps = 8
+
+// Long enough for yt-dlp to negotiate with YouTube, short enough that a
+// wedged resolve doesn't look like a hang.
+const resolveTimeout = 45 * time.Second
 
 // Set by GoReleaser via -ldflags.
 var version = "dev"
@@ -42,6 +54,11 @@ const (
 
 func main() {
 	if err := run(); err != nil {
+		// Not being live isn't an error to report like one.
+		if errors.Is(err, errNotLive) {
+			fmt.Println(err)
+			return
+		}
 		fmt.Fprintln(os.Stderr, "rgboo: "+err.Error())
 		os.Exit(1)
 	}
@@ -58,7 +75,7 @@ func run() error {
 		return nil
 	}
 
-	mpvPath, err := findPlayer()
+	mpvPath, ytdlpPath, err := findPlayer()
 	if err != nil {
 		return err
 	}
@@ -73,12 +90,20 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Resolve before anything else starts. mpv would do this itself, but with
+	// --no-terminal it exits 2 without a word, so asking yt-dlp directly is
+	// the only way to tell "not live" apart from a real problem.
+	watchURL, err := resolveBroadcast(ctx, ytdlpPath, resolveBroadcastURL(os.Getenv("RGBOO_BROADCAST_URL")))
+	if err != nil {
+		return err
+	}
+
 	go client.Run(ctx)
 
 	// mpv is told --no-terminal so it never writes to the screen the scene owns;
 	// its stderr is held back and only shown if it dies.
 	stderr := &tailBuffer{limit: 4096}
-	mpv := exec.CommandContext(ctx, mpvPath, "--no-video", "--no-terminal", broadcastURL)
+	mpv := exec.CommandContext(ctx, mpvPath, "--no-video", "--no-terminal", watchURL)
 	mpv.Stderr = stderr
 	mpv.WaitDelay = 2 * time.Second
 	if err := mpv.Start(); err != nil {
@@ -179,17 +204,90 @@ func logChanges(ctx context.Context, out io.Writer, state *State, mpvDone <-chan
 	}
 }
 
-// findPlayer resolves mpv and confirms yt-dlp is around, since mpv's ytdl_hook
-// needs it to turn the YouTube URL into a playable stream.
-func findPlayer() (string, error) {
-	mpvPath, err := exec.LookPath("mpv")
+// findPlayer resolves both tools up front: we call yt-dlp ourselves to find
+// the live stream, and mpv's ytdl_hook calls it again to play one.
+func findPlayer() (mpvPath, ytdlpPath string, err error) {
+	if mpvPath, err = exec.LookPath("mpv"); err != nil {
+		return "", "", fmt.Errorf("mpv not found on PATH. %s", installHint())
+	}
+	if ytdlpPath, err = exec.LookPath("yt-dlp"); err != nil {
+		return "", "", fmt.Errorf("yt-dlp not found on PATH; it's what turns the channel into a playable stream. %s", installHint())
+	}
+	return mpvPath, ytdlpPath, nil
+}
+
+// resolveBroadcastURL picks which broadcast to play. RGBOO_BROADCAST_URL wins,
+// for pinning one stream or pointing at something else entirely.
+func resolveBroadcastURL(envURL string) string {
+	if envURL != "" {
+		return envURL
+	}
+	return broadcastURL
+}
+
+// resolveBroadcast asks yt-dlp what is streaming now and hands back a plain
+// watch URL, so mpv plays the same video we just checked was live.
+func resolveBroadcast(ctx context.Context, ytdlpPath, url string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, resolveTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, ytdlpPath, "--no-warnings", "--simulate",
+		"--print", "%(id)s|%(live_status)s", url)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+
+	// Run first: arguments are evaluated before the call, so reading the
+	// buffers inline would read them empty.
+	runErr := cmd.Run()
+	id, err := broadcastID(stdout.String(), stderr.String(), runErr)
 	if err != nil {
-		return "", fmt.Errorf("mpv not found on PATH. %s", installHint())
+		return "", err
 	}
-	if _, err := exec.LookPath("yt-dlp"); err != nil {
-		return "", fmt.Errorf("yt-dlp not found on PATH; mpv needs it to play a YouTube stream. %s", installHint())
+	return "https://www.youtube.com/watch?v=" + id, nil
+}
+
+// broadcastID reads yt-dlp's answer. Kept apart from the exec so every failure
+// mode is testable without a network or a binary.
+func broadcastID(stdout, stderr string, runErr error) (string, error) {
+	line, _, _ := strings.Cut(strings.TrimSpace(stdout), "\n")
+	id, status, _ := strings.Cut(line, "|")
+
+	if runErr == nil && id != "" {
+		// A scheduled stream resolves fine but has nothing to play yet.
+		if status == "is_upcoming" {
+			return "", errNotLive
+		}
+		return id, nil
 	}
-	return mpvPath, nil
+
+	reason := ytdlpError(stderr)
+	switch {
+	case strings.Contains(reason, "not currently live"),
+		strings.Contains(reason, "recording is not available"):
+		return "", errNotLive
+	case reason != "":
+		return "", fmt.Errorf("finding the live stream: %s", reason)
+	case runErr != nil:
+		return "", fmt.Errorf("finding the live stream: %w", runErr)
+	}
+	return "", errors.New("finding the live stream: yt-dlp printed nothing")
+}
+
+// ytdlpError pulls the last `ERROR: [extractor] ...` line out of yt-dlp's
+// output and drops the extractor tag, which means nothing to a listener.
+func ytdlpError(stderr string) string {
+	msg := ""
+	for _, line := range strings.Split(stderr, "\n") {
+		if rest, ok := strings.CutPrefix(strings.TrimSpace(line), "ERROR:"); ok {
+			msg = strings.TrimSpace(rest)
+		}
+	}
+	if strings.HasPrefix(msg, "[") {
+		if i := strings.Index(msg, "] "); i != -1 {
+			msg = msg[i+2:]
+		}
+	}
+	return msg
 }
 
 func installHint() string {
