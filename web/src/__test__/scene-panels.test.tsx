@@ -152,9 +152,14 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
       const target = document.querySelector<HTMLElement>(`[data-tape-index="${index}"]`)!;
       const bounds = target.getBoundingClientRect();
       const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
-      console.log(`DEBUG clickThroughBackdrop(${index})`, JSON.stringify({ bounds, cx, cy }), document.elementFromPoint(cx, cy)?.outerHTML?.slice(0, 300));
-      await page.getByTestId("scene-panel-backdrop").click({ position: { x: cx, y: cy } });
-      console.log(`DEBUG clickThroughBackdrop(${index}) done`);
+      console.log(`DEBUG clickThroughBackdrop(${index})`, JSON.stringify({ bounds, cx, cy }), document.elementFromPoint(cx, cy)?.outerHTML);
+      try {
+        await page.getByTestId("scene-panel-backdrop").click({ position: { x: cx, y: cy }, timeout: 5000 });
+        console.log(`DEBUG clickThroughBackdrop(${index}) done`);
+      } catch (error) {
+        console.log(`DEBUG clickThroughBackdrop(${index}) FAILED`, String(error), "elementFromPoint now:", document.elementFromPoint(cx, cy)?.outerHTML);
+        throw error;
+      }
     };
     await clickThroughBackdrop(1);
     console.log("DEBUG waiting for Links dialog", document.querySelector('[role="dialog"]')?.outerHTML?.slice(0, 300));
