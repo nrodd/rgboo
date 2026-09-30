@@ -138,43 +138,29 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
     // sets after the viewport change, not the resize itself; without this, a
     // slow reflow leaves it clicking where a tape used to be.
     await expect.poll(() => document.querySelector("canvas")?.width).toBe(width);
-    // TEMP DEBUG: narrowing a CI-only timeout in this test.
-    console.log("DEBUG post-resize", JSON.stringify({
-      innerWidth: window.innerWidth, innerHeight: window.innerHeight,
-      playerRect: document.querySelector(".scene-player")?.getBoundingClientRect(),
-      canvas: { w: document.querySelector("canvas")?.width, h: document.querySelector("canvas")?.height },
-    }));
+    // CI logs (with temporary diagnostics, since removed) showed the very
+    // next click hanging on a slower runner even though layout had already
+    // updated: Playwright's actionability check waits for an element's
+    // position to be stable across two rendered frames, and the resize's own
+    // repaint can still be in flight a moment after layout settles. Waiting
+    // two animation frames here gives that repaint a chance to finish first.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await tape(1).click();
-    console.log("DEBUG tape(1) clicked");
     await page.getByRole("textbox", { name: "Name", exact: true }).fill("Draft Viewer");
-    console.log("DEBUG name filled");
     const clickThroughBackdrop = async (index: number) => {
       const target = document.querySelector<HTMLElement>(`[data-tape-index="${index}"]`)!;
       const bounds = target.getBoundingClientRect();
-      const cx = bounds.x + bounds.width / 2, cy = bounds.y + bounds.height / 2;
-      console.log(`DEBUG clickThroughBackdrop(${index})`, JSON.stringify({ bounds, cx, cy }), document.elementFromPoint(cx, cy)?.outerHTML);
-      try {
-        await page.getByTestId("scene-panel-backdrop").click({ position: { x: cx, y: cy }, timeout: 5000 });
-        console.log(`DEBUG clickThroughBackdrop(${index}) done`);
-      } catch (error) {
-        console.log(`DEBUG clickThroughBackdrop(${index}) FAILED`, String(error), "elementFromPoint now:", document.elementFromPoint(cx, cy)?.outerHTML);
-        throw error;
-      }
+      await page.getByTestId("scene-panel-backdrop").click({ position: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 } });
     };
     await clickThroughBackdrop(1);
-    console.log("DEBUG waiting for Links dialog", document.querySelector('[role="dialog"]')?.outerHTML?.slice(0, 300));
     await expect.element(page.getByRole("dialog", { name: "Links" })).toBeInTheDocument();
     await expect.element(page.getByRole("dialog", { name: "Links" })).toHaveFocus();
-    console.log("DEBUG Links dialog confirmed");
     await clickThroughBackdrop(2);
-    console.log("DEBUG waiting for Settings dialog", document.querySelector('[role="dialog"]')?.outerHTML?.slice(0, 300));
     await expect.element(page.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
-    console.log("DEBUG Settings dialog confirmed");
     await clickThroughBackdrop(0);
     await expect.element(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Draft Viewer");
     await userEvent.keyboard("{Escape}");
     await expect.element(tape(1)).toHaveFocus();
-    console.log("DEBUG test complete");
   } finally {
     await page.viewport(initialViewport[0], initialViewport[1]);
   }
