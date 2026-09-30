@@ -1,6 +1,6 @@
 import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { useEffect, useRef, useState } from "react";
-import { createYouTubePlayer, defaultVideoId, type YouTubeHandle, type YouTubeState } from "../../media/youtubePlayer";
+import { createYouTubePlayer, type YouTubeHandle, type YouTubeState } from "../../media/youtubePlayer";
 import { createFrogSender } from "../../api/frogColor";
 import { tvArtwork, vhsTapes } from "../../scene/scene.config";
 import type { SceneHandle } from "../../scene/createScene";
@@ -9,7 +9,10 @@ import { ScenePanels } from "./ScenePanels";
 import { readPreferences, type ScenePreferences } from "../../scene/preferences";
 import "../../scene/scene.css";
 
-export const StreamEmbed = ({ videoId = defaultVideoId }: { videoId?: string }) => {
+// Follow the channel across broadcasts; keep the source here rather than in environment configuration.
+const youtubeChannelId = "UC2GJYmn0WCqW8k1NFp1W7KQ";
+
+export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { videoId?: string }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);

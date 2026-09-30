@@ -12,7 +12,8 @@ export default defineConfig({
     fileParallelism: false,
     setupFiles: ["./src/__test__/setup/setupTests.ts"],
     env: {
-      VITE_YOUTUBE_VIDEO_ID: "",
+      // A stale video override must never replace the component's channel.
+      VITE_YOUTUBE_VIDEO_ID: "obsolete-video-id",
     },
     browser: {
       provider: playwright(),

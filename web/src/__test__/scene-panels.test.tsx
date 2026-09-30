@@ -89,7 +89,8 @@ test("settings change scene behavior without recreating the canvas and persist a
   await expect.element(canvas()).toHaveAttribute("data-motion", "reduced");
   await tape(3).click();
   await expect.element(page.getByRole("switch", { name: "Reduce motion", exact: true })).toBeChecked();
-});
+  // Two real WebGL mounts plus modal interactions take longer on CI software rendering.
+}, 30000);
 
 test("repeated live resizes retain the canvas, redraw pixels and align every tape with the scene", async () => {
   await render(<StreamEmbed videoId="" />);
@@ -128,10 +129,10 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
 });
 
 
-test("one click on another tape swaps panels on desktop and mobile, preserving the draft", async () => {
+test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preserving the draft", async (width, height) => {
   const initialViewport = [window.innerWidth, window.innerHeight];
   await render(<StreamEmbed videoId="" />);
-  for (const [width, height] of [[390, 844], [1440, 900]]) {
+  try {
     await page.viewport(width, height);
     await tape(1).click();
     await page.getByRole("textbox", { name: "Name", exact: true }).fill("Draft Viewer");
@@ -149,6 +150,7 @@ test("one click on another tape swaps panels on desktop and mobile, preserving t
     await expect.element(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Draft Viewer");
     await userEvent.keyboard("{Escape}");
     await expect.element(tape(1)).toHaveFocus();
+  } finally {
+    await page.viewport(initialViewport[0], initialViewport[1]);
   }
-  await page.viewport(initialViewport[0], initialViewport[1]);
 });

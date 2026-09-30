@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import logoUrl from "../../assets/rgboo-logo.png";
+import logoUrl from "../../assets/rgboo-logo.webp";
 import Eyes from "../../assets/logo-eyes.svg?react";
 import "./brandLogo.css";
 

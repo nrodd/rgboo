@@ -78,6 +78,8 @@ export default defineConfig(({ command, mode }) => {
     devAssetsPlugin(),
     removeDevAssetsPlugin(),
   ],
+  // Keep small animation frames cacheable instead of base64-encoding them into JS.
+  build: { assetsInlineLimit: 0 },
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
   server: {
     host: "127.0.0.1",

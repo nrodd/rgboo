@@ -1,8 +1,8 @@
 import { Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
-import catAwakeUrl from "../assets/cat_awake.png";
-import catAwakeWagUrl from "../assets/cat_awake_wag.png";
-import catDefaultUrl from "../assets/cat_default.png";
-import catDefaultWagUrl from "../assets/cat_default_wag.png";
+import catAwakeUrl from "../assets/cat_awake.webp";
+import catAwakeWagUrl from "../assets/cat_awake_wag.webp";
+import catDefaultUrl from "../assets/cat_default.webp";
+import catDefaultWagUrl from "../assets/cat_default_wag.webp";
 import { pixels } from "./pixelArt";
 
 /** The resting and awake exports have different sizes but share a resting plane. */

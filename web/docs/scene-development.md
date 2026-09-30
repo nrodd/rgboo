@@ -15,11 +15,10 @@ adds a subtle pixel halo. The Submit tape shows a temporary “Coming soon” to
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. Set `VITE_YOUTUBE_VIDEO_ID` in `.env.local` to the
-`channel:UC2GJYmn0WCqW8k1NFp1W7KQ` to follow the channel across broadcasts,
-or to a specific video ID for a fixed source. Restart Vite after changing
-configuration. A new YouTube broadcast can have a new ID. `/api/stream` provides
-song metadata over SSE; it is not a video endpoint.
+Open http://127.0.0.1:5173. The channel ID is hardcoded in
+`src/components/StreamEmbed/StreamEmbed.tsx`, so the player follows each new
+broadcast without environment configuration. `/api/stream` provides song
+metadata over SSE; it is not a video endpoint.
 
 The official YouTube iframe sits over a matching rectangular opening in the
 Pixi television. `src/scene/layout.ts` supplies the same coordinates to both
@@ -46,7 +45,7 @@ Put transparent PNG/WebP exports in `public/scene/`. Set the matching `src`
 inside `sceneArtwork` in `src/scene/scene.config.ts`, for example:
 
 ```ts
-{ id: "frog", src: "/scene/frog.png", layer: "props",
+{ id: "frog", src: "/scene/frog.webp", layer: "props",
   x: 1280, y: 565, width: 95, height: 70, action: "frog-hop" }
 ```
 
@@ -136,9 +135,9 @@ VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test -- src/__test__/youtube-live.tes
 
 ## Room ambience and animal behavior
 
-`characters.ts` loads `src/assets/cat_default.png` (96 × 96 resting pose) and
-`cat_awake.png` (64 × 64 awake pose). The cat breathes gently, occasionally
-opens its eyes and blinks while awake. The original image files and palette
+`characters.ts` loads `src/assets/cat_default.webp` (96 × 96 resting pose) and
+`cat_awake.webp` (64 × 64 awake pose). The cat breathes gently, occasionally
+opens its eyes and blinks while awake. The decoded pixels and palette
 are unchanged; Pixi crops their transparent padding and normalizes pose widths.
 The resting body ends at source row 64; the awake body ends at row 43. Both
 share the same TV contact plane, with the tail below that plane kept stationary
@@ -149,14 +148,14 @@ it wakes for eight seconds, cycling its four awake frames at one second each.
 These idle behaviors never call the API. Clicking the frog still performs its
 larger hop and the existing green submission with cooldown protection.
 
-`src/assets/window.png` supplies the frame, reflections and sill as one square
+`src/assets/window.webp` supplies the frame, reflections and sill as one square
 export. `windowOpening` clips rain, moon and fog to its panes. The frog and mug align with the integrated sill. Curtains and the curtain rod
 are removed so the custom frame stays visible. Wallpaper is slightly lighter
 for contrast behind the dark cat; the cat artwork itself is not brightened.
 
 `atmosphere.ts` adds two depths of pixel rain within the outside-window mask,
 a shared warm candlelight pool, and cool TV light on the wall, bezel and shelf.
-The candles use `src/assets/candle_fat.png` and `candle_tall.png`. Their `crop`
+The candles use `src/assets/candle_fat.webp` and `candle_tall.webp`. Their `crop`
 bounds in `scene.config.ts` remove transparent margins, and they scale uniformly.
 These exports contain wax only, so separate pixel flames sit above the wicks.
 The candles sit closer together next to the TV, float slightly and still dim
@@ -235,7 +234,7 @@ below the tapes. Its `pumpkin` artwork slot accepts a custom sprite export.
 
 ## Integrated pixel-art exports
 
-The scene now bundles every PNG export from `feat/pixel-art`, including the
+The scene now uses lossless WebP versions of every PNG export from `feat/pixel-art`, including the
 frog poses, rain and fog sequences, pink and green candle flames, TV casing,
 and color/info/name/submit VHS artwork with hover frames. `artAssets.ts` resolves
 the original exports; scene animation uses the existing ticker and stops with
@@ -251,9 +250,9 @@ uses the shared screen bounds and uses a small corner mask to reveal the TV artw
 
 ## Application logo
 
-`BrandLogo` renders the supplied `rgboo-logo.png` and registers `logo-eyes.svg`
+`BrandLogo` renders the supplied `rgboo-logo.webp` and registers `logo-eyes.svg`
 over its eyes. A rendering filter removes the PNG's black background; the
-original source files remain intact. The pupils ease toward the pointer with
+decoded source pixels remain intact. The pupils ease toward the pointer with
 bounded movement and return to rest when the pointer leaves the window.
 System and scene reduced-motion settings hold them still. Listener and
 animation cleanup supports StrictMode and route changes.
@@ -286,3 +285,10 @@ The Settings tape keeps the original name-tape colors and hover frames, with
 a source-pixel `SETUP` label drawn over its old lettering. The replacement
 letters share the eight-frame orange highlight sweep on hover and keyboard
 focus, and hold still with reduced motion.
+
+## Raster asset delivery
+
+All room sprites and the logo use lossless WebP, with exact RGBA round-trip
+verification against their original PNGs (399,688 → 245,008 bytes). Nearest-neighbor
+sampling remains unchanged. Vite emits separate hashed assets instead of inlining
+frames into JavaScript, allowing browser caching without inflating the scene bundle.

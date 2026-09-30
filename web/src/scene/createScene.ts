@@ -1,6 +1,6 @@
 import { frogFrameAt } from "./frogAnimation";
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
-import spiderWebUrl from "../assets/spiderweb.png";
+import spiderWebUrl from "../assets/spiderweb.webp";
 import { createRain, createRoomLight } from "./atmosphere";
 import { createIdleFrog, createLoungingCat } from "./characters";
 import { getSceneLayout } from "./layout";

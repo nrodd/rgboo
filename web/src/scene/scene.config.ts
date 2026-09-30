@@ -1,14 +1,14 @@
 import { artFrames, artUrl } from "./artAssets";
-import roomBackgroundUrl from "../assets/background.png";
-import candleFatUrl from "../assets/candle_fat.png";
-import candleTallUrl from "../assets/candle_tall.png";
-import ghostUrl from "../assets/ghost.png";
-import moonUrl from "../assets/moon.png";
-import spiderTwoUrl from "../assets/spider_2.png";
-import spiderThreeUrl from "../assets/spider_3.png";
-import spiderFourUrl from "../assets/spider_4.png";
-import spiderDefaultUrl from "../assets/spider_default.png";
-import windowUrl from "../assets/window.png";
+import roomBackgroundUrl from "../assets/background.webp";
+import candleFatUrl from "../assets/candle_fat.webp";
+import candleTallUrl from "../assets/candle_tall.webp";
+import ghostUrl from "../assets/ghost.webp";
+import moonUrl from "../assets/moon.webp";
+import spiderTwoUrl from "../assets/spider_2.webp";
+import spiderThreeUrl from "../assets/spider_3.webp";
+import spiderFourUrl from "../assets/spider_4.webp";
+import spiderDefaultUrl from "../assets/spider_default.webp";
+import windowUrl from "../assets/window.webp";
 
 export const layerNames = ["background", "outside", "window", "props", "foreground"] as const;
 export type SceneLayer = (typeof layerNames)[number];
@@ -16,7 +16,7 @@ export type SceneAction = "toggle-playback" | "toggle-sound" | "toggle-candles" 
 export interface Bounds { x: number; y: number; width: number; height: number }
 export interface SceneArtwork extends Bounds {
   id: string;
-  /** Add a /scene/file.png path to replace this slot's placeholder. */
+  /** Add a /scene/file.webp path to replace this slot's placeholder. */
   src?: string;
   /** Optional sequence of frame assets for animated art. */
   frames?: string[];
@@ -60,7 +60,7 @@ export const sceneArtwork: SceneArtwork[] = [
 export const tvArtwork = { src: artUrl("tv"), width: 255, height: 209,
   opening: { x: 13, y: 9, width: 229, height: 130 } };
 
-/** Native shelf gaps between the books baked into tv.png. */
+/** Native shelf gaps between the books baked into tv.webp. */
 export const tapeArtworkSlots: Bounds[] = [
   { x: 62, y: 166, width: 14, height: 29 }, // Color: former Info gap.
   { x: 174, y: 166, width: 14, height: 29 }, // Info: shares the wide gap with Submit.

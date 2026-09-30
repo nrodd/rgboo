@@ -35,7 +35,6 @@ export function loadYouTubeAPI(): Promise<YouTubeAPI> {
 }
 export interface YouTubeState { status: PlaybackStatus; ready: boolean; muted: boolean; volume: number }
 export interface YouTubeHandle { togglePlayback(): void; toggleSound(): void; setVolume(volume: number): void; destroy(): void }
-export const defaultVideoId = import.meta.env.VITE_YOUTUBE_VIDEO_ID ?? "channel:UC2GJYmn0WCqW8k1NFp1W7KQ";
 
 export function youtubeWatchUrl(source: string) {
   return source.startsWith("channel:")
