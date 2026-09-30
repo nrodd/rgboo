@@ -3,47 +3,49 @@ import type { getSceneLayout } from "./layout";
 import type { Bounds } from "./scene.config";
 import { pixelLine, pixels, steppedRect } from "./pixelArt";
 
-export function drawTelevision(g: Graphics, { screen: s, stand, cat }: ReturnType<typeof getSceneLayout>) {
+export function drawTelevision(g: Graphics, { screen: s, stand, cat }: ReturnType<typeof getSceneLayout>, casing = true) {
   g.clear();
-  const cx = Math.round(s.x + s.width * 0.52);
-  // Rabbit ears are behind the casing, built from square pixels.
-  pixelLine(g, cx - 4, s.y - 24, cx - 65, s.y - 82, 0x797579);
-  pixelLine(g, cx + 4, s.y - 24, cx + 74, s.y - 94, 0x9b9393);
-  g.rect(cx - 68, s.y - 86, 8, 8).fill(0xb4a58f).rect(cx + 72, s.y - 98, 8, 8).fill(0xb4a58f);
-  steppedRect(g, cx - 20, s.y - 32, 40, 16, 4, 0x2c2323);
-  // Dark side, thick plastic shell, bevel, and a fully unobscured video opening.
-  steppedRect(g, s.x - 18, s.y - 22, s.width + 36, s.height + 98, 10, 0x21191b);
-  steppedRect(g, s.x - 18, s.y - 22, s.width + 28, s.height + 90, 8, 0x594132);
-  g.rect(s.x - 10, s.y - 22, s.width + 12, 4).fill(0x88664a);
-  g.rect(s.x - 18, s.y - 14, 4, s.height + 68).fill(0x74553d);
-  steppedRect(g, s.x - 8, s.y - 8, s.width + 16, s.height + 16, 4, 0x211b1d);
-  g.rect(s.x - 4, s.y - 4, s.width + 8, s.height + 8).fill(0x0d0c10);
-  g.rect(s.x, s.y, s.width, s.height).fill(0x080c12);
-  // Layered walnut shading makes the lower control fascia feel recessed.
-  for (const [offset, color] of [[10, 0x543c2f], [28, 0x50382c], [46, 0x4a3329], [62, 0x402c25]]) {
-    g.rect(s.x - 10, s.y + s.height + offset, s.width + 20, 14).fill(color);
+  if (casing) {
+    const cx = Math.round(s.x + s.width * 0.52);
+    // Rabbit ears are behind the casing, built from square pixels.
+    pixelLine(g, cx - 4, s.y - 24, cx - 65, s.y - 82, 0x797579);
+    pixelLine(g, cx + 4, s.y - 24, cx + 74, s.y - 94, 0x9b9393);
+    g.rect(cx - 68, s.y - 86, 8, 8).fill(0xb4a58f).rect(cx + 72, s.y - 98, 8, 8).fill(0xb4a58f);
+    steppedRect(g, cx - 20, s.y - 32, 40, 16, 4, 0x2c2323);
+    // Dark side, thick plastic shell, bevel, and a fully unobscured video opening.
+    steppedRect(g, s.x - 18, s.y - 22, s.width + 36, s.height + 98, 10, 0x21191b);
+    steppedRect(g, s.x - 18, s.y - 22, s.width + 28, s.height + 90, 8, 0x594132);
+    g.rect(s.x - 10, s.y - 22, s.width + 12, 4).fill(0x88664a);
+    g.rect(s.x - 18, s.y - 14, 4, s.height + 68).fill(0x74553d);
+    steppedRect(g, s.x - 8, s.y - 8, s.width + 16, s.height + 16, 4, 0x211b1d);
+    g.rect(s.x - 4, s.y - 4, s.width + 8, s.height + 8).fill(0x0d0c10);
+    g.rect(s.x, s.y, s.width, s.height).fill(0x080c12);
+    // Layered walnut shading makes the lower control fascia feel recessed.
+    for (const [offset, color] of [[10, 0x543c2f], [28, 0x50382c], [46, 0x4a3329], [62, 0x402c25]]) {
+      g.rect(s.x - 10, s.y + s.height + offset, s.width + 20, 14).fill(color);
+    }
+    g.rect(s.x - 10, s.y + s.height + 9, s.width + 20, 1).fill(0x76553d);
+    // A woven runner under the cat, a woodgrain side and small period color stripes.
+    const runnerX = Math.max(s.x, cat.x - 8);
+    const runnerWidth = Math.min(s.x + s.width - runnerX, cat.pixelSize * 29 + 10);
+    g.rect(runnerX, s.y - 22, runnerWidth, 4).fill(0x405c53);
+    for (let x = runnerX + 4; x < runnerX + runnerWidth - 4; x += 8) {
+      g.rect(x, s.y - 22, 2, 4).fill(0x8e7d63);
+      g.rect(x, s.y - 18, 2, 3).fill(0x5f7968);
+    }
+    for (let y = s.y + 16; y < s.y + s.height - 16; y += 36) {
+      g.rect(s.x - 15, y, 2, 20).fill(0x422b20);
+      g.rect(s.x - 12, y + 9, 2, 14).fill(0x75533a);
+    }
+    for (const [i, color] of [0xa66c4b, 0x9a8156, 0x55786b].entries()) {
+      g.rect(s.x + 5 + i * 12, s.y + s.height + 61, 10, 3).fill(color);
+    }
+    for (let x = s.x + s.width - 76; x < s.x + s.width - 8; x += 8) {
+      g.rect(x, s.y + s.height + 61, 4, 4).fill(0x201819);
+    }
+    // Feet sit directly on the stand.
+    for (const x of [s.x + 16, s.x + s.width - 44]) g.rect(x, s.y + s.height + 76, 28, 12).fill(0x1c171e);
   }
-  g.rect(s.x - 10, s.y + s.height + 9, s.width + 20, 1).fill(0x76553d);
-  // A woven runner under the cat, a woodgrain side and small period color stripes.
-  const runnerX = Math.max(s.x, cat.x - 8);
-  const runnerWidth = Math.min(s.x + s.width - runnerX, cat.pixelSize * 29 + 10);
-  g.rect(runnerX, s.y - 22, runnerWidth, 4).fill(0x405c53);
-  for (let x = runnerX + 4; x < runnerX + runnerWidth - 4; x += 8) {
-    g.rect(x, s.y - 22, 2, 4).fill(0x8e7d63);
-    g.rect(x, s.y - 18, 2, 3).fill(0x5f7968);
-  }
-  for (let y = s.y + 16; y < s.y + s.height - 16; y += 36) {
-    g.rect(s.x - 15, y, 2, 20).fill(0x422b20);
-    g.rect(s.x - 12, y + 9, 2, 14).fill(0x75533a);
-  }
-  for (const [i, color] of [0xa66c4b, 0x9a8156, 0x55786b].entries()) {
-    g.rect(s.x + 5 + i * 12, s.y + s.height + 61, 10, 3).fill(color);
-  }
-  for (let x = s.x + s.width - 76; x < s.x + s.width - 8; x += 8) {
-    g.rect(x, s.y + s.height + 61, 4, 4).fill(0x201819);
-  }
-  // Feet sit directly on the stand.
-  for (const x of [s.x + 16, s.x + s.width - 44]) g.rect(x, s.y + s.height + 76, 28, 12).fill(0x1c171e);
   g.rect(stand.x, stand.y, stand.width, 12).fill(0x54382b);
   g.rect(stand.x, stand.y, stand.width, 4).fill(0x805a3b);
   g.rect(stand.x + 8, stand.y + 12, stand.width - 16, 68).fill(0x17131d);
@@ -83,4 +85,35 @@ export function drawTapeGlow(g: Graphics, b: Bounds, color: number) {
   }
   // Small square highlights keep the halo consistent with the sprite style.
   pixels(g, ["xx", "x."], { x: color }, 2, -3, -3);
+}
+
+
+/** A compact replacement label in the original tape's source-pixel coordinates. */
+export function drawSettingsSpine(g: Graphics) {
+  g.rect(1, 5, 6, 19).fill(0x3e2627);
+  const letters = g.addChild(new Graphics());
+  letters.position.set(1, 24);
+  letters.rotation = -Math.PI / 2;
+  const setup = [
+    ["xxx", "x..", "xxx", "..x", "xxx"],
+    ["xxx", "x..", "xx.", "x..", "xxx"],
+    ["xxx", ".x.", ".x.", ".x.", ".x."],
+    ["x.x", "x.x", "x.x", "x.x", "xxx"],
+    ["xx.", "x.x", "xx.", "x..", "x.."],
+  ];
+  let previousFrame = -1;
+  const update = (frame: number) => {
+    if (frame === previousFrame) return;
+    previousFrame = frame;
+    letters.clear();
+    const highlight = (frame - 1) * 19 / 8;
+    setup.forEach((rows, index) => rows.forEach((row, y) => Array.from(row).forEach((cell, x) => {
+      if (cell !== "x") return;
+      const column = index * 4 + x;
+      const lit = frame > 0 && Math.abs(column - highlight) < 2.5;
+      letters.rect(column, y, 1, 1).fill(lit ? 0xcf6f28 : 0xbca08b);
+    })));
+  };
+  update(0);
+  return update;
 }

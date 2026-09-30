@@ -3,8 +3,8 @@
 .scene-canvas-host { position: absolute; inset: 0; }
 .scene-canvas-host canvas { display: block; touch-action: pan-y; image-rendering: pixelated; }
 .scene-canvas-host canvas:focus-visible { outline: 2px solid #ebdbbe; outline-offset: -2px; }
-/* No crop, rounded mask, overlay or filter on the official player. */
-.scene-youtube-screen { position: absolute; left: var(--screen-x); top: var(--screen-y); width: var(--screen-width); height: var(--screen-height); background: #080c12; }
+/* The requested corner mask reveals the original TV bezel beneath the player. */
+.scene-youtube-screen { position: absolute; left: var(--screen-x); top: var(--screen-y); width: var(--screen-width); height: var(--screen-height); background: #080c12; border-radius: var(--screen-corner-x) / var(--screen-corner-y); overflow: hidden; }
 .scene-youtube-screen iframe { display: block; width: 100%; height: 100%; border: 0; }
 .vhs-hit-target { position: absolute; padding: 0; background: transparent; border: 0; cursor: pointer; touch-action: manipulation; }
 .vhs-hit-target:focus-visible { outline: 2px solid #e8d6a8; outline-offset: 4px; }
@@ -113,3 +113,8 @@
 @supports not (backdrop-filter: blur(1px)) { .scene-sheet { background: #292523; } }
 @media (max-width: 480px) { .scene-sheet { right: max(12px, env(safe-area-inset-right)); width: calc(100vw - 24px); max-height: calc(100dvh - 24px); padding: 20px; border-radius: 24px; } }
 @media (max-width: 759px) { .scene-player { min-height: 640px; } }
+
+/* Keep the shelf available for one-click panel changes on phones. */
+@media (max-width: 759px) {
+  .scene-sheet { top: 12px; translate: none; max-height: min(calc(100dvh - 24px), var(--panel-max-height, calc(100dvh - 24px))); }
+}

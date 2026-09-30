@@ -2,11 +2,12 @@
 
 The homepage is a full-page PixiJS v8 scene based on the room sketch. The old
 logo, form, info button and footer are no longer mounted; `/admin` is retained.
-The cat, candles and window use the custom PNG exports from `feat/pixel-art`; the other
-room objects still use code-authored pixel-art placeholders.
+The room integrates the PNG exports from `feat/pixel-art`, including animated
+characters, weather, flames and tape hover states. Unexported props retain their
+code-authored placeholders.
 The CRT has a stepped plastic casing, rabbit-ear antenna and feet on a wooden
-stand. Five VHS tapes sit on the shelf below it. Hovering or focusing a tape
-adds a subtle pixel halo. The last two tapes show a temporary “Coming soon” toast. The first three open compact shadcn glass cards on the right: color submission, project links, and settings.
+stand. Four VHS tapes sit on the shelf below it. Hovering or focusing a tape
+adds a subtle pixel halo. The Submit tape shows a temporary “Coming soon” toast. The first three open compact shadcn glass cards on the right: color submission, project links, and settings.
 
 ## Local preview
 
@@ -32,8 +33,8 @@ initialization fails, native controls are restored. Settings includes a reconnec
 action, and the links panel includes the YouTube watch link. Playback starts
 muted; use Settings or the canvas Space/M shortcuts to start playback or sound.
 
-No YouTube media URLs are extracted or proxied. There are no CRT filters, masks,
-or overlays over its player. The earlier direct-media adapter remains in
+No YouTube media URLs are extracted or proxied. The requested rounded corner mask reveals the TV bezel; no CRT filters
+are applied to playback. The earlier direct-media adapter remains in
 `src/media/createVideoPlayer.ts` for a future independently hosted source, but
 is not connected to the homepage. Its old `VITE_STREAM_*`/`VITE_DEV_EMBED`
 settings do not control this scene.
@@ -63,10 +64,10 @@ in `vhsTapes` in the scene config. Their transparent HTML hit targets match
 Pixi coordinates and supply keyboard focus; the glow itself is rendered in Pixi.
 
 The TV has a separate `tvArtwork` entry because it resizes independently on
-mobile. Default art bounds are 964 × 610.25 with an opening at (32, 32), sized
-900 × 506.25. Update both the exported dimensions and `opening` when changing
+mobile. The full TV export is 255 × 209 with an opening at (13, 9), sized
+229 × 130. Update both the exported dimensions and `opening` when changing
 the TV art. Keep the opening rectangular and clear, and leave space below it
-for the walnut fascia. The iframe always remains fully visible above artwork.
+for the walnut fascia. The iframe sits above artwork with a small corner mask matching the bezel.
 
 `createScene.ts` owns Pixi containers, lifecycle and animation;
 `placeholders.ts` contains only replaceable drawing code. Each slot can bind a
@@ -141,8 +142,9 @@ are unchanged; Pixi crops their transparent padding and normalizes pose widths.
 The resting body ends at source row 64; the awake body ends at row 43. Both
 share the same TV contact plane, with the tail below that plane kept stationary
 while the body breathes upward. Its scale adapts to the space above the TV.
-The frog blinks,
-breathes, looks toward the rain, and makes a small idle hop every 14 seconds.
+The frog rests outside behind the rain and window frame. A half-second tick
+holds `asleep_0` for six ticks and `asleep_1` for two ticks. Every 47 seconds
+it wakes for eight seconds, cycling its four awake frames at one second each.
 These idle behaviors never call the API. Clicking the frog still performs its
 larger hop and the existing green submission with cooldown protection.
 
@@ -161,7 +163,8 @@ when clicked (or with L).
 `sceneConfig.ambience.color` sets the TV light color (a cool blue chosen to
 match the current broadcast). This is authored lighting, not live color sampling
 from YouTube. Its intensity follows the official player's play/pause state.
-The video opening stays clear: no overlays, masks or filters cover the iframe.
+The video opening has a scaled corner mask to reveal the frame; lighting and
+other props do not cover the playback surface.
 
 Reduced motion holds rain and animals still and removes light flicker; playback
 brightness changes remain available. Hidden tabs pause rendering, and all
@@ -179,16 +182,17 @@ a regression test checks that contact across a complete animation cycle.
 
 The receiver palette uses dark walnut and a nearly black inner bezel. Room colors and fabric highlights
 are subdued to sit closer to the dark live broadcast. A vignette is applied
-only over the Pixi scene; the official iframe remains above it and unobstructed.
+only over the Pixi scene; the official iframe remains above it with its corner mask matching the TV frame.
 The settings panel uses a warm brass shadcn slider with keyboard and touch support.
 
 
 The TV and stand are raised together, with a wider, deeper rug underneath.
-VHS tapes are upright sleeves with all five bases aligned to the shelf.
+VHS tapes are upright sleeves with the upright tape bases aligned to the shelf.
 `layout.ts` now owns tape, rug and cat placements as well as the screen.
 The cat and its woven runner sit on the TV's right edge in front of the window
 frame on desktop; the tail can extend slightly beyond the casing while the
-body remains supported. Mobile keeps the cat inside the viewport. The old
+body remains supported. Mobile keeps the cat inside the viewport and puts candles on the rug,
+clear of the logo and interactive tape gaps. The old
 receiver badge and control strip have been removed.
 
 ## VHS panels and resizing
@@ -218,7 +222,7 @@ Resize observers keep the HTML player, tape hit areas and Pixi geometry aligned
 without replacing the iframe or canvas. Pixi immediately renders after resizing
 and preserves its drawing buffer, avoiding a cleared frame while native window
 resizing suspends animation frames. Portrait layouts put the window above the TV
-and candles at the free end of the shelf. Short viewports scroll to preserve
+and candles on the rug. Short viewports scroll to preserve
 YouTube's 200 × 200 minimum player. Browser tests sample rendered pixels through
 repeated resizes and exercise the panels with mocked color submissions.
 
@@ -227,3 +231,57 @@ and warm amber light. Pixel paper bats hang above the TV, a cobweb sits in the
 upper corner, bare branches sit behind the rain, and a jack-o'-lantern lights
 the floor beside the stand. On narrow screens the pumpkin moves onto the rug
 below the tapes. Its `pumpkin` artwork slot accepts a custom sprite export.
+
+## Integrated pixel-art exports
+
+The scene now bundles every PNG export from `feat/pixel-art`, including the
+frog poses, rain and fog sequences, pink and green candle flames, TV casing,
+and color/info/name/submit VHS artwork with hover frames. `artAssets.ts` resolves
+the original exports; scene animation uses the existing ticker and stops with
+reduced motion. Existing tape actions and keyboard controls are retained.
+One horizontal Submit tape sits in the widest shelf gap; its action remains a
+Coming soon placeholder.
+
+The full TV export includes its original shelf and preset books.
+`tapeArtworkSlots` places the larger interactive tapes in the gaps between those
+books using the same source-to-screen transform as the TV.
+Its player opening is at (13, 9), sized 229 × 130 source pixels; the iframe
+uses the shared screen bounds and uses a small corner mask to reveal the TV artwork beneath.
+
+## Application logo
+
+`BrandLogo` renders the supplied `rgboo-logo.png` and registers `logo-eyes.svg`
+over its eyes. A rendering filter removes the PNG's black background; the
+original source files remain intact. The pupils ease toward the pointer with
+bounded movement and return to rest when the pointer leaves the window.
+System and scene reduced-motion settings hold them still. Listener and
+animation cleanup supports StrictMode and route changes.
+
+The logo now shares the TV's resize geometry. Its lower text edge is masked to
+meet the casing while the ghost extends over the rim; the entire logo stays
+above the video opening. Pupils converge independently toward nearby pointers
+and respond in both axes with faster easing. The window and its weather, frog,
+and mug are shifted together upward and to the right.
+
+The cross-origin YouTube player owns pointer events inside the video. Eye
+tracking holds its last position there and resumes over the surrounding page.
+
+On narrow screens the candles move onto the rug and the ambient ghost moves
+below the shelf on the right. The logo's text and ghost use separate masks:
+the letters shift down to sit flush on the casing, while the ghost retains its
+original position over the rim. The CRT underline under the letters is masked
+out to remove the floating gap.
+
+The logo is horizontally centered on the TV. Color occupies the middle
+book gap, Setup the next gap, and Info sits directly beside Submit in the
+widest gap. A click on
+another tape while a card is open routes through the modal backdrop to swap
+its content immediately, retaining the color draft and keyboard focus handling.
+
+On phones, panel cards stay above the shelf and scroll within the available
+height so all tape controls remain clickable while another panel is open.
+
+The Settings tape keeps the original name-tape colors and hover frames, with
+a source-pixel `SETUP` label drawn over its old lettering. The replacement
+letters share the eight-frame orange highlight sweep on hover and keyboard
+focus, and hold still with reduced motion.

@@ -1,3 +1,4 @@
+import { frogFrameAt } from "../scene/frogAnimation";
 import { StrictMode } from "react";
 import { afterEach, expect, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
@@ -96,7 +97,7 @@ test("official player API handles playback, sound and teardown without extractin
 });
 
 
-test("unassigned VHS tapes still glow and show Coming soon", async () => {
+test("the remaining Submit tape still glows and show Coming soon", async () => {
   const view = await render(<StrictMode><StreamEmbed videoId="" /></StrictMode>);
   await expect.poll(() => document.querySelectorAll("canvas").length).toBe(1);
   const firstTape = page.getByRole("button", { name: "VHS tape 4: Coming soon", exact: true });
@@ -106,10 +107,6 @@ test("unassigned VHS tapes still glow and show Coming soon", async () => {
   const toast = page.getByRole("status", { name: "VHS notification" });
   await expect.element(toast).toHaveTextContent("Coming soon");
   await expect.element(toast).toHaveAttribute("data-visible", "true");
-  await userEvent.keyboard("{Tab}");
-  await expect.element(canvas()).toHaveAttribute("data-hovered-tape", "vhs-5");
-  await userEvent.keyboard("{Enter}");
-  await expect.element(toast).toHaveTextContent("Coming soon");
   await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("");
   await expect.element(toast, { timeout: 4000 }).toHaveAttribute("data-visible", "false");
   await view.unmount();
@@ -123,7 +120,8 @@ test("idle animal behavior never submits a color", async () => {
   await render(<StreamEmbed videoId="" />);
   await expect.element(canvas()).toHaveAttribute("data-cat", "lounging");
   await expect.element(canvas()).toHaveAttribute("data-motion", "full");
-  await expect.element(canvas(), { timeout: 10000 }).toHaveAttribute("data-frog", "hopping");
+  await expect.element(canvas(), { timeout: 6000 }).toHaveAttribute("data-frog-frame", "1");
+  await expect.element(canvas()).toHaveAttribute("data-frog", "resting");
   expect(submitted).not.toHaveBeenCalled();
   await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("");
 });
@@ -163,12 +161,15 @@ test("the custom cat frames keep its paws planted and its tail hanging during br
 });
 
 
-test("upright tapes, the larger rug and right-side cat remain aligned on all layouts", () => {
+test("tapes fill the original book gaps and the rug and cat remain aligned on all layouts", () => {
   for (const [width, height] of [[240, 420], [390, 844], [844, 420], [1280, 720], [1440, 900]]) {
     const { screen, stand, tapes, cat, rug } = getSceneLayout(width, height);
-    for (const tape of tapes) {
-      expect(tape.height).toBeGreaterThan(tape.width);
-      expect(tape.y + tape.height).toBe(stand.y + 80);
+    for (const [index, tape] of tapes.entries()) {
+      if (index < 3) expect(tape.height).toBeGreaterThan(tape.width);
+      else expect(tape.width).toBeGreaterThan(tape.height);
+      expect(tape.y + tape.height).toBeCloseTo(tapes[0].y + tapes[0].height);
+      expect(tape.y).toBeGreaterThan(stand.y);
+      expect(tape.y + tape.height).toBeLessThan(stand.y + stand.height);
       expect(tape.x).toBeGreaterThan(stand.x);
       expect(tape.x + tape.width).toBeLessThan(stand.x + stand.width);
     }
@@ -180,4 +181,15 @@ test("upright tapes, the larger rug and right-side cat remain aligned on all lay
     expect(rug.x + rug.width).toBeLessThanOrEqual(width);
     expect(rug.y + rug.height + 3).toBeLessThanOrEqual(Math.max(width < 760 ? 640 : 540, height));
   }
+});
+
+
+test("frog sleeps for six ticks then two, waking briefly every 47 seconds", () => {
+  expect(Array.from({ length: 8 }, (_, tick) => frogFrameAt(tick * .5))).toEqual([0, 0, 0, 0, 0, 0, 1, 1]);
+  expect(frogFrameAt(4)).toBe(0);
+  expect(frogFrameAt(46.9)).toBeLessThan(2);
+  expect(Array.from({ length: 8 }, (_, second) => frogFrameAt(47 + second))).toEqual([2, 3, 4, 5, 2, 3, 4, 5]);
+  expect(frogFrameAt(55)).toBeLessThan(2);
+  expect(frogFrameAt(94)).toBe(2);
+  expect(frogFrameAt(48, true)).toBe(0);
 });

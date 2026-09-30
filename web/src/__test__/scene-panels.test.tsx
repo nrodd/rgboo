@@ -104,11 +104,18 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
     const l = getSceneLayout(width, height);
     const player = document.querySelector<HTMLElement>(".scene-youtube-screen")!;
     await expect.poll(() => player.offsetWidth).toBe(Math.round(l.screen.width));
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < l.tapes.length; i++) {
       const button = document.querySelector<HTMLElement>(`[data-tape-index="${i}"]`)!;
       expect(parseFloat(button.style.left)).toBeCloseTo(l.tapes[i].x);
       expect(parseFloat(button.style.top)).toBeCloseTo(l.tapes[i].y);
     }
+    const corner = getComputedStyle(player);
+    expect(parseFloat(corner.borderTopLeftRadius)).toBeGreaterThan(0);
+    const logo = document.querySelector<HTMLElement>(".brand-logo")!;
+    await expect.poll(() => logo.offsetWidth).toBe(Math.round(l.logo.width));
+    expect(logo.getBoundingClientRect().left + logo.getBoundingClientRect().width / 2).toBeCloseTo(player.getBoundingClientRect().left + player.getBoundingClientRect().width / 2, 0);
+    expect(logo.getBoundingClientRect().bottom).toBeLessThanOrEqual(player.getBoundingClientRect().top);
+    expect(document.querySelectorAll("[data-tape-index]")).toHaveLength(4);
     // A cleared/black WebGL buffer has one color; a rendered room has many.
     const snapshot = document.createElement("canvas"); snapshot.width = 64; snapshot.height = 64;
     const ctx = snapshot.getContext("2d")!;
@@ -118,4 +125,30 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
     for (let i = 0; i < pixels.length; i += 4) colors.add(`${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}`);
     expect(colors.size).toBeGreaterThan(30);
   }
+});
+
+
+test("one click on another tape swaps panels on desktop and mobile, preserving the draft", async () => {
+  const initialViewport = [window.innerWidth, window.innerHeight];
+  await render(<StreamEmbed videoId="" />);
+  for (const [width, height] of [[390, 844], [1440, 900]]) {
+    await page.viewport(width, height);
+    await tape(1).click();
+    await page.getByRole("textbox", { name: "Name", exact: true }).fill("Draft Viewer");
+    const clickThroughBackdrop = async (index: number) => {
+      const target = document.querySelector<HTMLElement>(`[data-tape-index="${index}"]`)!;
+      const bounds = target.getBoundingClientRect();
+      await page.getByTestId("scene-panel-backdrop").click({ position: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 } });
+    };
+    await clickThroughBackdrop(1);
+    await expect.element(page.getByRole("dialog", { name: "Links" })).toBeInTheDocument();
+    await expect.element(page.getByRole("dialog", { name: "Links" })).toHaveFocus();
+    await clickThroughBackdrop(2);
+    await expect.element(page.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    await clickThroughBackdrop(0);
+    await expect.element(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Draft Viewer");
+    await userEvent.keyboard("{Escape}");
+    await expect.element(tape(1)).toHaveFocus();
+  }
+  await page.viewport(initialViewport[0], initialViewport[1]);
 });

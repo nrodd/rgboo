@@ -1,7 +1,8 @@
+import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { useEffect, useRef, useState } from "react";
 import { createYouTubePlayer, defaultVideoId, type YouTubeHandle, type YouTubeState } from "../../media/youtubePlayer";
 import { createFrogSender } from "../../api/frogColor";
-import { vhsTapes } from "../../scene/scene.config";
+import { tvArtwork, vhsTapes } from "../../scene/scene.config";
 import type { SceneHandle } from "../../scene/createScene";
 import { getSceneLayout } from "../../scene/layout";
 import { ScenePanels } from "./ScenePanels";
@@ -60,11 +61,14 @@ export const StreamEmbed = ({ videoId = defaultVideoId }: { videoId?: string }) 
       toastTimer.current = setTimeout(() => setFrogMessage(""), 3000);
     });
     const resize = () => {
-      const { screen, tapes } = getSceneLayout(root.clientWidth, root.clientHeight);
+      const { screen, tapes, logo } = getSceneLayout(root.clientWidth, root.clientHeight);
       tapes.forEach((tape, index) => {
         const button = root.querySelector<HTMLElement>(`[data-tape-index="${index}"]`);
         if (button) Object.assign(button.style, { left: `${tape.x}px`, top: `${tape.y}px`, width: `${tape.width}px`, height: `${tape.height}px` });
       });
+      root.style.setProperty("--screen-corner-x", `${10 * screen.width / tvArtwork.opening.width}px`);
+      root.style.setProperty("--screen-corner-y", `${10 * screen.height / tvArtwork.opening.height}px`);
+      for (const [key, value] of Object.entries(logo)) root.style.setProperty(`--logo-${key}`, `${value}px`);
       for (const [key, value] of Object.entries(screen)) root.style.setProperty(`--screen-${key}`, `${value}px`);
     };
     const observer = new ResizeObserver(resize);
@@ -91,6 +95,7 @@ export const StreamEmbed = ({ videoId = defaultVideoId }: { videoId?: string }) 
     <div ref={rootRef} className="scene-player" data-testid="stream-embed-container" data-playback={state.status} data-scene-failed={sceneFailed} data-high-contrast={preferences.highContrast} data-show-labels={preferences.showLabels} data-reduced-motion={preferences.reduceMotion}>
       <div className="scene-canvas-host" ref={hostRef} />
       <div className="scene-youtube-screen" ref={screenRef} />
+      <BrandLogo />
       <div role="group" aria-label="VHS shelf">
         {vhsTapes.map((tape, index) => <button key={tape.id} type="button" className="vhs-hit-target" data-tape-index={index} aria-label={tape.label} aria-haspopup={index < 3 ? "dialog" : undefined} title={tape.label}
           onPointerEnter={() => sceneRef.current?.hoverTape(index)}
@@ -99,7 +104,7 @@ export const StreamEmbed = ({ videoId = defaultVideoId }: { videoId?: string }) 
           onClick={() => openTape(index)}><span className="tape-label">{tape.title}</span></button>)}
       </div>
       <div className="scene-toast" role="status" aria-label="VHS notification" data-visible={Boolean(toast)}>{toast}</div>
-      <ScenePanels panel={panel} onClose={() => setPanel(null)} returnFocus={returnFocus} player={playerRef} playback={state} videoId={videoId}
+      <ScenePanels panel={panel} onSelectTape={openTape} onClose={() => setPanel(null)} returnFocus={returnFocus} player={playerRef} playback={state} videoId={videoId}
         preferences={preferences} onPreferences={applyPreferences} onRetry={() => setAttempt((n) => n + 1)} />
       <p className="scene-toast frog-message" data-visible={Boolean(frogMessage)} role="status" aria-label="Frog color submission">{frogMessage}</p>
     </div>

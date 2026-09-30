@@ -1,14 +1,15 @@
+import { frogFrameAt } from "./frogAnimation";
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Texture } from "pixi.js";
 import spiderWebUrl from "../assets/spiderweb.png";
 import { createRain, createRoomLight } from "./atmosphere";
 import { createIdleFrog, createLoungingCat } from "./characters";
 import { getSceneLayout } from "./layout";
-import { pixels } from "./pixelArt";
+import { artFrames } from "./artAssets";
 import { makePlaceholder } from "./placeholders";
 import type { ScenePreferences } from "./preferences";
 import { drawRoomRug } from "./roomDecor";
 import { layerNames, sceneArtwork, sceneConfig, tvArtwork, vhsTapes, windowOpening, type SceneAction, type SceneLayer } from "./scene.config";
-import { drawTape, drawTapeGlow, drawTelevision } from "./television";
+import { drawSettingsSpine, drawTape, drawTapeGlow, drawTelevision } from "./television";
 export interface SceneHandle { destroy: () => void; hoverTape: (index: number | null) => void; setPlaying: (playing: boolean) => void; setPreferences: (preferences: ScenePreferences) => void }
 
 /** Pixi owns the room; the official YouTube iframe remains a separate DOM surface. */
@@ -59,13 +60,13 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
   }
   backdrop.addChild(spiderWeb);
   const frogArt = sceneArtwork.find((art) => art.id === "frog")!;
-  const frog = frogArt.src ? undefined : createIdleFrog(frogArt.width);
+  const frog = frogArt.src || frogArt.frames ? undefined : createIdleFrog(frogArt.width);
   if (frog) {
     objects.get("frog")!.removeChildren().forEach((child) => child.destroy());
     objects.get("frog")!.addChild(frog.root);
   }
   const rain = createRain();
-  layers.outside.addChild(rain.root);
+  if (!sceneArtwork.some((art) => art.id === "rain")) layers.outside.addChild(rain.root);
   const tv = app.stage.addChild(new Graphics({ label: "crt-housing" }));
   app.stage.addChild(light.reflected, layers.foreground);
   const cat = createLoungingCat();
@@ -90,8 +91,10 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     object.cursor = "pointer";
     object.on("pointerenter", () => hoverTape(index));
     object.on("pointerleave", () => hoverTape(null));
-    object.on("pointertap", () => onAction((["open-color", "open-links", "open-settings", "coming-soon", "coming-soon"] as SceneAction[])[index]));
-    return { object, glow, body };
+    object.on("pointertap", () => onAction((["open-color", "open-links", "open-settings", "coming-soon"] as SceneAction[])[index]));
+    const sprite = object.addChild(new Sprite({ label: `${tape.id}-art` }));
+    sprite.visible = false;
+    return { object, glow, body, sprite, textures: [] as Texture[], updateLabel: undefined as ((frame: number) => void) | undefined };
   });
   let tvSprite: Sprite | undefined;
   const animatedArt = new Map<string, { sprite: Sprite; textures: Texture[]; frameIndex: number; elapsed: number; frameDelays: number[] }>();
@@ -128,13 +131,22 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
       ((width < 760 ? layout.stand.y + layout.stand.height - 6 : layout.stand.y + layout.stand.height - 64) - layout.y) / layout.scale);
     drawRoomRug(rug, layout.rug);
     drawTelevision(tv, layout);
+    tv.visible = !tvSprite;
     cat.root.scale.set(layout.cat.pixelSize);
     cat.root.position.set(Math.round(layout.cat.x - 30), layout.cat.y);
+    const ghostArt = sceneArtwork.find((art) => art.id === "ghost")!;
+    const ghost = objects.get("ghost")!;
+    ghost.scale.set(width < 760 ? 60 / ghostArt.width / layout.scale : 1);
+    const ghostPosition = width < 760
+      ? { x: (width - 72 - layout.x) / layout.scale, y: (layout.stand.y + layout.stand.height + 6 - layout.y) / layout.scale }
+      : { x: ghostArt.x, y: ghostArt.y };
+    positions.set("ghost", ghostPosition);
+    ghost.position.set(ghostPosition.x, ghostPosition.y);
     const candles = sceneArtwork.filter((art) => art.id.startsWith("candle")).map((art, index) => {
-      // In portrait layouts the candles float in the free end of the shelf.
+      // On phones, candles sit on the rug, leaving the logo and window clear.
       const position = width < 760 ? {
-        x: ((width < 360 ? s.x + (index === 0 ? 20 : 46) : s.x + s.width - (index === 0 ? 64 : 38)) - layout.x) / layout.scale,
-        y: ((width < 360 ? s.y - (index === 0 ? 62 : 78) : layout.stand.y + (index === 0 ? 32 : 18)) - layout.y) / layout.scale,
+        x: ((layout.stand.x + layout.stand.width * (index === 0 ? .38 : .48)) - layout.x) / layout.scale,
+        y: ((layout.stand.y + layout.stand.height + 42 - art.height * layout.scale) - layout.y) / layout.scale,
       } : { x: art.x, y: art.y };
       positions.set(art.id, position);
       objects.get(art.id)!.position.set(position.x, position.y);
@@ -142,12 +154,17 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
         width: art.width * layout.scale, height: art.height * layout.scale };
     });
     light.resize(layout, candles);
-    tapes.forEach(({ object, glow, body }, index) => {
+    tapes.forEach(({ object, glow, body, sprite }, index) => {
       const bounds = layout.tapes[index];
       object.position.set(bounds.x, bounds.y);
       object.hitArea = new Rectangle(0, 0, bounds.width, bounds.height);
       drawTape(body, bounds, vhsTapes[index].color, index);
       drawTapeGlow(glow, bounds, vhsTapes[index].color);
+      if (sprite.visible) {
+        const scale = Math.min(bounds.width / sprite.texture.width, bounds.height / sprite.texture.height);
+        sprite.scale.set(scale);
+        sprite.position.set((bounds.width - sprite.width) / 2, bounds.height - sprite.height);
+      }
     });
     if (tvSprite) {
       const sx = s.width / tvArtwork.opening.width, sy = s.height / tvArtwork.opening.height;
@@ -174,8 +191,13 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     rain.update(still ? 0 : elapsed);
     light.update(dt, elapsed, still, candlesLit);
     hop = Math.max(0, hop - dt);
-    tapes.forEach(({ glow }, index) => {
+    tapes.forEach(({ glow, sprite, textures, updateLabel }, index) => {
       const target = hoveredTape === index ? 1 : 0;
+      if (textures.length) {
+        const frame = target ? 1 + (still ? 0 : Math.floor(elapsed * 8) % (textures.length - 1)) : 0;
+        sprite.texture = textures[frame];
+        updateLabel?.(frame);
+      }
       glow.alpha = still ? target : glow.alpha + (target - glow.alpha) * Math.min(1, dt * 12);
     });
     for (const art of sceneArtwork) {
@@ -183,9 +205,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
       if (art.motion === "float") object.y = positions.get(art.id)!.y + (still ? 0 : Math.sin(elapsed * 1.15 + art.x * 0.01) * 3);
       if (art.motion === "fog") object.x = art.x + (still ? 0 : Math.sin(elapsed * 0.2 + art.y) * 24);
       if (art.id === "frog") {
-        const phase = elapsed % 14;
-        const idleHop = phase > 7 && phase < 7.5 ? Math.sin((phase - 7) / 0.5 * Math.PI) * 14 : 0;
-        const height = still ? 0 : Math.max(idleHop, Math.sin(hop / 0.5 * Math.PI) * 28);
+        const height = still ? 0 : Math.sin(hop / 0.5 * Math.PI) * 28;
         object.y = art.y - height;
         app.canvas.dataset.frog = frog?.update(elapsed, still, height > 0) ?? (height > 0 ? "hopping" : "resting");
       }
@@ -200,11 +220,18 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
           fade = (60 - cycle) / 5;
         }
         object.alpha = fade;
-        object.x = art.x + Math.sin(elapsed * 0.5) * 10;
-        object.y = art.y + Math.sin(elapsed * 1.1) * 12;
+        object.x = positions.get(art.id)!.x + Math.sin(elapsed * 0.5) * 10;
+        object.y = positions.get(art.id)!.y + Math.sin(elapsed * 1.1) * 12;
       }
     }
-    for (const animation of animatedArt.values()) {
+    for (const [id, animation] of animatedArt) {
+      if (id === "frog") {
+        animation.frameIndex = frogFrameAt(elapsed, still);
+        animation.sprite.texture = animation.textures[animation.frameIndex];
+        app.canvas.dataset.frogFrame = String(animation.frameIndex);
+        continue;
+      }
+      if (still) continue;
       animation.elapsed += dt;
       const frameDelay = animation.frameDelays[animation.frameIndex] ?? 0.18;
       if (animation.elapsed >= frameDelay) {
@@ -268,7 +295,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
         const frameDelays = art.id === "spider" ? [3.6, 1.2, 1.2, 3.6] : Array(textures.length).fill(0.18);
         animatedArt.set(art.id, { sprite, textures: textures.map((texture) => art.crop ? new Texture({ source: texture.source, frame: new Rectangle(art.crop.x, art.crop.y, art.crop.width, art.crop.height) }) : texture), frameIndex: 0, elapsed: 0, frameDelays });
         object.on("destroyed", () => {
-          for (const texture of animatedArt.get(art.id)?.textures ?? []) texture.destroy();
+          if (art.crop) for (const texture of animatedArt.get(art.id)?.textures ?? []) texture.destroy();
           animatedArt.delete(art.id);
         });
       }
@@ -278,9 +305,15 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
         const flameHeight = 32;
         sprite.scale.set(Math.min(art.width / cropped.width, (art.height - flameHeight) / cropped.height));
         sprite.position.set((art.width - sprite.width) / 2, flameHeight);
-        const flame = object.addChild(new Graphics({ label: "candle-flame" }));
-        pixels(flame, ["...a...", "..aaa..", "..aba..", ".abbba.", "..aba..", "...b...", "...w...", "...w..."],
-          { a: 0xdd9460, b: 0xffe8ad, w: 0x30202b }, 4, art.width / 2 - 14, 0);
+        const flame = object.addChild(new Sprite({ label: "candle-flame" }));
+        void Promise.all(artFrames(art.id === "candle-right" ? "flame_green" : "flame").map((url) => Assets.load<Texture>(url))).then((textures) => {
+          if (disposed) return;
+          textures.forEach((texture) => { texture.source.scaleMode = "nearest"; });
+          flame.texture = textures[0];
+          flame.width = 40; flame.height = 40;
+          flame.position.set(art.width / 2 - 20, -6);
+          animatedArt.set(`${art.id}-flame`, { sprite: flame, textures, frameIndex: 0, elapsed: 0, frameDelays: Array(8).fill(.12) });
+        }).catch((error: unknown) => console.warn("Could not load flame artwork", error));
       } else if (art.frames && art.frames.length > 1) {
         const scale = Math.min(art.width / cropped.width, art.height / cropped.height);
         sprite.scale.set(scale);
@@ -290,13 +323,29 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
       if (!disposed) app.render();
     } catch (error) { console.warn(`Could not load scene art: ${art.id}`, error); }
   }));
+  tapes.forEach(({ body, sprite, textures }, index) => {
+    const tape = vhsTapes[index];
+    void Promise.all([tape.src, ...tape.frames].map((url) => Assets.load<Texture>(url))).then((loaded) => {
+      if (disposed) return;
+      loaded.forEach((texture) => {
+        texture.source.scaleMode = "nearest";
+        textures.push(new Texture({ source: texture.source, frame: index >= 3 ? new Rectangle(1, 22, 30, 10) : new Rectangle(11, 5, index === 2 ? 9 : 10, 27) }));
+      });
+      sprite.texture = textures[0]; sprite.visible = true; body.visible = false;
+      if (index === 2) tapes[index].updateLabel = drawSettingsSpine(sprite.addChild(new Graphics({ label: "settings-spine-label" })));
+      sprite.on("destroyed", () => textures.forEach((texture) => texture.destroy()));
+      redraw();
+    }).catch((error: unknown) => console.warn("Could not load tape artwork", error));
+  });
   if (tvArtwork.src) void Assets.load<Texture>(tvArtwork.src).then((texture) => {
     if (disposed) return;
     texture.source.scaleMode = "nearest";
-    // Keep the separately drawn stand and tapes when replacing the TV casing.
-    tv.visible = true;
-    tvSprite = app.stage.addChildAt(new Sprite({ texture, label: "crt-artwork" }), app.stage.getChildIndex(light.reflected));
-    resize();
+    // Preserve the full export: the books and shelf are authored in the PNG.
+    tv.visible = false;
+    tvSprite = app.stage.addChildAt(new Sprite({ texture: new Texture({ source: texture.source, frame: new Rectangle(0, 0, tvArtwork.width, tvArtwork.height) }), label: "crt-artwork" }), app.stage.getChildIndex(light.reflected));
+    const casingTexture = tvSprite.texture;
+    tvSprite.on("destroyed", () => casingTexture.destroy());
+    redraw();
   }).catch((error: unknown) => console.warn("Could not load TV artwork", error));
   return { destroy, hoverTape, setPlaying, setPreferences };
 }

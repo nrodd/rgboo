@@ -13,14 +13,14 @@ import { glassLensMap } from "../../scene/glassMaterial";
 import type { ScenePreferences } from "../../scene/preferences";
 
 interface Props {
-  panel: number | null; onClose(): void; returnFocus: RefObject<HTMLElement | null>;
+  panel: number | null; onSelectTape(index: number): void; onClose(): void; returnFocus: RefObject<HTMLElement | null>;
   player: RefObject<YouTubeHandle | null>; playback: YouTubeState; videoId: string;
   preferences: ScenePreferences; onPreferences(value: ScenePreferences): void; onRetry(): void;
 }
 const titles = ["Color", "Links", "Settings"];
 const swatches = ["#8fa77b", "#d5854c", "#946172", "#697fa8", "#d2b575", "#722cc7"];
 
-export function ScenePanels({ panel, onClose, returnFocus, player, playback, videoId, preferences, onPreferences, onRetry }: Props) {
+export function ScenePanels({ panel, onSelectTape, onClose, returnFocus, player, playback, videoId, preferences, onPreferences, onRetry }: Props) {
   const glassId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
   const [username, setUsername] = useState("");
@@ -37,6 +37,20 @@ export function ScenePanels({ panel, onClose, returnFocus, player, playback, vid
     const timer = window.setInterval(() => setRemaining(cooldownRemaining()), 1000);
     return () => { sender.current?.destroy(); window.clearInterval(timer); };
   }, []);
+  useEffect(() => {
+    if (panel === null) return;
+    cardRef.current?.focus({ preventScroll: true });
+    const root = returnFocus.current?.closest(".scene-player");
+    if (!root) return;
+    const place = () => {
+      const shelfTop = Math.min(...Array.from(root.querySelectorAll("[data-tape-index]")).map((tape) => tape.getBoundingClientRect().top));
+      cardRef.current?.style.setProperty("--panel-max-height", `${Math.max(160, shelfTop - 24)}px`);
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [panel, returnFocus]);
   const pickColor = (hex: string) => { setColor(hex); setHexInput(hex); };
   const playing = playback.status === "playing" || playback.status === "buffering";
   const togglePreference = (key: keyof ScenePreferences, value: boolean) => onPreferences({ ...preferences, [key]: value });
@@ -52,6 +66,18 @@ export function ScenePanels({ panel, onClose, returnFocus, player, playback, vid
     <Sheet open={panel !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
     <SheetContent ref={cardRef} tabIndex={-1} side="right" className="scene-sheet"
       style={{ "--glass-refraction": `url("#${glassId}")` } as CSSProperties}
+      onPointerDownOutside={(event) => {
+        // The modal backdrop owns this pointer event. Route tape hits through it
+        // so switching replaces the content without first dismissing the card.
+        const pointer = event.detail.originalEvent;
+        const root = returnFocus.current?.closest(".scene-player");
+        const target = Array.from(root?.querySelectorAll<HTMLElement>("[data-tape-index]") ?? []).find((button) => {
+          const bounds = button.getBoundingClientRect();
+          return pointer.clientX >= bounds.left && pointer.clientX <= bounds.right
+            && pointer.clientY >= bounds.top && pointer.clientY <= bounds.bottom;
+        });
+        if (target) { event.preventDefault(); onSelectTape(Number(target.dataset.tapeIndex)); }
+      }}
       onOpenAutoFocus={(event) => { event.preventDefault(); cardRef.current?.focus({ preventScroll: true }); }} data-side="right" aria-describedby={undefined}
       data-reduced-motion={preferences.reduceMotion} data-high-contrast={preferences.highContrast}
       onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus({ preventScroll: true }); }}>
