@@ -132,19 +132,23 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
 test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preserving the draft", async (width, height) => {
   const initialViewport = [window.innerWidth, window.innerHeight];
   await render(<StreamEmbed videoId="" />);
+  // The scene keeps rendering at up to 30fps regardless of motion
+  // preferences (createScene's ticker isn't gated by reduceMotion, only the
+  // animations within a frame are). A canvas this large under CI's software
+  // WebGL can burn enough CPU per frame to starve the clicks below well past
+  // any timeout, which neither a longer timeout nor a settle-wait fixed.
+  // Reuse the app's own visibility-driven pause (it calls app.stop() on
+  // hidden) instead of out-waiting a CPU-bound render loop.
+  let hidden = false;
+  Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+  const setHidden = (value: boolean) => { hidden = value; document.dispatchEvent(new Event("visibilitychange")); };
+  setHidden(true);
   try {
     await page.viewport(width, height);
     // clickThroughBackdrop below reads tape positions that a ResizeObserver
     // sets after the viewport change, not the resize itself; without this, a
     // slow reflow leaves it clicking where a tape used to be.
     await expect.poll(() => document.querySelector("canvas")?.width).toBe(width);
-    // CI logs (with temporary diagnostics, since removed) showed the very
-    // next click hanging on a slower runner even though layout had already
-    // updated: Playwright's actionability check waits for an element's
-    // position to be stable across two rendered frames, and the resize's own
-    // repaint can still be in flight a moment after layout settles. Waiting
-    // two animation frames here gives that repaint a chance to finish first.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await tape(1).click();
     await page.getByRole("textbox", { name: "Name", exact: true }).fill("Draft Viewer");
     const clickThroughBackdrop = async (index: number) => {
@@ -162,6 +166,8 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
     await userEvent.keyboard("{Escape}");
     await expect.element(tape(1)).toHaveFocus();
   } finally {
+    setHidden(false);
+    delete (document as { hidden?: boolean }).hidden;
     await page.viewport(initialViewport[0], initialViewport[1]);
   }
 });
