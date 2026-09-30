@@ -57,6 +57,14 @@ the stream isn't live right now, check back later
 To pin a particular stream, or point at something else entirely, set a full URL
 in `RGBOO_BROADCAST_URL`.
 
+## Sync delay
+
+The bridge posts a now-playing update the instant a song starts, but a
+low-latency YouTube stream still lags a few seconds behind real time by the
+time mpv plays it. To keep the scene from changing before you actually hear
+the new track, rgboo holds every update back by a fixed 7 seconds, a
+middle-of-the-road guess based on YouTube's own low-latency numbers.
+
 ## Staging vs production
 
 Production is the default. To listen to the staging Durable Object
