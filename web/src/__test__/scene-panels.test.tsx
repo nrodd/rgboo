@@ -134,6 +134,10 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
   await render(<StreamEmbed videoId="" />);
   try {
     await page.viewport(width, height);
+    // clickThroughBackdrop below reads tape positions that a ResizeObserver
+    // sets after the viewport change, not the resize itself; without this, a
+    // slow reflow leaves it clicking where a tape used to be.
+    await expect.poll(() => document.querySelector("canvas")?.width).toBe(width);
     await tape(1).click();
     await page.getByRole("textbox", { name: "Name", exact: true }).fill("Draft Viewer");
     const clickThroughBackdrop = async (index: number) => {
@@ -153,5 +157,4 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
   } finally {
     await page.viewport(initialViewport[0], initialViewport[1]);
   }
-  // The larger viewport pushes more pixels through CI's software WebGL renderer.
-}, 30000);
+});
