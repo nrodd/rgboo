@@ -85,6 +85,7 @@ func run() error {
 		URL:     ResolveStreamURL(os.Getenv("RGBOO_STREAM_URL"), *staging),
 		Headers: accessHeaders(os.Getenv("CF_ACCESS_CLIENT_ID"), os.Getenv("CF_ACCESS_CLIENT_SECRET")),
 		State:   state,
+		Delay:   nowPlayingDelay,
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

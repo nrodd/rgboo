@@ -130,6 +130,28 @@ func TestStateTrackHistory(t *testing.T) {
 	}
 }
 
+func TestClientHandleAppliesImmediatelyWithoutDelay(t *testing.T) {
+	state := &State{}
+	c := &Client{State: state}
+	c.handle("message", `{"title":"Roygbiv"}`)
+	if got := state.Snapshot().Current; got != "Roygbiv" {
+		t.Fatalf("got %q, want immediate update", got)
+	}
+}
+
+func TestClientHandleHoldsBackForDelay(t *testing.T) {
+	state := &State{}
+	c := &Client{State: state, Delay: 30 * time.Millisecond}
+	c.handle("message", `{"title":"Roygbiv"}`)
+	if got := state.Snapshot().Current; got != "" {
+		t.Fatalf("got %q before the delay elapsed", got)
+	}
+	time.Sleep(60 * time.Millisecond)
+	if got := state.Snapshot().Current; got != "Roygbiv" {
+		t.Fatalf("got %q, want the update applied after the delay", got)
+	}
+}
+
 func TestRenderShape(t *testing.T) {
 	lines := Render(Snapshot{})
 	if len(lines) != skyH+7 {

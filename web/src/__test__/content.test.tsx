@@ -1,7 +1,9 @@
-import { expect } from "vitest";
+import { afterEach, expect } from "vitest";
 import { page } from "vitest/browser";
 import { test } from "./setup/test-extend";
 import { renderApp } from "./setup/test-utils";
+
+afterEach(() => { delete window.YT; });
 
 test("the homepage is a full viewport canvas without the old page UI", async () => {
   await renderApp();

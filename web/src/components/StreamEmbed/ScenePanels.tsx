@@ -124,7 +124,7 @@ export function ScenePanels({ submitAttempt, panel, onSelectTape, onClose, retur
       {selected === 1 && <div className="panel-stack">
         <nav className="panel-links" aria-label="Project links">
           <a href={youtubeWatchUrl(videoId)} target="_blank" rel="noreferrer"><span>YouTube</span><span aria-hidden="true">↗</span></a>
-          <a href="https://twitch.tv/roddzillaaa" target="_blank" rel="noreferrer"><span>Twitch</span><span aria-hidden="true">↗</span></a>
+          <a href="https://twitch.tv/na10_dev" target="_blank" rel="noreferrer"><span>Twitch</span><span aria-hidden="true">↗</span></a>
           <a href="https://github.com/nrodd/rgboo" target="_blank" rel="noreferrer"><span>GitHub</span><span aria-hidden="true">↗</span></a>
         </nav>
       </div>}
