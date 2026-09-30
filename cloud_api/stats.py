@@ -129,7 +129,7 @@ class StatsStore:
                 logger.warning("Skipping malformed request %s: %s", doc.id, error)
 
     # ------------------------------------------------------------------
-    # Read side: what GET /api/stats returns.
+    # Read side: what GET /admin/stats returns.
     # ------------------------------------------------------------------
 
     def read_range(self, days: int) -> dict:

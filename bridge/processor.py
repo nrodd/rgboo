@@ -15,10 +15,10 @@ difference below follows from that:
 
 import logging
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Callable, Iterable, Optional
 
-from shared.schema import STATUS_PENDING
+from shared.schema import SLOT_SECONDS, STATUS_PENDING
 
 from .store import ColorRequest
 
@@ -33,6 +33,7 @@ class ColorProcessor:
         store,
         serial_controller,
         obs_update_callback: Optional[Callable[[str], bool]] = None,
+        display_callback: Optional[Callable[[str, int, int, int], None]] = None,
         idle_wait_seconds: float = 5.0,
         max_wait_seconds: float = 30.0,
         clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
@@ -40,10 +41,12 @@ class ColorProcessor:
         self._store = store
         self._serial_controller = serial_controller
         self._obs_update_callback = obs_update_callback
+        self._display_callback = display_callback
         self._idle_wait = idle_wait_seconds
         # Cap on one wait, so a far-future slot is re-evaluated periodically.
         self._max_wait = max_wait_seconds
         self._now = clock
+        self._last_displayed_at = None
 
         self._pending = {}
         # Doc ids currently mid-dispatch. Kept out of _pending so a
@@ -124,7 +127,14 @@ class ColorProcessor:
                 self._cond.wait(timeout=self._idle_wait)
                 return None
 
-            wait_seconds = (request.scheduled_time - self._now()).total_seconds()
+            due_at = request.scheduled_time
+            if self._last_displayed_at is not None:
+                # Delivery or serial delays must not shorten someone's turn.
+                due_at = max(
+                    due_at,
+                    self._last_displayed_at + timedelta(seconds=SLOT_SECONDS),
+                )
+            wait_seconds = (due_at - self._now()).total_seconds()
             if wait_seconds > 0:
                 logger.debug(
                     f"Waiting {wait_seconds:.1f}s before processing "
@@ -153,7 +163,7 @@ class ColorProcessor:
         return min(self._pending.values(), key=lambda request: request.scheduled_time)
 
     def _dispatch(self, request: ColorRequest) -> None:
-        """Re-read, send to the ESP32, update OBS, and close the doc out."""
+        """Re-read, send to the Pico, update OBS, and close the doc out."""
         fresh = self._store.reload(request.doc_id)
         if fresh is None:
             logger.warning(f"Request {request.request_id} disappeared before dispatch")
@@ -171,14 +181,17 @@ class ColorProcessor:
         if success:
             logger.info(
                 f"SUCCESS: Sent color RGB({fresh.r}, {fresh.g}, {fresh.b}) "
-                f"to ESP32 for {fresh.username}"
+                f"to Pico for {fresh.username}"
             )
         else:
             logger.error(f"ERROR: Failed to send color for {fresh.username}: {message}")
 
         # Update OBS regardless of the serial result, matching the old
-        # worker loop -- the overlay reflects whose turn it was.
+        # worker loop -- the overlay reflects whose turn it was. The SSE
+        # display push mirrors that: it's who/what is on the LEDs right now.
         self._update_obs(fresh.username)
+        self._publish_display(fresh)
+        self._last_displayed_at = self._now()
 
         try:
             if success:
@@ -189,6 +202,15 @@ class ColorProcessor:
             # Leaving it pending is the safe failure: it will be retried
             # rather than silently dropped.
             logger.error(f"Failed to record status for {fresh.request_id}: {e}")
+
+    def _publish_display(self, request: ColorRequest) -> None:
+        if not self._display_callback:
+            return
+        try:
+            self._display_callback(request.username, request.r, request.g, request.b)
+        except Exception as error:
+            # Best-effort, exactly like OBS: never let it break dispatch.
+            logger.error("Failed to publish display update: %s", error)
 
     def _update_obs(self, username: str) -> None:
         if not self._obs_update_callback:

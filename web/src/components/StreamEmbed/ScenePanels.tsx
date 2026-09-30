@@ -8,7 +8,7 @@ import { Slider } from "../ui/slider";
 import { Switch } from "../ui/switch";
 import { colorFormSchema } from "../ColorForm/colorForm.schema";
 import { cooldownRemaining, createColorSender, type SubmissionResult } from "../../api/colorSubmission";
-import type { YouTubeHandle, YouTubeState } from "../../media/youtubePlayer";
+import { youtubeWatchUrl, type YouTubeHandle, type YouTubeState } from "../../media/youtubePlayer";
 import { glassLensMap } from "../../scene/glassMaterial";
 import type { ScenePreferences } from "../../scene/preferences";
 
@@ -107,7 +107,7 @@ export function ScenePanels({ panel, onSelectTape, onClose, returnFocus, player,
       </form>}
       {selected === 1 && <div className="panel-stack">
         <nav className="panel-links" aria-label="Project links">
-          <a href={`https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`} target="_blank" rel="noreferrer"><span>YouTube</span><span aria-hidden="true">↗</span></a>
+          <a href={youtubeWatchUrl(videoId)} target="_blank" rel="noreferrer"><span>YouTube</span><span aria-hidden="true">↗</span></a>
           <a href="https://twitch.tv/roddzillaaa" target="_blank" rel="noreferrer"><span>Twitch</span><span aria-hidden="true">↗</span></a>
           <a href="https://github.com/nrodd/rgboo" target="_blank" rel="noreferrer"><span>GitHub</span><span aria-hidden="true">↗</span></a>
         </nav>

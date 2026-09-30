@@ -10,7 +10,7 @@ posture are in [architecture.md](architecture.md).
 | `cloud_api/`, `shared/` | Cloud Run | [1](#1-cloud-api--cloud-run) |
 | `bridge/`, `shared/` | The home machine | [2](#2-bridge--home-machine) |
 | `web/` (app or Worker) | Cloudflare | [3](#3-web--cloudflare) |
-| `firmware/` | ESP32 over USB | [4](#4-firmware--esp32) |
+| `firmware/` | Raspberry Pi Pico 2 over USB | [4](#4-firmware--raspberry-pi-pico-2) |
 | `main` (preview) | staging.rgboo.com | [5](#5-staging-environment) |
 
 When a change spans the API and the bridge, deploy **API first, bridge
@@ -164,7 +164,7 @@ dashboard (Workers → rgboo → Deployments), which needs no rebuild. Details:
 
 ---
 
-## 4. Firmware → ESP32
+## 4. Firmware → Raspberry Pi Pico 2
 
 Stop the bridge first — whatever owns the serial port blocks the upload.
 

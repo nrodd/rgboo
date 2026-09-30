@@ -146,7 +146,7 @@
   }
 
   .footer {
-    @apply flex justify-center fixed bottom-0 left-0 right-0 md:h-24 pb-4 space-x-12 md:space-x-8 pointer-events-none;
+    @apply flex flex-col items-center justify-center gap-2 relative lg:fixed bottom-0 left-0 right-0 pb-4 pointer-events-none z-50;
   }
 }
 
@@ -173,3 +173,31 @@
   --color-muted-foreground: var(--muted-foreground, #c3af94);
   --color-secondary: var(--secondary, #3a2c24);
 }
+/* Legal pages use a reading layout independent of the full-screen stream. */
+.legal-page {
+  min-height: 100dvh;
+  background: var(--color-arcana-900);
+  color: var(--color-bone);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+.legal-header, .legal-content, .legal-footer {
+  width: min(100% - 2.5rem, 48rem);
+  margin-inline: auto;
+}
+.legal-header { padding-block: 1.5rem; border-bottom: 1px solid rgb(235 219 190 / 20%); }
+.legal-header > a { font-weight: 700; text-decoration: none; }
+.legal-header span { font-weight: 400; font-size: 0.9rem; }
+.legal-content { padding-block: 3rem; }
+.legal-eyebrow { color: var(--color-pumpkin-400); font-size: 0.875rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.legal-content h1 { font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 700; line-height: 1.1; margin-block: 0.75rem; }
+.legal-date { font-size: 0.9rem; opacity: 0.7; }
+.legal-intro { font-size: 1.25rem; margin-top: 2rem; }
+.legal-content section { margin-top: 2rem; }
+.legal-content h2 { font-size: 1.5rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.75rem; }
+.legal-content section p + p { margin-top: 0.75rem; }
+.legal-page a { text-decoration: underline; text-underline-offset: 0.2em; overflow-wrap: anywhere; }
+.legal-page a:hover { color: var(--color-pumpkin-400); }
+.legal-page a:focus-visible, .footer a:focus-visible { outline: 2px solid var(--color-pumpkin-400); outline-offset: 4px; }
+.legal-footer { padding-block: 1.5rem 2rem; border-top: 1px solid rgb(235 219 190 / 20%); }
+.legal-footer nav { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; font-size: 1rem; }

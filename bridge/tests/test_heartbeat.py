@@ -19,7 +19,7 @@ def test_beat_writes_serial_state(mock_serial):
     )
 
 
-"""Test a disconnected ESP32 is reported honestly rather than omitted"""
+"""Test a disconnected Pico is reported honestly rather than omitted"""
 def test_beat_reports_disconnected_serial(mock_serial):
     store = Mock()
     mock_serial.is_connected.return_value = False

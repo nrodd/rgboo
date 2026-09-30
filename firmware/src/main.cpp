@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <FastLED.h>
+#include <math.h>
 #include "SerialHandler.h"
 #include "Config.h"
 
@@ -12,6 +13,21 @@ SerialHandler serialHandler;
 CRGB currentColor = CRGB::Black;
 CRGB targetColor = CRGB::Black;
 bool transitionInProgress = false;
+
+uint8_t gammaCorrect(uint8_t channel)
+{
+    return static_cast<uint8_t>(powf(channel / 255.0f, LED_GAMMA) * 255.0f + 0.5f);
+}
+
+// Keep transitions and serial logs in input RGB space; correct only the output.
+void showCurrentColor()
+{
+    const CRGB outputColor(gammaCorrect(currentColor.r),
+                           gammaCorrect(currentColor.g),
+                           gammaCorrect(currentColor.b));
+    fill_solid(leds, MAX_LEDS, outputColor);
+    FastLED.show();
+}
 
 // Function to update LED colors with smooth transition
 void updateLEDColor(uint8_t r, uint8_t g, uint8_t b, uint8_t brightness)
@@ -39,8 +55,7 @@ void handleColorTransition()
     currentColor = blend(currentColor, targetColor, BLEND_AMOUNT);
 
     // Update all LEDs with the blended color
-    fill_solid(leds, MAX_LEDS, currentColor);
-    FastLED.show();
+    showCurrentColor();
 
     // Check if transition is complete (colors are very close)
     if (abs(currentColor.r - targetColor.r) <= 1 &&
@@ -50,8 +65,7 @@ void handleColorTransition()
 
         // Snap to exact target color and finish transition
         currentColor = targetColor;
-        fill_solid(leds, MAX_LEDS, currentColor);
-        FastLED.show();
+        showCurrentColor();
 
         transitionInProgress = false;
         Serial.printf("Transition complete: R=%d, G=%d, B=%d\n",
@@ -74,15 +88,14 @@ void setup()
 
     Serial.println("Pico WS2811 Controller Starting...");
 
-    // The PAUTIX 5 m COB strip has 50 WS2811-controlled segments in GRB order.
-    FastLED.addLeds<WS2811, LED_PIN, GRB>(leds, MAX_LEDS);
+    // Pure-color testing confirmed RGB wire order for the connected strip.
+    FastLED.addLeds<WS2811, LED_PIN, RGB>(leds, MAX_LEDS);
     FastLED.setBrightness(LED_BRIGHTNESS);
 
     // Set all LEDs to blue and initialize color state
     currentColor = CRGB::Blue;
     targetColor = CRGB::Blue;
-    fill_solid(leds, MAX_LEDS, currentColor);
-    FastLED.show();
+    showCurrentColor();
 
     Serial.println("LEDs set to blue at 20% brightness");
     Serial.println("Waiting for color data over USB serial...");

@@ -7,20 +7,30 @@ from typing import Tuple, List, Optional, Dict
 logger = logging.getLogger(__name__)
 
 class SerialController:
-    """Handles USB serial communication with the ESP32"""
+    """Handles USB serial communication with the LED controller."""
+
+    # Arduino-Pico assigns Pico 2 (RP2350) PID 0x000F. Depending on the
+    # enabled USB interfaces, the core may set one or more composite-device
+    # bits in that PID.
+    PICO_USB_VID = 0x2E8A
+    PICO2_USB_PIDS = {
+        0x000F, 0x010F, 0x400F, 0x410F,
+        0x800F, 0x810F, 0xC00F, 0xC10F,
+    }
     
     def __init__(self):
         self.serial_connection = None
         self.port = None
         self.baud_rate = 115200
         self.timeout = 2
-        self.esp32_vid_pid_pairs = [
-            ('10C4', '0001'),  # Silicon Labs CP210x
-            ('1A86', '7523'),  # QinHeng Electronics HL-340
-            ('0403', '6001'),  # FTDI
-            ('2341', '0043'),  # Arduino
-            ('2341', '0001'),  # Arduino
-        ]
+        # Retain the adapters recognized by the previous controller setup as a
+        # fallback for development hardware and USB-to-serial adapters.
+        self.legacy_usb_vendor_ids = {
+            0x10C4,  # Silicon Labs CP210x
+            0x1A86,  # QinHeng Electronics HL-340/CH340
+            0x0403,  # FTDI
+            0x2341,  # Arduino
+        }
     
     def get_available_ports(self) -> List[Dict]:
         """Get list of available serial ports"""
@@ -35,36 +45,42 @@ class SerialController:
             })
         return ports
     
-    def find_esp32_port(self) -> Optional[str]:
-        """Automatically find ESP32 port by VID/PID"""
-        for port in serial.tools.list_ports.comports():
-            if port.vid and port.pid:
-                vid_hex = f"{port.vid:04X}"
-                pid_hex = f"{port.pid:04X}"
-                
-                # Check if it matches known ESP32 VID/PID pairs
-                for known_vid, known_pid in self.esp32_vid_pid_pairs:
-                    if vid_hex == known_vid or 'CP210' in port.description or 'ESP32' in port.description:
-                        logger.info(f"Found potential ESP32 at {port.device}: {port.description}")
-                        return port.device
-        
-        # Fallback: look for common ESP32 device names
-        for port in serial.tools.list_ports.comports():
-            description = port.description.upper()
-            if any(keyword in description for keyword in ['CP210', 'ESP32', 'SILICON LABS', 'USB-SERIAL']):
-                logger.info(f"Found potential ESP32 by description at {port.device}: {port.description}")
+    def find_controller_port(self) -> Optional[str]:
+        """Automatically find the Pico 2, with legacy adapters as fallback."""
+        ports = list(serial.tools.list_ports.comports())
+
+        # Prefer the deployed Pico 2 so a generic adapter cannot win merely
+        # because Windows returned it first.
+        for port in ports:
+            if (port.vid == self.PICO_USB_VID
+                    and port.pid in self.PICO2_USB_PIDS):
+                logger.info(
+                    f"Found Raspberry Pi Pico 2 at {port.device}: {port.description}"
+                )
+                return port.device
+
+        for port in ports:
+            description = (port.description or '').upper()
+            if (port.vid in self.legacy_usb_vendor_ids
+                    or any(keyword in description for keyword in (
+                        'CP210', 'SILICON LABS', 'USB-SERIAL'
+                    ))):
+                logger.info(
+                    f"Found potential LED controller at {port.device}: "
+                    f"{port.description}"
+                )
                 return port.device
         
         return None
     
     def connect(self, port: Optional[str] = None) -> bool:
-        """Connect to ESP32 via serial"""
+        """Connect to the LED controller via serial."""
         try:
             # Auto-detect port if not specified
             if not port:
-                port = self.find_esp32_port()
+                port = self.find_controller_port()
                 if not port:
-                    logger.error("Could not find ESP32 device")
+                    logger.error("Could not find Raspberry Pi Pico 2 controller")
                     return False
             
             # Close existing connection if any
@@ -86,7 +102,7 @@ class SerialController:
             
             # Test connection by sending a ping
             if self.test_connection():
-                logger.info(f"Successfully connected to ESP32 at {port}")
+                logger.info(f"Successfully connected to Pico controller at {port}")
                 return True
             else:
                 logger.error(f"Connection test failed for {port}")
@@ -109,12 +125,12 @@ class SerialController:
         self.port = None
     
     def is_connected(self) -> bool:
-        """Check if connected to ESP32"""
+        """Check if connected to the LED controller."""
         return (self.serial_connection is not None and 
                 self.serial_connection.is_open)
     
     def test_connection(self) -> bool:
-        """Test if ESP32 is responding"""
+        """Test whether the serial connection can write to the controller."""
         try:
             if not self.is_connected():
                 return False
@@ -126,7 +142,8 @@ class SerialController:
             test_message = "TEST\n"
             self.serial_connection.write(test_message.encode('utf-8'))
             
-            # Wait for response (ESP32 should echo)
+            # The firmware echoes generic input, but receiving the response is
+            # optional: a successful write is enough to establish the link.
             time.sleep(0.5)
             
             # Check if there's any response
@@ -142,7 +159,7 @@ class SerialController:
             return False
     
     def send_color(self, r: int, g: int, b: int) -> Tuple[bool, str]:
-        """Send RGB color to ESP32"""
+        """Send an RGB color command to the Pico controller."""
         try:
             # Ensure connection
             if not self.is_connected():
@@ -158,11 +175,13 @@ class SerialController:
             
             logger.info(f"Sent RGB command: {command.strip()}")
             
-            # Optional: Read response from ESP32
+            # Optional: read the firmware's diagnostic response.
             time.sleep(0.1)
             if self.serial_connection.in_waiting > 0:
                 response = self.serial_connection.read(self.serial_connection.in_waiting)
-                logger.debug(f"ESP32 response: {response.decode('utf-8', errors='ignore')}")
+                logger.debug(
+                    f"Pico response: {response.decode('utf-8', errors='ignore')}"
+                )
             
             return True, "Color sent successfully"
             

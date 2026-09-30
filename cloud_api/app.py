@@ -30,7 +30,7 @@ def create_app(store=None, stats=None) -> Flask:
 
     # A test that injects a fake store gets no stats store unless it asks for
     # one, so it never builds a real Firestore client behind its own back.
-    # /api/stats answers 503 without one, which is the right answer there.
+    # /admin/stats answers 503 without one, which is the right answer there.
     if store is None:
         client = get_firestore_client()
         store = RequestStore(client)

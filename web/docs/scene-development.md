@@ -16,7 +16,8 @@ npm run dev
 ```
 
 Open http://127.0.0.1:5173. Set `VITE_YOUTUBE_VIDEO_ID` in `.env.local` to the
-current broadcast's video ID (currently `6LVM4iQfMX4`). Restart Vite after changing
+`channel:UC2GJYmn0WCqW8k1NFp1W7KQ` to follow the channel across broadcasts,
+or to a specific video ID for a fixed source. Restart Vite after changing
 configuration. A new YouTube broadcast can have a new ID. `/api/stream` provides
 song metadata over SSE; it is not a video endpoint.
 

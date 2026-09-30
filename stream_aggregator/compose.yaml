@@ -1,0 +1,11 @@
+services:
+  aggregator:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    volumes:
+      - token-data:/data
+volumes:
+  token-data:

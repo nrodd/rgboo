@@ -40,7 +40,7 @@ and the bridge observes the same Firestore request documents.
 1. Open the web URL and submit a name and colour.
 2. Watch the `[api]` log queue it and the `[bridge]` log dispatch it. The bridge
    is dry-run by default, so it logs the serial write instead of touching an
-   ESP32.
+   Raspberry Pi Pico 2.
 3. Open `/admin` to see the queue and use its controls. Changes appear in the
    Firestore Emulator UI as well.
 

@@ -35,7 +35,13 @@ export function loadYouTubeAPI(): Promise<YouTubeAPI> {
 }
 export interface YouTubeState { status: PlaybackStatus; ready: boolean; muted: boolean; volume: number }
 export interface YouTubeHandle { togglePlayback(): void; toggleSound(): void; setVolume(volume: number): void; destroy(): void }
-export const defaultVideoId = import.meta.env.VITE_YOUTUBE_VIDEO_ID ?? "6LVM4iQfMX4";
+export const defaultVideoId = import.meta.env.VITE_YOUTUBE_VIDEO_ID ?? "channel:UC2GJYmn0WCqW8k1NFp1W7KQ";
+
+export function youtubeWatchUrl(source: string) {
+  return source.startsWith("channel:")
+    ? `https://www.youtube.com/channel/${encodeURIComponent(source.slice(8))}/live`
+    : `https://www.youtube.com/watch?v=${encodeURIComponent(source)}`;
+}
 
 export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange: (state: YouTubeState) => void): YouTubeHandle {
   let disposed = false, ready = false;
@@ -50,7 +56,9 @@ export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange
   iframe.allowFullscreen = true;
   iframe.referrerPolicy = "strict-origin-when-cross-origin";
   const params = new URLSearchParams({ enablejsapi: "1", origin: window.location.origin, controls: "0", playsinline: "1", rel: "0" });
-  const url = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}?${params}`;
+  const channel = videoId.startsWith("channel:") ? videoId.slice(8) : undefined;
+  if (channel) params.set("channel", channel);
+  const url = `https://www.youtube.com/embed/${channel ? "live_stream" : encodeURIComponent(videoId)}?${params}`;
   const fallback = () => {
     if (disposed || ready) return;
     state.status = "error"; state.ready = false;

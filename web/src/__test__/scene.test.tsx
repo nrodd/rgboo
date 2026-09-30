@@ -10,7 +10,7 @@ import { StreamEmbed } from "../components/StreamEmbed";
 import { createLoungingCat } from "../scene/characters";
 import { getSceneLayout } from "../scene/layout";
 import { sceneArtwork } from "../scene/scene.config";
-import { createYouTubePlayer, type YouTubeAPI } from "../media/youtubePlayer";
+import { createYouTubePlayer, youtubeWatchUrl, type YouTubeAPI } from "../media/youtubePlayer";
 
 afterEach(() => { localStorage.removeItem("rgboo_cooldown_end"); localStorage.removeItem("rgboo_scene_preferences"); delete window.YT; vi.restoreAllMocks(); });
 const canvas = () => page.getByRole("group", { name: /Interactive scene/ });
@@ -192,4 +192,17 @@ test("frog sleeps for six ticks then two, waking briefly every 47 seconds", () =
   expect(frogFrameAt(55)).toBeLessThan(2);
   expect(frogFrameAt(94)).toBe(2);
   expect(frogFrameAt(48, true)).toBe(0);
+});
+
+
+test("the default channel embed follows new broadcasts and its watch link targets the channel", () => {
+  const host = document.createElement("div");
+  const source = "channel:UC2GJYmn0WCqW8k1NFp1W7KQ";
+  const player = createYouTubePlayer(host, source, () => {});
+  const url = new URL(host.querySelector("iframe")!.src);
+  expect(url.pathname).toBe("/embed/live_stream");
+  expect(url.searchParams.get("channel")).toBe("UC2GJYmn0WCqW8k1NFp1W7KQ");
+  expect(url.searchParams.get("enablejsapi")).toBe("1");
+  expect(youtubeWatchUrl(source)).toBe("https://www.youtube.com/channel/UC2GJYmn0WCqW8k1NFp1W7KQ/live");
+  player.destroy();
 });

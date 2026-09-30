@@ -1,0 +1,60 @@
+/**
+ * Stats API client. Goes through /admin-api, so Cloudflare Access gates it
+ * like the rest of the admin page; the Worker and Vite's proxy both rewrite
+ * it to the API's /admin/stats.
+ */
+
+/** One colour family, ranked across the whole window. It is a grid row. */
+export type ColorRow = {
+  key: string;
+  label: string;
+  hex: string | null;
+  count: number;
+  share: number;
+};
+
+export type StatsDay = {
+  date: string;
+  count: number;
+  /** Colour-bin key -> how many that day. Bins with none are omitted. */
+  colors: Record<string, number>;
+};
+
+/** Total submissions in this hour of day, summed across the window. */
+export type HourSlot = { h: number; n: number };
+
+export type StatsTotals = {
+  count: number;
+  active_days: number;
+  avg_per_active_day: number;
+  busiest_day: { date: string; count: number } | null;
+  busiest_hour: { hour: number; count: number } | null;
+  hours: HourSlot[];
+  colors: ColorRow[];
+  /** Every colour picked, in the order it arrived. Thinned if very long. */
+  sequence: string[];
+  /** True when `sequence` is a thinned sample of a longer window. */
+  sampled: boolean;
+};
+
+export type StatsResponse = {
+  timezone: string;
+  days: number;
+  start_date: string;
+  end_date: string;
+  generated_at: string;
+  /** When the aggregates were last rebuilt, or null if they never have been. */
+  updated_at: string | null;
+  totals: StatsTotals;
+  grid: StatsDay[];
+};
+
+/** Sent explicitly rather than relying on the API default, so they cannot drift. */
+const STATS_DAYS = 30;
+
+export const fetchStats = async (): Promise<StatsResponse> => {
+  const response = await fetch(`/admin-api/stats?days=${STATS_DAYS}`);
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || "Unable to load stats");
+  return body as StatsResponse;
+};

@@ -40,6 +40,14 @@ Deployed using Cloudflare Workers.
 yarn deploy
 ```
 
+## Pages
+
+| Route | Access |
+| --- | --- |
+| `/` | Public colour form and stream |
+| `/admin` | Cloudflare Access only |
+| `/admin/stats` | Cloudflare Access only, until there's a plan for public load on Firestore. Its data comes from `/admin-api/stats`. |
+
 ## API proxy
 
 `worker/index.js` serves the app and proxies `/api/*` and `/admin-api/*` with

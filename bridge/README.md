@@ -2,11 +2,11 @@
 
 The half of RGBoo that cannot live in the cloud. It watches Firestore for
 pending color requests, waits for each one's slot, and writes the color to
-the ESP32 over USB serial. See [`docs/architecture.md`](../docs/architecture.md)
+the Raspberry Pi Pico 2 over USB serial. See [`docs/architecture.md`](../docs/architecture.md)
 for the full design; this is the how-to-run.
 
 ```
-Cloud Run API --> Firestore --> bridge (this machine) --> USB serial --> ESP32
+Cloud Run API --> Firestore --> bridge (this machine) --> USB serial --> Pico 2
 ```
 
 It also serves the OBS browser source on `:5001` from `obs.py` and
@@ -18,7 +18,7 @@ change to Cloudflare, which broadcasts it from `https://rgboo.com/api/stream`.
 
 New here? [`docs/local-setup.md`](../docs/local-setup.md) starts the complete
 emulator-backed stack and runs this bridge in dry-run mode, which is what you
-want unless the ESP32 is plugged into your machine.
+want unless the Pico is plugged into your machine.
 
 ## Install
 
@@ -55,7 +55,7 @@ only.
 ## Dry run
 
 `--dry-run` logs color writes instead of opening the serial port, so it
-runs anywhere -- no ESP32 attached, and no fight over the port with a
+runs anywhere -- no Pico attached, and no fight over the port with a
 bridge that is already running.
 
 ```
@@ -125,7 +125,12 @@ bridge picks them back up (overdue ones dispatch immediately). See
 - **`heartbeat.py`** writes `meta/bridge` every 60s; the cloud API reads
   it to answer `bridge_online` / `serial_connected`.
 - **`now_playing.py`** listens for Windows media/session changes and pushes
-  artist/title JSON to the Cloudflare SSE fan-out.
+  artist/title JSON to the Cloudflare SSE fan-out. One worker coalesces media
+  events into a single pending refresh, including while a read or POST is slow.
+- **`display.py`** publishes the current color/username with one in-flight POST
+  and at most one waiting update. New updates replace the waiting value, so a
+  slow endpoint cannot accumulate obsolete display states. Shutdown discards
+  the waiting update. LED dispatch still processes each queued request.
 
 ## Tests
 

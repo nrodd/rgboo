@@ -9,7 +9,7 @@
 # See bridge/README.md.
 
 [Unit]
-Description=RGBoo bridge (Firestore queue -> USB serial -> ESP32)
+Description=RGBoo bridge (Firestore queue -> USB serial -> Raspberry Pi Pico 2)
 After=network-online.target
 Wants=network-online.target
 

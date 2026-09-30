@@ -1,4 +1,4 @@
-"""Home-machine bridge: Firestore queue -> USB serial -> ESP32.
+"""Home-machine bridge: Firestore queue -> USB serial -> Raspberry Pi Pico 2.
 
 The cloud API (cloud_api/) accepts color requests and parks them in
 Firestore with a scheduled_time. This package is the half that cannot
