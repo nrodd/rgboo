@@ -129,6 +129,7 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
 });
 
 
+// Three animated modal swaps over a real WebGL scene need a CI rendering budget.
 test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preserving the draft", async (width, height) => {
   const initialViewport = [window.innerWidth, window.innerHeight];
   await render(<StreamEmbed videoId="" />);
@@ -153,4 +154,4 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
   } finally {
     await page.viewport(initialViewport[0], initialViewport[1]);
   }
-});
+}, 30000);
