@@ -153,4 +153,5 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
   } finally {
     await page.viewport(initialViewport[0], initialViewport[1]);
   }
-});
+  // The larger viewport pushes more pixels through CI's software WebGL renderer.
+}, 30000);
