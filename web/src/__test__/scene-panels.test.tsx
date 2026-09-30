@@ -1,4 +1,4 @@
-import { afterEach, expect, vi } from "vitest";
+import { afterEach, beforeEach, expect, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { http, HttpResponse } from "msw";
@@ -7,25 +7,33 @@ import { worker } from "./mocks/browser";
 import { StreamEmbed } from "../components/StreamEmbed";
 import { getSceneLayout } from "../scene/layout";
 
+import { useStaticScene } from "./setup/test-scene-adapter";
+
+beforeEach(() => useStaticScene(true));
+afterEach(() => useStaticScene(false));
+
 const tape = (index: number) => page.getByRole("button", { name: new RegExp(`^VHS tape ${index}:`) });
 const canvas = () => page.getByRole("group", { name: /Interactive scene/ });
 afterEach(() => { localStorage.removeItem("rgboo_cooldown_end"); localStorage.removeItem("rgboo_scene_preferences"); vi.restoreAllMocks(); });
 
 test("first tape submits a name and RGB color, shares frog cooldown, and returns keyboard focus", async () => {
+  useStaticScene(false);
   const requests: unknown[] = [];
   worker.use(http.post("*/api/color", async ({ request }) => { requests.push(await request.json()); return HttpResponse.json({ queue_position: 3 }); }));
-  await render(<StreamEmbed videoId="" />);
+  await render(<StreamEmbed videoId="test-video-id" />);
   await tape(1).click();
   await expect.element(page.getByRole("dialog", { name: "Color" })).toHaveAttribute("data-side", "right");
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test Viewer");
   await page.getByRole("textbox", { name: "Hex color" }).fill("#123456");
-  await page.getByRole("button", { name: "Send" }).click();
-  await expect.element(page.getByRole("status")).toHaveTextContent("Queued · #3");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.element(page.getByRole("status", { name: "Color submission", exact: true })).toHaveTextContent("Queued · #3");
   expect(requests).toEqual([{ username: "Test Viewer", color: { r: 18, g: 52, b: 86 } }]);
   await expect.element(page.getByRole("button", { name: /Wait \d+s/ })).toBeDisabled();
   await userEvent.keyboard("{Escape}");
   await expect.element(tape(1)).toHaveFocus();
-  await canvas().click({ position: { x: 10, y: 10 } });
+  // Keyboard interaction needs focus, not a GPU-dependent pointer round trip.
+  document.querySelector<HTMLCanvasElement>("canvas")!.focus();
+  await expect.element(canvas()).toHaveFocus();
   await userEvent.keyboard("f");
   expect(requests).toHaveLength(1);
   expect(document.body.textContent).not.toContain("Frog is resting");
@@ -34,21 +42,21 @@ test("first tape submits a name and RGB color, shares frog cooldown, and returns
 test("invalid inputs and server rejection keep the color form available to retry", async () => {
   const requests = vi.fn();
   worker.use(http.post("*/api/color", () => { requests(); return HttpResponse.json({ error: "Queue is full" }, { status: 503 }); }));
-  await render(<StreamEmbed videoId="" />);
+  await render(<StreamEmbed videoId="test-video-id" />);
   await tape(1).click();
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test!!!");
-  await page.getByRole("button", { name: "Send" }).click();
-  await expect.element(page.getByRole("status")).toHaveTextContent("alphanumeric");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.element(page.getByRole("status", { name: "Color submission", exact: true })).toHaveTextContent("alphanumeric");
   expect(requests).not.toHaveBeenCalled();
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test Viewer");
-  await page.getByRole("button", { name: "Send" }).click();
-  await expect.element(page.getByRole("status")).toHaveTextContent("Queue is full");
-  await expect.element(page.getByRole("button", { name: "Send" })).toBeEnabled();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.element(page.getByRole("status", { name: "Color submission", exact: true })).toHaveTextContent("Queue is full");
+  await expect.element(page.getByRole("button", { name: "Send", exact: true })).toBeEnabled();
   expect(localStorage.getItem("rgboo_cooldown_end")).toBeNull();
 });
 
 test("second tape opens old links from the right and the dialog traps focus", async () => {
-  await render(<StreamEmbed videoId="" />);
+  await render(<StreamEmbed videoId="test-video-id" />);
   await tape(2).click();
   await expect.element(page.getByRole("dialog", { name: "Links" })).toHaveAttribute("data-side", "right");
   await expect.element(page.getByRole("dialog", { name: "Links" })).toHaveFocus();
@@ -67,7 +75,8 @@ test("second tape opens old links from the right and the dialog traps focus", as
 });
 
 test("settings change scene behavior without recreating the canvas and persist after remount", async () => {
-  const view = await render(<StreamEmbed videoId="" />);
+  useStaticScene(false);
+  const view = await render(<StreamEmbed videoId="test-video-id" />);
   await expect.element(canvas()).toHaveAttribute("data-motion", "full");
   const originalCanvas = document.querySelector("canvas");
   await tape(3).click();
@@ -85,7 +94,7 @@ test("settings change scene behavior without recreating the canvas and persist a
   expect(JSON.parse(localStorage.getItem("rgboo_scene_preferences")!)).toEqual({ reduceMotion: true, highContrast: true, showLabels: true });
   await userEvent.keyboard("{Escape}");
   await view.unmount();
-  await render(<StreamEmbed videoId="" />);
+  await render(<StreamEmbed videoId="test-video-id" />);
   await expect.element(canvas()).toHaveAttribute("data-motion", "reduced");
   await tape(3).click();
   await expect.element(page.getByRole("switch", { name: "Reduce motion", exact: true })).toBeChecked();
@@ -93,7 +102,8 @@ test("settings change scene behavior without recreating the canvas and persist a
 }, 30000);
 
 test("repeated live resizes retain the canvas, redraw pixels and align every tape with the scene", async () => {
-  await render(<StreamEmbed videoId="" />);
+  useStaticScene(false);
+  await render(<StreamEmbed videoId="test-video-id" />);
   await expect.element(canvas()).toBeInTheDocument();
   const originalCanvas = document.querySelector("canvas")!;
   const root = document.querySelector<HTMLElement>(".scene-player")!;
@@ -129,9 +139,11 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
 });
 
 
+// Three animated modal swaps over a real WebGL scene need a CI rendering budget.
 test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preserving the draft", async (width, height) => {
   const initialViewport = [window.innerWidth, window.innerHeight];
-  await render(<StreamEmbed videoId="" />);
+  useStaticScene(false);
+  await render(<StreamEmbed videoId="test-video-id" />);
   // The scene keeps rendering at up to 30fps regardless of motion
   // preferences (createScene's ticker isn't gated by reduceMotion, only the
   // animations within a frame are). A canvas this large under CI's software
@@ -150,8 +162,20 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
     // slow reflow leaves it clicking where a tape used to be.
     await expect.poll(() => document.querySelector("canvas")?.width).toBe(width);
     await tape(1).click();
+    if (width < 760) {
+      await expect.poll(() => document.querySelector<HTMLElement>(".scene-sheet")!.getBoundingClientRect().x).toBe(0);
+      const panel = document.querySelector<HTMLElement>(".scene-sheet")!.getBoundingClientRect();
+      expect(panel.x).toBe(0); expect(panel.y).toBe(0);
+      expect(panel.width).toBe(width); expect(panel.height).toBe(height);
+      expect(document.querySelector(".scene-sheet")?.getAttribute("aria-modal")).not.toBe("true");
+      expect(document.querySelector('[data-testid="scene-panel-backdrop"]')).toBeNull();
+    }
     await page.getByRole("textbox", { name: "Name", exact: true }).fill("Draft Viewer");
     const clickThroughBackdrop = async (index: number) => {
+      if (width < 760) {
+        await page.getByRole("navigation", { name: "Scene panels" }).getByRole("button", { name: ["Color", "Links", "Settings"][index], exact: true }).click();
+        return;
+      }
       const target = document.querySelector<HTMLElement>(`[data-tape-index="${index}"]`)!;
       const bounds = target.getBoundingClientRect();
       await page.getByTestId("scene-panel-backdrop").click({ position: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 } });
@@ -163,11 +187,13 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
     await expect.element(page.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
     await clickThroughBackdrop(0);
     await expect.element(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Draft Viewer");
-    await userEvent.keyboard("{Escape}");
+    if (width < 760) await page.getByRole("button", { name: "Close", exact: true }).click();
+    else await clickThroughBackdrop(0); // A second click on the same tape closes it.
     await expect.element(tape(1)).toHaveFocus();
+    await expect.element(page.getByRole("dialog", { name: "Color" })).not.toBeInTheDocument();
   } finally {
     setHidden(false);
     delete (document as { hidden?: boolean }).hidden;
     await page.viewport(initialViewport[0], initialViewport[1]);
   }
-});
+}, 30000);

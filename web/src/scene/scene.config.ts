@@ -12,7 +12,7 @@ import windowUrl from "../assets/window.webp";
 
 export const layerNames = ["background", "outside", "window", "props", "foreground"] as const;
 export type SceneLayer = (typeof layerNames)[number];
-export type SceneAction = "toggle-playback" | "toggle-sound" | "toggle-candles" | "frog-hop" | "coming-soon" | "open-color" | "open-links" | "open-settings";
+export type SceneAction = "toggle-playback" | "toggle-sound" | "toggle-candles" | "frog-hop" | "open-submit" | "open-color" | "open-links" | "open-settings";
 export interface Bounds { x: number; y: number; width: number; height: number }
 export interface SceneArtwork extends Bounds {
   id: string;
@@ -73,5 +73,5 @@ export const vhsTapes = [
   { id: "vhs-1", src: artUrl("vhs_color"), frames: artFrames("vhs_color_hover"), label: "VHS tape 1: Send a color", title: "Send a color", color: 0x9f855f },
   { id: "vhs-2", src: artUrl("vhs_info"), frames: artFrames("vhs_info_hover"), label: "VHS tape 2: Links", title: "Links", color: 0x60867a },
   { id: "vhs-3", src: artUrl("vhs_name"), frames: artFrames("vhs_name_hover"), label: "VHS tape 3: Settings", title: "Settings", color: 0x946172 },
-  { id: "vhs-4", src: artUrl("vhs_submit"), frames: artFrames("vhs_submit_hover"), label: "VHS tape 4: Coming soon", title: "Coming soon", color: 0x69748f },
+  { id: "vhs-4", src: artUrl("vhs_submit"), frames: artFrames("vhs_submit_hover"), label: "VHS tape 4: Submit", title: "Submit", color: 0x69748f },
 ];

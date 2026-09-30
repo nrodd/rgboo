@@ -12,7 +12,9 @@
     "build:staging": "CLOUDFLARE_ENV=staging vite build && npx tsc --noEmit",
     "deploy:staging": "yarn build:staging && wrangler deploy",
     "test": "vitest run",
-    "test:browser": "vitest run --browser.headless=false"
+    "test:browser": "vitest run --browser.headless=false",
+    "postinstall": "node scripts/install-git-hooks.cjs",
+    "test:live": "vitest run --config vitest.live.config.ts"
   },
   "dependencies": {
     "@2toad/profanity": "^3.2.0",

@@ -82,10 +82,10 @@ export function BrandLogo() {
           <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1 1 1 0 0" />
         </filter>
         <mask id="logo-perched-text" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
-          <path d="M0 0H440V594H0Z" fill="white" />
+          <path d="M0 0H445V420C430 445 420 470 420 505C420 550 435 580 460 594H0Z" fill="white" />
         </mask>
         <mask id="logo-perched-ghost" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
-          <path d="M440 0H1000V1000H440Z" fill="white" />
+          <path d="M470 0H1000V1000H560V740C500 725 470 690 470 594Z" fill="white" />
         </mask>
       </defs>
       <image href={logoUrl} x="0" y="0" width="1000" height="1000" filter="url(#logo-remove-black)" mask="url(#logo-perched-text)" transform="translate(0 56)" />

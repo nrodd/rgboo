@@ -1,5 +1,5 @@
 import { createColorSender } from "./colorSubmission";
-export const frogColor = { username: "Frog", color: { r: 143, g: 167, b: 123 } };
+export const frogColor = { username: "Frog", color: { r: 0, g: 255, b: 0 } };
 
 export function createFrogSender(onMessage: (message: string) => void) {
   const sender = createColorSender((result) => {

@@ -7,7 +7,7 @@ characters, weather, flames and tape hover states. Unexported props retain their
 code-authored placeholders.
 The CRT has a stepped plastic casing, rabbit-ear antenna and feet on a wooden
 stand. Four VHS tapes sit on the shelf below it. Hovering or focusing a tape
-adds a subtle pixel halo. The Submit tape shows a temporary “Coming soon” toast. The first three open compact shadcn glass cards on the right: color submission, project links, and settings.
+adds a subtle pixel halo. The Submit tape sends the current color draft, opening the form to complete missing fields. The first three open compact shadcn glass cards on the right: color submission, project links, and settings.
 
 ## Local preview
 
@@ -84,10 +84,10 @@ Clicking the frog makes it hop and sends the same request as the old color form:
 POST /api/color
 Content-Type: application/json
 
-{"username":"Frog","color":{"r":143,"g":167,"b":123}}
+{"username":"Frog","color":{"r":0,"g":255,"b":0}}
 ```
 
-The green is `#8FA77B`. Edit `src/api/frogColor.ts` to change the name/color.
+The frog sends saturated green, `#00FF00`. Edit `src/api/frogColor.ts` to change the name/color.
 The sender prevents overlapping requests and shares the form's 30-second
 successful-send cooldown in localStorage. Every click can still animate the
 frog. A short toast reports a successful submission or failure. Cooldown hops
@@ -129,7 +129,7 @@ Optional live playback check (contacts YouTube; requires an active, embeddable
 broadcast):
 
 ```sh
-VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test -- src/__test__/youtube-live.test.tsx
+VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test:live
 ```
 
 
@@ -240,7 +240,7 @@ and color/info/name/submit VHS artwork with hover frames. `artAssets.ts` resolve
 the original exports; scene animation uses the existing ticker and stops with
 reduced motion. Existing tape actions and keyboard controls are retained.
 One horizontal Submit tape sits in the widest shelf gap; its action remains a
-Coming soon placeholder.
+color submission action.
 
 The full TV export includes its original shelf and preset books.
 `tapeArtworkSlots` places the larger interactive tapes in the gaps between those
@@ -278,8 +278,9 @@ widest gap. A click on
 another tape while a card is open routes through the modal backdrop to swap
 its content immediately, retaining the color draft and keyboard focus handling.
 
-On phones, panel cards stay above the shelf and scroll within the available
-height so all tape controls remain clickable while another panel is open.
+On phones, panels fill the screen with Color, Links and Settings navigation.
+They scroll inside the available height and close with the close button.
+Desktop tape clicks swap panels; clicking the same tape again closes its panel.
 
 The Settings tape keeps the original name-tape colors and hover frames, with
 a source-pixel `SETUP` label drawn over its old lettering. The replacement
@@ -292,3 +293,33 @@ All room sprites and the logo use lossless WebP, with exact RGBA round-trip
 verification against their original PNGs (399,688 → 245,008 bytes). Nearest-neighbor
 sampling remains unchanged. Vite emits separate hashed assets instead of inlining
 frames into JavaScript, allowing browser caching without inflating the scene bundle.
+
+## Shared pre-push tests
+
+Run `corepack yarn install` in `web/` after cloning. The postinstall script
+configures this checkout to use the versioned `.githooks/pre-push` hook. Every
+push runs the web unit/browser suite and is blocked if it fails. Install the
+browser once with `corepack yarn playwright install chromium` (on Linux, use
+`corepack yarn playwright install --with-deps chromium`). CI skips hook setup.
+
+The normal suite uses a local test-stream iframe and a fake YouTube API, so it
+never loads the production broadcast or YouTube scripts. Adapter URL tests use
+detached iframes. The explicitly opted-in live check remains separate and is
+excluded from the pre-push hook. Production and local app previews keep the
+hardcoded channel; the test fixture is only loaded by Vitest.
+
+The cat contact plane follows the TV artwork's scale rather than a fixed offset.
+The ghost mask excludes the source logo underline so no colored stripe remains.
+The room redraws at 30fps and at 10fps behind open controls to keep interactions
+responsive on software rendering and low-power devices.
+
+Panel interaction unit tests use a static canvas fixture. Actual WebGL coverage
+remains for scene resizes, preference updates, lifecycle and frog interactions.
+
+The YouTube adapter uses the official privacy-enhanced embed domain and muted
+autoplay. A transient HTML5 player error retries once; manual Retry creates a
+fresh iframe without recreating the scene. Stale player events and retry timers
+are discarded on reconnect or unmount. Embedding/permission errors do not loop.
+Privacy-enhanced embedding may reduce session-related problems but cannot fix
+extensions blocking playback or restrictions imposed by YouTube.
+Reference: https://support.google.com/youtube/answer/171780
