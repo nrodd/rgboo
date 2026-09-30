@@ -19,8 +19,8 @@ test("first tape submits a name and RGB color, shares frog cooldown, and returns
   await expect.element(page.getByRole("dialog", { name: "Color" })).toHaveAttribute("data-side", "right");
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test Viewer");
   await page.getByRole("textbox", { name: "Hex color" }).fill("#123456");
-  await page.getByRole("button", { name: "Send" }).click();
-  await expect.element(page.getByRole("status")).toHaveTextContent("Queued · #3");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.element(page.getByRole("status", { name: "Color submission", exact: true })).toHaveTextContent("Queued · #3");
   expect(requests).toEqual([{ username: "Test Viewer", color: { r: 18, g: 52, b: 86 } }]);
   await expect.element(page.getByRole("button", { name: /Wait \d+s/ })).toBeDisabled();
   await userEvent.keyboard("{Escape}");
@@ -37,13 +37,13 @@ test("invalid inputs and server rejection keep the color form available to retry
   await render(<StreamEmbed videoId="test-video-id" />);
   await tape(1).click();
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test!!!");
-  await page.getByRole("button", { name: "Send" }).click();
-  await expect.element(page.getByRole("status")).toHaveTextContent("alphanumeric");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.element(page.getByRole("status", { name: "Color submission", exact: true })).toHaveTextContent("alphanumeric");
   expect(requests).not.toHaveBeenCalled();
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test Viewer");
-  await page.getByRole("button", { name: "Send" }).click();
-  await expect.element(page.getByRole("status")).toHaveTextContent("Queue is full");
-  await expect.element(page.getByRole("button", { name: "Send" })).toBeEnabled();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect.element(page.getByRole("status", { name: "Color submission", exact: true })).toHaveTextContent("Queue is full");
+  await expect.element(page.getByRole("button", { name: "Send", exact: true })).toBeEnabled();
   expect(localStorage.getItem("rgboo_cooldown_end")).toBeNull();
 });
 
@@ -136,8 +136,20 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
   try {
     await page.viewport(width, height);
     await tape(1).click();
+    if (width < 760) {
+      await expect.poll(() => document.querySelector<HTMLElement>(".scene-sheet")!.getBoundingClientRect().x).toBe(0);
+      const panel = document.querySelector<HTMLElement>(".scene-sheet")!.getBoundingClientRect();
+      expect(panel.x).toBe(0); expect(panel.y).toBe(0);
+      expect(panel.width).toBe(width); expect(panel.height).toBe(height);
+      expect(document.querySelector(".scene-sheet")?.getAttribute("aria-modal")).not.toBe("true");
+      expect(document.querySelector('[data-testid="scene-panel-backdrop"]')).toBeNull();
+    }
     await page.getByRole("textbox", { name: "Name", exact: true }).fill("Draft Viewer");
     const clickThroughBackdrop = async (index: number) => {
+      if (width < 760) {
+        await page.getByRole("navigation", { name: "Scene panels" }).getByRole("button", { name: ["Color", "Links", "Settings"][index], exact: true }).click();
+        return;
+      }
       const target = document.querySelector<HTMLElement>(`[data-tape-index="${index}"]`)!;
       const bounds = target.getBoundingClientRect();
       await page.getByTestId("scene-panel-backdrop").click({ position: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 } });
@@ -149,8 +161,10 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
     await expect.element(page.getByRole("dialog", { name: "Settings" })).toBeInTheDocument();
     await clickThroughBackdrop(0);
     await expect.element(page.getByRole("textbox", { name: "Name", exact: true })).toHaveValue("Draft Viewer");
-    await userEvent.keyboard("{Escape}");
+    if (width < 760) await page.getByRole("button", { name: "Close", exact: true }).click();
+    else await clickThroughBackdrop(0); // A second click on the same tape closes it.
     await expect.element(tape(1)).toHaveFocus();
+    await expect.element(page.getByRole("dialog", { name: "Color" })).not.toBeInTheDocument();
   } finally {
     await page.viewport(initialViewport[0], initialViewport[1]);
   }

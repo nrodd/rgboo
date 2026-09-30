@@ -7,7 +7,7 @@ characters, weather, flames and tape hover states. Unexported props retain their
 code-authored placeholders.
 The CRT has a stepped plastic casing, rabbit-ear antenna and feet on a wooden
 stand. Four VHS tapes sit on the shelf below it. Hovering or focusing a tape
-adds a subtle pixel halo. The Submit tape shows a temporary “Coming soon” toast. The first three open compact shadcn glass cards on the right: color submission, project links, and settings.
+adds a subtle pixel halo. The Submit tape sends the current color draft, opening the form to complete missing fields. The first three open compact shadcn glass cards on the right: color submission, project links, and settings.
 
 ## Local preview
 
@@ -240,7 +240,7 @@ and color/info/name/submit VHS artwork with hover frames. `artAssets.ts` resolve
 the original exports; scene animation uses the existing ticker and stops with
 reduced motion. Existing tape actions and keyboard controls are retained.
 One horizontal Submit tape sits in the widest shelf gap; its action remains a
-Coming soon placeholder.
+color submission action.
 
 The full TV export includes its original shelf and preset books.
 `tapeArtworkSlots` places the larger interactive tapes in the gaps between those
@@ -278,8 +278,9 @@ widest gap. A click on
 another tape while a card is open routes through the modal backdrop to swap
 its content immediately, retaining the color draft and keyboard focus handling.
 
-On phones, panel cards stay above the shelf and scroll within the available
-height so all tape controls remain clickable while another panel is open.
+On phones, panels fill the screen with Color, Links and Settings navigation.
+They scroll inside the available height and close with the close button.
+Desktop tape clicks swap panels; clicking the same tape again closes its panel.
 
 The Settings tape keeps the original name-tape colors and hover frames, with
 a source-pixel `SETUP` label drawn over its old lettering. The replacement
@@ -306,3 +307,8 @@ never loads the production broadcast or YouTube scripts. Adapter URL tests use
 detached iframes. The explicitly opted-in live check remains separate and is
 excluded from the pre-push hook. Production and local app previews keep the
 hardcoded channel; the test fixture is only loaded by Vitest.
+
+The cat contact plane follows the TV artwork's scale rather than a fixed offset.
+The ghost mask excludes the source logo underline so no colored stripe remains.
+The room redraws at 30fps and at 10fps behind open controls to keep interactions
+responsive on software rendering and low-power devices.

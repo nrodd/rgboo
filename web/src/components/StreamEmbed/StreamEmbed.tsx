@@ -18,8 +18,11 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
   const screenRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneHandle | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const [toast, setToast] = useState("");
+  const [submitAttempt, setSubmitAttempt] = useState(0);
   const [panel, setPanel] = useState<number | null>(null);
+  const panelRef = useRef(panel);
+  panelRef.current = panel;
+  useEffect(() => { sceneRef.current?.setPanelOpen(panel !== null); }, [panel]);
   const returnFocus = useRef<HTMLElement | null>(null);
   const [preferences, setPreferences] = useState(readPreferences);
   const preferencesRef = useRef(preferences);
@@ -30,16 +33,10 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
     try { localStorage.setItem("rgboo_scene_preferences", JSON.stringify(value)); } catch { /* Storage is optional. */ }
   };
   const openTape = (index: number) => {
-    if (index > 2) { showComingSoon(); return; }
     returnFocus.current = rootRef.current?.querySelector<HTMLElement>(`[data-tape-index="${index}"]`) ?? null;
     sceneRef.current?.hoverTape(null);
-    setPanel(index);
-  };
-  const showComingSoon = () => {
-    clearTimeout(toastTimer.current);
-    setFrogMessage("");
-    setToast("Coming soon");
-    toastTimer.current = setTimeout(() => setToast(""), 2400);
+    setPanel((current) => index === 3 ? 0 : current === index ? null : index);
+    if (index === 3) setSubmitAttempt((value) => value + 1);
   };
   const playerRef = useRef<YouTubeHandle | null>(null);
   const [state, setState] = useState<YouTubeState>({ status: "loading", ready: false, muted: true, volume: 70 });
@@ -58,7 +55,6 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
     });
     playerRef.current = player;
     const frog = createFrogSender((message) => {
-      setToast("");
       setFrogMessage(message);
       clearTimeout(toastTimer.current);
       toastTimer.current = setTimeout(() => setFrogMessage(""), 3000);
@@ -82,12 +78,12 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
         if (action === "toggle-playback") player.togglePlayback();
         if (action === "toggle-sound") player.toggleSound();
         if (action === "frog-hop") void frog.send();
-        if (action === "coming-soon") showComingSoon();
+        if (action === "open-submit") openTape(3);
         if (action === "open-color") openTape(0);
         if (action === "open-links") openTape(1);
         if (action === "open-settings") openTape(2);
       });
-    }).then((scene) => { if (!controller.signal.aborted) { sceneRef.current = scene ?? null; scene?.setPlaying(playbackActive); scene?.setPreferences(preferencesRef.current); } }).catch((error: unknown) => {
+    }).then((scene) => { if (!controller.signal.aborted) { sceneRef.current = scene ?? null; scene?.setPlaying(playbackActive); scene?.setPreferences(preferencesRef.current); scene?.setPanelOpen(panelRef.current !== null); } }).catch((error: unknown) => {
       if (controller.signal.aborted) return;
       console.error("Scene could not initialize", error);
       setSceneFailed(true);
@@ -100,14 +96,13 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
       <div className="scene-youtube-screen" ref={screenRef} />
       <BrandLogo />
       <div role="group" aria-label="VHS shelf">
-        {vhsTapes.map((tape, index) => <button key={tape.id} type="button" className="vhs-hit-target" data-tape-index={index} aria-label={tape.label} aria-haspopup={index < 3 ? "dialog" : undefined} title={tape.label}
+        {vhsTapes.map((tape, index) => <button key={tape.id} type="button" className="vhs-hit-target" data-tape-index={index} aria-label={tape.label} aria-haspopup="dialog" title={tape.label}
           onPointerEnter={() => sceneRef.current?.hoverTape(index)}
           onPointerLeave={(event) => { if (document.activeElement !== event.currentTarget) sceneRef.current?.hoverTape(null); }}
           onFocus={() => sceneRef.current?.hoverTape(index)} onBlur={() => sceneRef.current?.hoverTape(null)}
           onClick={() => openTape(index)}><span className="tape-label">{tape.title}</span></button>)}
       </div>
-      <div className="scene-toast" role="status" aria-label="VHS notification" data-visible={Boolean(toast)}>{toast}</div>
-      <ScenePanels panel={panel} onSelectTape={openTape} onClose={() => setPanel(null)} returnFocus={returnFocus} player={playerRef} playback={state} videoId={videoId}
+      <ScenePanels submitAttempt={submitAttempt} panel={panel} onSelectTape={openTape} onClose={() => setPanel(null)} returnFocus={returnFocus} player={playerRef} playback={state} videoId={videoId}
         preferences={preferences} onPreferences={applyPreferences} onRetry={() => setAttempt((n) => n + 1)} />
       <p className="scene-toast frog-message" data-visible={Boolean(frogMessage)} role="status" aria-label="Frog color submission">{frogMessage}</p>
     </div>

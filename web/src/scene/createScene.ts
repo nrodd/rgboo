@@ -10,13 +10,16 @@ import type { ScenePreferences } from "./preferences";
 import { drawRoomRug } from "./roomDecor";
 import { layerNames, sceneArtwork, sceneConfig, tvArtwork, vhsTapes, windowOpening, type SceneAction, type SceneLayer } from "./scene.config";
 import { drawSettingsSpine, drawTape, drawTapeGlow, drawTelevision } from "./television";
-export interface SceneHandle { destroy: () => void; hoverTape: (index: number | null) => void; setPlaying: (playing: boolean) => void; setPreferences: (preferences: ScenePreferences) => void }
+export interface SceneHandle { destroy: () => void; hoverTape: (index: number | null) => void; setPlaying: (playing: boolean) => void; setPreferences: (preferences: ScenePreferences) => void; setPanelOpen: (open: boolean) => void }
 
 /** Pixi owns the room; the official YouTube iframe remains a separate DOM surface. */
 export async function createScene(host: HTMLElement, signal: AbortSignal, onAction: (action: SceneAction) => void): Promise<SceneHandle | undefined> {
   const app = new Application();
   await app.init({ preference: "webgl", background: sceneConfig.background, antialias: false, roundPixels: true,
     autoDensity: true, resolution: 1, autoStart: false, preserveDrawingBuffer: true });
+  // Pixel animations do not need a 60fps full-room redraw. Reserve CPU for controls.
+  app.ticker.maxFPS = 30;
+  const setPanelOpen = (open: boolean) => { app.ticker.maxFPS = open ? 10 : 30; };
   if (signal.aborted) { app.destroy(true, { children: true }); return; }
   const backdrop = app.stage.addChild(new Container({ label: "backdrop" }));
   const spiderWeb = backdrop.addChild(new Sprite({ label: "spider-web" }));
@@ -91,7 +94,7 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     object.cursor = "pointer";
     object.on("pointerenter", () => hoverTape(index));
     object.on("pointerleave", () => hoverTape(null));
-    object.on("pointertap", () => onAction((["open-color", "open-links", "open-settings", "coming-soon"] as SceneAction[])[index]));
+    object.on("pointertap", () => onAction((["open-color", "open-links", "open-settings", "open-submit"] as SceneAction[])[index]));
     const sprite = object.addChild(new Sprite({ label: `${tape.id}-art` }));
     sprite.visible = false;
     return { object, glow, body, sprite, textures: [] as Texture[], updateLabel: undefined as ((frame: number) => void) | undefined };
@@ -347,5 +350,5 @@ export async function createScene(host: HTMLElement, signal: AbortSignal, onActi
     tvSprite.on("destroyed", () => casingTexture.destroy());
     redraw();
   }).catch((error: unknown) => console.warn("Could not load TV artwork", error));
-  return { destroy, hoverTape, setPlaying, setPreferences };
+  return { destroy, hoverTape, setPlaying, setPreferences, setPanelOpen };
 }

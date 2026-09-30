@@ -97,21 +97,30 @@ test("official player API handles playback, sound and teardown without extractin
 });
 
 
-test("the remaining Submit tape still glows and show Coming soon", async () => {
-  const view = await render(<StrictMode><StreamEmbed videoId="test-video-id" /></StrictMode>);
-  await expect.poll(() => document.querySelectorAll("canvas").length).toBe(1);
-  const firstTape = page.getByRole("button", { name: "VHS tape 4: Coming soon", exact: true });
-  await firstTape.hover();
+test("Submit opens missing fields and submits the saved color draft through the API", async () => {
+  const requests: unknown[] = [];
+  worker.use(http.post("*/api/color", async ({ request }) => {
+    requests.push(await request.json());
+    return HttpResponse.json({ queue_position: 4 });
+  }));
+  await render(<StreamEmbed videoId="test-video-id" />);
+  const submit = page.getByRole("button", { name: "VHS tape 4: Submit", exact: true });
+  await submit.hover();
   await expect.element(canvas()).toHaveAttribute("data-hovered-tape", "vhs-4");
-  await firstTape.click();
-  const toast = page.getByRole("status", { name: "VHS notification" });
-  await expect.element(toast).toHaveTextContent("Coming soon");
-  await expect.element(toast).toHaveAttribute("data-visible", "true");
-  await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("");
-  await expect.element(toast, { timeout: 4000 }).toHaveAttribute("data-visible", "false");
-  await view.unmount();
-  expect(document.querySelectorAll("canvas")).toHaveLength(0);
-});
+  await submit.click();
+  await expect.element(page.getByRole("textbox", { name: "Name", exact: true })).toHaveFocus();
+  expect(requests).toHaveLength(0);
+  await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test Viewer");
+  await page.getByRole("textbox", { name: "Hex color" }).fill("#123456");
+  await userEvent.keyboard("{Escape}");
+  await expect.element(submit).toHaveFocus();
+  await submit.click();
+  await expect.poll(() => requests).toEqual([{ username: "Test Viewer", color: { r: 18, g: 52, b: 86 } }]);
+  await expect.element(page.getByRole("button", { name: /Wait \d+s/ })).toBeDisabled();
+  await userEvent.keyboard("{Escape}");
+  await submit.click();
+  expect(requests).toHaveLength(1);
+}, 30000);
 
 
 test("idle animal behavior never submits a color", async () => {
@@ -174,7 +183,7 @@ test("tapes fill the original book gaps and the rug and cat remain aligned on al
       expect(tape.x + tape.width).toBeLessThan(stand.x + stand.width);
     }
     expect(cat.x).toBeGreaterThan(screen.x + screen.width / 2);
-    expect(cat.y).toBe(screen.y - 22);
+    expect(cat.y).toBeCloseTo(screen.y - 7 * screen.height / 130);
     expect(cat.y - 31 * 34 / 53 * cat.pixelSize * 1.016).toBeGreaterThanOrEqual(0);
     expect(cat.x + 34 * cat.pixelSize).toBeLessThanOrEqual(width);
     expect(rug.x).toBeGreaterThanOrEqual(0);

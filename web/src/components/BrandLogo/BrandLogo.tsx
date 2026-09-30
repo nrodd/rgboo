@@ -85,7 +85,7 @@ export function BrandLogo() {
           <path d="M0 0H440V594H0Z" fill="white" />
         </mask>
         <mask id="logo-perched-ghost" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
-          <path d="M440 0H1000V1000H440Z" fill="white" />
+          <path d="M440 0H1000V1000H560V740C500 725 470 690 470 594H440Z" fill="white" />
         </mask>
       </defs>
       <image href={logoUrl} x="0" y="0" width="1000" height="1000" filter="url(#logo-remove-black)" mask="url(#logo-perched-text)" transform="translate(0 56)" />

@@ -45,7 +45,7 @@ export function getSceneLayout(width: number, height: number) {
   // Body rests on the right edge; only the tail can extend in front of the window.
   const cat = {
     x: Math.min(width - 34 * catPixel - 8, screen.x + screen.width - 28 * catPixel),
-    y: screen.y - 22, pixelSize: catPixel,
+    y: tvY + 2 * sy, pixelSize: catPixel,
   };
   const rugX = Math.max(8, stand.x - 72);
   const rug = { x: rugX, y: stand.y + stand.height - 24,

@@ -111,10 +111,18 @@
 @media (prefers-reduced-motion: reduce) { .scene-sheet, .scene-sheet * { animation: none !important; transition: none !important; } }
 @media (prefers-reduced-transparency: reduce) { .scene-sheet::before { display: none; } .scene-sheet { background: #292523; backdrop-filter: none; -webkit-backdrop-filter: none; } }
 @supports not (backdrop-filter: blur(1px)) { .scene-sheet { background: #292523; } }
-@media (max-width: 480px) { .scene-sheet { right: max(12px, env(safe-area-inset-right)); width: calc(100vw - 24px); max-height: calc(100dvh - 24px); padding: 20px; border-radius: 24px; } }
-@media (max-width: 759px) { .scene-player { min-height: 640px; } }
-
-/* Keep the shelf available for one-click panel changes on phones. */
+/* Mobile panels are full-screen pages with their own navigation. */
 @media (max-width: 759px) {
-  .scene-sheet { top: 12px; translate: none; max-height: min(calc(100dvh - 24px), var(--panel-max-height, calc(100dvh - 24px))); }
+  .scene-sheet {
+    inset: 0; translate: none; width: 100%; max-width: none;
+    height: 100dvh; max-height: none; border: 0; border-radius: 0;
+    padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+    background: #242126; backdrop-filter: none; -webkit-backdrop-filter: none;
+    box-shadow: none;
+  }
+  .scene-sheet::before { display: none; }
+  .scene-sheet .sheet-close { top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); }
+  .mobile-panel-nav { display: flex; gap: 8px; margin-bottom: 24px; }
+  .mobile-panel-nav .panel-button { flex: 1; }
+  .mobile-panel-nav [aria-current="page"] { background: #675544; border-color: #bca788; }
 }

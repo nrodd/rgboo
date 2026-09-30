@@ -13,15 +13,18 @@ import { glassLensMap } from "../../scene/glassMaterial";
 import type { ScenePreferences } from "../../scene/preferences";
 
 interface Props {
-  panel: number | null; onSelectTape(index: number): void; onClose(): void; returnFocus: RefObject<HTMLElement | null>;
+  submitAttempt: number; panel: number | null; onSelectTape(index: number): void; onClose(): void; returnFocus: RefObject<HTMLElement | null>;
   player: RefObject<YouTubeHandle | null>; playback: YouTubeState; videoId: string;
   preferences: ScenePreferences; onPreferences(value: ScenePreferences): void; onRetry(): void;
 }
 const titles = ["Color", "Links", "Settings"];
 const swatches = ["#8fa77b", "#d5854c", "#946172", "#697fa8", "#d2b575", "#722cc7"];
 
-export function ScenePanels({ panel, onSelectTape, onClose, returnFocus, player, playback, videoId, preferences, onPreferences, onRetry }: Props) {
+export function ScenePanels({ submitAttempt, panel, onSelectTape, onClose, returnFocus, player, playback, videoId, preferences, onPreferences, onRetry }: Props) {
   const glassId = useId();
+  const handledSubmit = useRef(0);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 759px)").matches);
   const cardRef = useRef<HTMLDivElement>(null);
   const [username, setUsername] = useState("");
   const [color, setColor] = useState("#8fa77b");
@@ -40,17 +43,27 @@ export function ScenePanels({ panel, onSelectTape, onClose, returnFocus, player,
   useEffect(() => {
     if (panel === null) return;
     cardRef.current?.focus({ preventScroll: true });
-    const root = returnFocus.current?.closest(".scene-player");
-    if (!root) return;
-    const place = () => {
-      const shelfTop = Math.min(...Array.from(root.querySelectorAll("[data-tape-index]")).map((tape) => tape.getBoundingClientRect().top));
-      cardRef.current?.style.setProperty("--panel-max-height", `${Math.max(160, shelfTop - 24)}px`);
-    };
-    place();
-    const observer = new ResizeObserver(place);
-    observer.observe(root);
-    return () => observer.disconnect();
+
   }, [panel, returnFocus]);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 759px)");
+    const update = () => setMobile(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const submitDraft = () => {
+    if (submitAttempt > handledSubmit.current && formRef.current) {
+      handledSubmit.current = submitAttempt;
+      formRef.current.requestSubmit();
+    }
+  };
+  useEffect(submitDraft, [submitAttempt]);
+  useEffect(() => {
+    const root = returnFocus.current?.closest<HTMLElement>(".scene-player");
+    if (!root) return;
+    root.inert = mobile && panel !== null;
+    return () => { root.inert = false; };
+  }, [mobile, panel, returnFocus]);
   const pickColor = (hex: string) => { setColor(hex); setHexInput(hex); };
   const playing = playback.status === "playing" || playback.status === "buffering";
   const togglePreference = (key: keyof ScenePreferences, value: boolean) => onPreferences({ ...preferences, [key]: value });
@@ -63,7 +76,7 @@ export function ScenePanels({ panel, onSelectTape, onClose, returnFocus, player,
         </filter>
       </defs>
     </svg>
-    <Sheet open={panel !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Sheet modal={!mobile} open={panel !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
     <SheetContent ref={cardRef} tabIndex={-1} side="right" className="scene-sheet"
       style={{ "--glass-refraction": `url("#${glassId}")` } as CSSProperties}
       onPointerDownOutside={(event) => {
@@ -78,13 +91,16 @@ export function ScenePanels({ panel, onSelectTape, onClose, returnFocus, player,
         });
         if (target) { event.preventDefault(); onSelectTape(Number(target.dataset.tapeIndex)); }
       }}
-      onOpenAutoFocus={(event) => { event.preventDefault(); cardRef.current?.focus({ preventScroll: true }); }} data-side="right" aria-describedby={undefined}
+      onOpenAutoFocus={(event) => { event.preventDefault(); cardRef.current?.focus({ preventScroll: true }); submitDraft(); }} data-side="right" aria-describedby={undefined}
       data-reduced-motion={preferences.reduceMotion} data-high-contrast={preferences.highContrast}
       onCloseAutoFocus={(event) => { event.preventDefault(); returnFocus.current?.focus({ preventScroll: true }); }}>
       <SheetHeader className="panel-header">
         <SheetTitle className="panel-title">{titles[selected]}</SheetTitle>
       </SheetHeader>
-      {selected === 0 && <form className="panel-stack" onSubmit={async (event) => {
+      {mobile && <nav className="mobile-panel-nav" aria-label="Scene panels">
+        {titles.map((title, index) => <Button key={title} className="panel-button" aria-current={selected === index ? "page" : undefined} onClick={() => onSelectTape(index)}>{title}</Button>)}
+      </nav>}
+      {selected === 0 && <form ref={formRef} className="panel-stack" onSubmit={async (event) => {
         event.preventDefault();
         if (!/^#[\da-f]{6}$/i.test(hexInput)) { setResult({ kind: "error", message: "Use a hex color: #8fa77b." }); return; }
         const value = { username: username.trim(), color: { r: parseInt(color.slice(1, 3), 16), g: parseInt(color.slice(3, 5), 16), b: parseInt(color.slice(5, 7), 16) } };
@@ -103,7 +119,7 @@ export function ScenePanels({ panel, onSelectTape, onClose, returnFocus, player,
         <Button className="panel-button panel-primary" type="submit" disabled={result?.kind === "sending" || remaining > 0}>
           {result?.kind === "sending" ? "Sending…" : remaining > 0 ? `Wait ${remaining}s` : "Send"}
         </Button>
-        <p role="status" className="panel-feedback" data-error={result?.kind === "error"}>{result?.kind === "success" ? `Queued${result.position === undefined ? "" : ` · #${result.position}`}` : result?.message}</p>
+        <p role="status" aria-label="Color submission" className="panel-feedback" data-error={result?.kind === "error"}>{result?.kind === "success" ? `Queued${result.position === undefined ? "" : ` · #${result.position}`}` : result?.message}</p>
       </form>}
       {selected === 1 && <div className="panel-stack">
         <nav className="panel-links" aria-label="Project links">
