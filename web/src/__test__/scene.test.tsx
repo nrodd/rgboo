@@ -12,7 +12,7 @@ import { getSceneLayout } from "../scene/layout";
 import { sceneArtwork } from "../scene/scene.config";
 import { createYouTubePlayer, youtubeWatchUrl, type YouTubeAPI } from "../media/youtubePlayer";
 
-afterEach(() => { localStorage.removeItem("rgboo_cooldown_end"); localStorage.removeItem("rgboo_scene_preferences"); delete window.YT; vi.restoreAllMocks(); });
+afterEach(() => { localStorage.removeItem("rgboo_cooldown_end"); localStorage.removeItem("rgboo_scene_preferences"); delete window.YT; vi.useRealTimers(); vi.restoreAllMocks(); });
 const canvas = () => page.getByRole("group", { name: /Interactive scene/ });
 
 test("frog pointer interaction hops and sends the original color API payload once during cooldown", async () => {
@@ -23,12 +23,15 @@ test("frog pointer interaction hops and sends the original color API payload onc
   }));
   const view = await render(<StrictMode><StreamEmbed videoId="test-video-id" /></StrictMode>);
   await expect.poll(() => document.querySelectorAll("canvas").length).toBe(1);
+  await page.getByRole("button", { name: "VHS tape 1: Send a color", exact: true }).click();
+  await page.getByRole("textbox", { name: "Hex color" }).fill("#ffffff");
+  await userEvent.keyboard("{Escape}");
   const host = document.querySelector(".scene-canvas-host")!;
   const l = getSceneLayout(host.clientWidth, host.clientHeight);
   const frog = sceneArtwork.find((art) => art.id === "frog")!;
   await canvas().click({ position: { x: l.x + (frog.x + frog.width / 2) * l.scale, y: l.y + (frog.y + frog.height / 2) * l.scale } });
   await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("Frog sent green! #2 in the queue.");
-  expect(requests).toEqual([{ username: "Frog", color: { r: 143, g: 167, b: 123 } }]);
+  expect(requests).toEqual([{ username: "Frog", color: { r: 0, g: 255, b: 0 } }]);
   await userEvent.keyboard("f");
   expect(document.body.textContent).not.toContain("Frog is resting");
   expect(requests).toHaveLength(1);
@@ -78,7 +81,7 @@ test("official player API handles playback, sound and teardown without extractin
   // Detached iframe verifies the integration contract without contacting YouTube in tests.
   await Promise.resolve();
   const url = new URL(host.querySelector("iframe")!.src);
-  expect(url.origin).toBe("https://www.youtube.com");
+  expect(url.origin).toBe("https://www.youtube-nocookie.com");
   expect(url.searchParams.get("controls")).toBe("0");
   expect(url.searchParams.get("origin")).toBe(window.location.origin);
   options!.events.onReady({ target: apiPlayer, data: 0 });
@@ -214,4 +217,48 @@ test("the default channel embed follows new broadcasts and its watch link target
   expect(url.searchParams.get("enablejsapi")).toBe("1");
   expect(youtubeWatchUrl(source)).toBe("https://www.youtube.com/channel/UC2GJYmn0WCqW8k1NFp1W7KQ/live");
   player.destroy();
+});
+
+
+test("YouTube retries one transient player failure, ignores stale callbacks and cleans up timers", async () => {
+  vi.useFakeTimers();
+  const instances: { events: ConstructorParameters<YouTubeAPI["Player"]>[1]["events"]; player: InstanceType<YouTubeAPI["Player"]> }[] = [];
+  window.YT = { Player: class {
+    constructor(_element: HTMLIFrameElement, { events }: ConstructorParameters<YouTubeAPI["Player"]>[1]) {
+      const player = {
+        playVideo: vi.fn(), pauseVideo: vi.fn(), mute: vi.fn(), unMute: vi.fn(),
+        setVolume: vi.fn(), getVolume: () => 70, isMuted: () => true, getPlayerState: () => 1, destroy: vi.fn(),
+      };
+      instances.push({ events, player });
+      return player;
+    }
+  } as YouTubeAPI["Player"] };
+  const host = document.createElement("div");
+  const changes = vi.fn();
+  const handle = createYouTubePlayer(host, "test-video-id", changes);
+  await Promise.resolve();
+  const firstFrame = host.querySelector("iframe");
+  instances[0].events.onReady({ target: instances[0].player, data: 0 });
+  instances[0].events.onError({ target: instances[0].player, data: 5 });
+  expect(changes).toHaveBeenLastCalledWith(expect.objectContaining({ status: "error", ready: false, errorCode: 5 }));
+  await vi.advanceTimersByTimeAsync(1500);
+  expect(instances).toHaveLength(2);
+  expect(instances[0].player.destroy).toHaveBeenCalledOnce();
+  expect(host.querySelector("iframe")).not.toBe(firstFrame);
+  const callCount = changes.mock.calls.length;
+  instances[0].events.onStateChange({ target: instances[0].player, data: 1 });
+  expect(changes).toHaveBeenCalledTimes(callCount);
+  instances[1].events.onError({ target: instances[1].player, data: 5 });
+  await vi.advanceTimersByTimeAsync(1500);
+  expect(instances).toHaveLength(2);
+  handle.retry();
+  await Promise.resolve();
+  expect(instances).toHaveLength(3);
+  instances[2].events.onError({ target: instances[2].player, data: 153 });
+  await vi.advanceTimersByTimeAsync(1500);
+  expect(instances).toHaveLength(3);
+  handle.destroy();
+  await vi.advanceTimersByTimeAsync(20000);
+  expect(host.children).toHaveLength(0);
+  expect(vi.getTimerCount()).toBe(0);
 });

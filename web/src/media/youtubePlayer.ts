@@ -33,8 +33,8 @@ export function loadYouTubeAPI(): Promise<YouTubeAPI> {
   });
   return apiPromise;
 }
-export interface YouTubeState { status: PlaybackStatus; ready: boolean; muted: boolean; volume: number }
-export interface YouTubeHandle { togglePlayback(): void; toggleSound(): void; setVolume(volume: number): void; destroy(): void }
+export interface YouTubeState { status: PlaybackStatus; ready: boolean; muted: boolean; volume: number; errorCode?: number }
+export interface YouTubeHandle { togglePlayback(): void; toggleSound(): void; setVolume(volume: number): void; retry(): void; destroy(): void }
 
 export function youtubeWatchUrl(source: string) {
   return source.startsWith("channel:")
@@ -43,61 +43,85 @@ export function youtubeWatchUrl(source: string) {
 }
 
 export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange: (state: YouTubeState) => void): YouTubeHandle {
-  let disposed = false, ready = false;
+  let disposed = false, generation = 0, automaticRetries = 0;
   let player: YouTubePlayer | undefined;
-  let poll: number | undefined;
-  let readinessTimeout: number | undefined;
+  let iframe: HTMLIFrameElement | undefined;
+  let poll: number | undefined, readinessTimeout: number | undefined, retryTimer: number | undefined;
   const state: YouTubeState = { status: videoId ? "loading" : "unconfigured", ready: false, muted: true, volume: 70 };
   const emit = () => { if (!disposed) onChange({ ...state }); };
-  const iframe = document.createElement("iframe");
-  iframe.title = "RGBOO live stream on YouTube";
-  iframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
-  iframe.allowFullscreen = true;
-  iframe.referrerPolicy = "strict-origin-when-cross-origin";
-  const params = new URLSearchParams({ enablejsapi: "1", origin: window.location.origin, controls: "0", playsinline: "1", rel: "0" });
-  const channel = videoId.startsWith("channel:") ? videoId.slice(8) : undefined;
-  if (channel) params.set("channel", channel);
-  const url = `https://www.youtube.com/embed/${channel ? "live_stream" : encodeURIComponent(videoId)}?${params}`;
-  const fallback = () => {
-    if (disposed || ready) return;
-    state.status = "error"; state.ready = false;
-    // Native controls remain usable even if an extension or network blocks the JS API.
-    iframe.src = url.replace("controls=0", "controls=1");
-    emit();
-  };
   const sync = () => {
-    if (!ready || disposed || !player) return;
+    if (!state.ready || disposed || !player) return;
     state.muted = player.isMuted(); state.volume = player.getVolume(); emit();
   };
-  emit();
-  if (videoId) {
-    iframe.src = url;
-    host.appendChild(iframe);
+  const release = () => {
+    clearInterval(poll); clearTimeout(readinessTimeout); clearTimeout(retryTimer);
+    // A broken external player must not prevent removing its iframe.
+    try { player?.destroy(); } catch { /* The fresh iframe can still reconnect. */ }
+    player = undefined; iframe?.remove(); iframe = undefined;
+  };
+  const connect = () => {
+    if (disposed) return;
+    const current = ++generation;
+    release();
+    state.ready = false; state.errorCode = undefined;
+    state.status = videoId ? "loading" : "unconfigured";
+    emit();
+    if (!videoId) return;
+    const frame = document.createElement("iframe");
+    iframe = frame;
+    frame.title = "RGBOO live stream on YouTube";
+    frame.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+    frame.allowFullscreen = true;
+    frame.referrerPolicy = "strict-origin-when-cross-origin";
+    const params = new URLSearchParams({ enablejsapi: "1", origin: window.location.origin, autoplay: "1", mute: "1", controls: "0", playsinline: "1", rel: "0" });
+    const channel = videoId.startsWith("channel:") ? videoId.slice(8) : undefined;
+    if (channel) params.set("channel", channel);
+    // Use YouTube's privacy-enhanced embed domain.
+    const url = `https://www.youtube-nocookie.com/embed/${channel ? "live_stream" : encodeURIComponent(videoId)}?${params}`;
+    const active = () => !disposed && current === generation;
+    const fallback = () => {
+      if (!active() || state.ready) return;
+      state.status = "error"; state.ready = false;
+      frame.src = url.replace("controls=0", "controls=1");
+      emit();
+    };
+    frame.src = url;
+    host.appendChild(frame);
     void loadYouTubeAPI().then((api) => {
-      if (disposed) return;
+      if (!active()) return;
       readinessTimeout = window.setTimeout(fallback, 15000);
-      player = new api.Player(iframe, { events: {
+      player = new api.Player(frame, { events: {
         onReady: ({ target }) => {
-          if (disposed) return;
+          if (!active()) return;
           clearTimeout(readinessTimeout);
-          ready = true; state.ready = true; state.status = "paused";
-          target.setVolume(70); target.mute(); emit(); target.playVideo();
+          state.ready = true; state.status = "paused"; state.errorCode = undefined;
+          target.setVolume(state.volume);
+          if (state.muted) target.mute(); else target.unMute();
+          emit(); target.playVideo();
           poll = window.setInterval(sync, 1000);
         },
         onStateChange: ({ data }) => {
-          if (disposed) return;
+          if (!active()) return;
           state.status = ({ [-1]: "paused", 0: "ended", 1: "playing", 2: "paused", 3: "buffering", 5: "paused" } as Record<number, PlaybackStatus>)[data] ?? "loading";
           emit(); sync();
         },
-        onError: () => { state.status = "error"; emit(); },
-        onAutoplayBlocked: () => { state.status = "blocked"; emit(); },
+        onError: ({ data }) => {
+          if (!active()) return;
+          clearInterval(poll); clearTimeout(readinessTimeout);
+          state.status = "error"; state.ready = false; state.errorCode = data; emit();
+          // Retry one transient HTML5 player failure, never embedding/permission errors.
+          if (data === 5 && automaticRetries++ === 0) retryTimer = window.setTimeout(connect, 1500);
+        },
+        onAutoplayBlocked: () => { if (active()) { state.status = "blocked"; emit(); } },
       } });
     }).catch(fallback);
-  }
+  };
+  connect();
   return {
-    togglePlayback: () => { if (ready && player) { if ([1, 3].includes(player.getPlayerState())) player.pauseVideo(); else player.playVideo(); } },
-    toggleSound: () => { if (ready && player) { if (player.isMuted()) player.unMute(); else player.mute(); sync(); } },
-    setVolume: (volume) => { if (ready && player) { player.setVolume(volume); if (volume > 0) player.unMute(); else player.mute(); sync(); } },
-    destroy: () => { disposed = true; clearInterval(poll); clearTimeout(readinessTimeout); player?.destroy(); iframe.remove(); },
+    togglePlayback: () => { if (state.ready && player) { if ([1, 3].includes(player.getPlayerState())) player.pauseVideo(); else player.playVideo(); } },
+    toggleSound: () => { if (state.ready && player) { if (player.isMuted()) player.unMute(); else player.mute(); sync(); } },
+    setVolume: (volume) => { if (state.ready && player) { player.setVolume(volume); if (volume > 0) player.unMute(); else player.mute(); sync(); } },
+    retry: () => { automaticRetries = 0; connect(); },
+    destroy: () => { disposed = true; generation++; release(); },
   };
 }

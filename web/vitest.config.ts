@@ -12,6 +12,8 @@ export default defineConfig({
     resolveId(source, importer) {
       const fixture = path.resolve("src/__test__/setup/test-youtube-adapter.ts");
       if (source.endsWith("/media/youtubePlayer") && importer !== fixture) return fixture;
+      const sceneFixture = path.resolve("src/__test__/setup/test-scene-adapter.ts");
+      if (source.endsWith("/scene/createScene") && importer !== sceneFixture) return sceneFixture;
     },
   }],
   optimizeDeps: { include: ["react-dom/client"] },

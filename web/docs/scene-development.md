@@ -84,10 +84,10 @@ Clicking the frog makes it hop and sends the same request as the old color form:
 POST /api/color
 Content-Type: application/json
 
-{"username":"Frog","color":{"r":143,"g":167,"b":123}}
+{"username":"Frog","color":{"r":0,"g":255,"b":0}}
 ```
 
-The green is `#8FA77B`. Edit `src/api/frogColor.ts` to change the name/color.
+The frog sends saturated green, `#00FF00`. Edit `src/api/frogColor.ts` to change the name/color.
 The sender prevents overlapping requests and shares the form's 30-second
 successful-send cooldown in localStorage. Every click can still animate the
 frog. A short toast reports a successful submission or failure. Cooldown hops
@@ -312,3 +312,14 @@ The cat contact plane follows the TV artwork's scale rather than a fixed offset.
 The ghost mask excludes the source logo underline so no colored stripe remains.
 The room redraws at 30fps and at 10fps behind open controls to keep interactions
 responsive on software rendering and low-power devices.
+
+Panel interaction unit tests use a static canvas fixture. Actual WebGL coverage
+remains for scene resizes, preference updates, lifecycle and frog interactions.
+
+The YouTube adapter uses the official privacy-enhanced embed domain and muted
+autoplay. A transient HTML5 player error retries once; manual Retry creates a
+fresh iframe without recreating the scene. Stale player events and retry timers
+are discarded on reconnect or unmount. Embedding/permission errors do not loop.
+Privacy-enhanced embedding may reduce session-related problems but cannot fix
+extensions blocking playback or restrictions imposed by YouTube.
+Reference: https://support.google.com/youtube/answer/171780

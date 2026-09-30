@@ -41,7 +41,6 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
   const playerRef = useRef<YouTubeHandle | null>(null);
   const [state, setState] = useState<YouTubeState>({ status: "loading", ready: false, muted: true, volume: 70 });
   const [frogMessage, setFrogMessage] = useState("");
-  const [attempt, setAttempt] = useState(0);
   const [sceneFailed, setSceneFailed] = useState(false);
   useEffect(() => {
     const root = rootRef.current!;
@@ -89,11 +88,12 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
       setSceneFailed(true);
     });
     return () => { clearTimeout(toastTimer.current); sceneRef.current = null; controller.abort(); frog.destroy(); observer.disconnect(); player.destroy(); playerRef.current = null; };
-  }, [videoId, attempt]);
+  }, [videoId]);
   return (
     <div ref={rootRef} className="scene-player" data-testid="stream-embed-container" data-playback={state.status} data-scene-failed={sceneFailed} data-high-contrast={preferences.highContrast} data-show-labels={preferences.showLabels} data-reduced-motion={preferences.reduceMotion}>
       <div className="scene-canvas-host" ref={hostRef} />
       <div className="scene-youtube-screen" ref={screenRef} />
+      {state.status === "error" && <button className="stream-retry" type="button" onClick={() => playerRef.current?.retry()}>Retry stream</button>}
       <BrandLogo />
       <div role="group" aria-label="VHS shelf">
         {vhsTapes.map((tape, index) => <button key={tape.id} type="button" className="vhs-hit-target" data-tape-index={index} aria-label={tape.label} aria-haspopup="dialog" title={tape.label}
@@ -103,7 +103,7 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
           onClick={() => openTape(index)}><span className="tape-label">{tape.title}</span></button>)}
       </div>
       <ScenePanels submitAttempt={submitAttempt} panel={panel} onSelectTape={openTape} onClose={() => setPanel(null)} returnFocus={returnFocus} player={playerRef} playback={state} videoId={videoId}
-        preferences={preferences} onPreferences={applyPreferences} onRetry={() => setAttempt((n) => n + 1)} />
+        preferences={preferences} onPreferences={applyPreferences} onRetry={() => playerRef.current?.retry()} />
       <p className="scene-toast frog-message" data-visible={Boolean(frogMessage)} role="status" aria-label="Frog color submission">{frogMessage}</p>
     </div>
   );

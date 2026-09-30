@@ -1,4 +1,4 @@
-import { afterEach, expect, vi } from "vitest";
+import { afterEach, beforeEach, expect, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { http, HttpResponse } from "msw";
@@ -7,11 +7,17 @@ import { worker } from "./mocks/browser";
 import { StreamEmbed } from "../components/StreamEmbed";
 import { getSceneLayout } from "../scene/layout";
 
+import { useStaticScene } from "./setup/test-scene-adapter";
+
+beforeEach(() => useStaticScene(true));
+afterEach(() => useStaticScene(false));
+
 const tape = (index: number) => page.getByRole("button", { name: new RegExp(`^VHS tape ${index}:`) });
 const canvas = () => page.getByRole("group", { name: /Interactive scene/ });
 afterEach(() => { localStorage.removeItem("rgboo_cooldown_end"); localStorage.removeItem("rgboo_scene_preferences"); vi.restoreAllMocks(); });
 
 test("first tape submits a name and RGB color, shares frog cooldown, and returns keyboard focus", async () => {
+  useStaticScene(false);
   const requests: unknown[] = [];
   worker.use(http.post("*/api/color", async ({ request }) => { requests.push(await request.json()); return HttpResponse.json({ queue_position: 3 }); }));
   await render(<StreamEmbed videoId="test-video-id" />);
@@ -67,6 +73,7 @@ test("second tape opens old links from the right and the dialog traps focus", as
 });
 
 test("settings change scene behavior without recreating the canvas and persist after remount", async () => {
+  useStaticScene(false);
   const view = await render(<StreamEmbed videoId="test-video-id" />);
   await expect.element(canvas()).toHaveAttribute("data-motion", "full");
   const originalCanvas = document.querySelector("canvas");
@@ -93,6 +100,7 @@ test("settings change scene behavior without recreating the canvas and persist a
 }, 30000);
 
 test("repeated live resizes retain the canvas, redraw pixels and align every tape with the scene", async () => {
+  useStaticScene(false);
   await render(<StreamEmbed videoId="test-video-id" />);
   await expect.element(canvas()).toBeInTheDocument();
   const originalCanvas = document.querySelector("canvas")!;
