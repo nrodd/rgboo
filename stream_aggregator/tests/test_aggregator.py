@@ -17,6 +17,27 @@ from stream_aggregator.youtube import YouTube
 CONFIG = Config("https://cloud.example", "secret", youtube_key="google-key", youtube_video="video")
 
 
+@pytest.mark.parametrize("source", ["youtube_channel", "youtube_video", "youtube_chat", None])
+def test_startup_enables_youtube_for_each_source(monkeypatch, caplog, source):
+    from stream_aggregator.__main__ import run
+
+    config = replace(CONFIG, youtube_video="")
+    if source:
+        config = replace(config, **{source: "source-id"})
+    listener = AsyncMock()
+    monkeypatch.setattr(YouTube, "run", listener)
+
+    async def scenario():
+        # Avoid registering process-wide signal handlers in a unit test.
+        monkeypatch.setattr(asyncio.get_running_loop(), "add_signal_handler", lambda *args: None)
+        await asyncio.wait_for(run(config), timeout=1)
+
+    with caplog.at_level("INFO", logger="stream_aggregator.__main__"):
+        asyncio.run(scenario())
+    assert listener.await_count == int(source is not None)
+    assert f"youtube={source is not None}" in caplog.text
+
+
 @pytest.mark.parametrize("text,rgb", [
     ("!red", (255, 0, 0)), ("!BLUE", (0, 0, 255)), (" !teal \n", (0, 128, 128)),
     ("!#a0B1c2", (160, 177, 194)), ("!abc", (170, 187, 204)),

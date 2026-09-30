@@ -13,8 +13,9 @@ log = logging.getLogger(__name__)
 
 
 async def run(config):
+    youtube_enabled = bool(config.youtube_channel or config.youtube_video or config.youtube_chat)
     log.info("Stream aggregator starting (youtube_ingestion=streamList, chat_estimate_replies=v3, youtube=%s, twitch=%s)",
-             bool(config.youtube_video or config.youtube_chat), bool(config.twitch_channel))
+             youtube_enabled, bool(config.twitch_channel))
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -25,7 +26,7 @@ async def run(config):
         worker = asyncio.create_task(forwarder.run())
         producers = []
         background = []
-        if config.youtube_video or config.youtube_chat:
+        if youtube_enabled:
             producers.append(asyncio.create_task(YouTube(session, config, forwarder).run()))
         if twitch is not None:
             producers.append(asyncio.create_task(twitch.run()))
