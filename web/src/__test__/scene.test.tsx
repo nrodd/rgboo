@@ -5,6 +5,7 @@ import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { http, HttpResponse } from "msw";
 import { test } from "./setup/test-extend";
+import { stubYouTubeApi } from "./setup/test-utils";
 import { worker } from "./mocks/browser";
 import { StreamEmbed } from "../components/StreamEmbed";
 import { createLoungingCat } from "../scene/characters";
@@ -196,6 +197,7 @@ test("frog sleeps for six ticks then two, waking briefly every 47 seconds", () =
 
 
 test("the default channel embed follows new broadcasts and its watch link targets the channel", () => {
+  stubYouTubeApi();
   const host = document.createElement("div");
   const source = "channel:UC2GJYmn0WCqW8k1NFp1W7KQ";
   const player = createYouTubePlayer(host, source, () => {});

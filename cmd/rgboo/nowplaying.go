@@ -38,6 +38,14 @@ const (
 	// A server that never sends the blank line ending an event would otherwise
 	// grow the buffer without limit.
 	maxEventBytes = 1 << 20
+
+	// The bridge posts a now-playing change the instant the song starts, but
+	// that's real time, not stream time: YouTube's own "low latency" mode puts
+	// most viewers under 10 seconds behind, and mpv adds a little more on top
+	// getting the stream open. 7s is a middle-of-the-road guess at that total,
+	// so the scene changes roughly when the new song is actually heard instead
+	// of a few seconds ahead of it.
+	nowPlayingDelay = 7 * time.Second
 )
 
 // streamClient replaces http.DefaultClient for one reason: net/http strips
@@ -139,6 +147,11 @@ type Client struct {
 	URL     string
 	Headers map[string]string
 	State   *State
+
+	// Delay holds an event back before it reaches State; main sets this to
+	// nowPlayingDelay. Zero (as in a zero-value Client, e.g. in tests) applies
+	// updates immediately.
+	Delay time.Duration
 }
 
 // Run listens forever, reconnecting with a slow backoff, until ctx is done.
@@ -224,6 +237,14 @@ func (i *idleReader) Read(p []byte) (int, error) {
 }
 
 func (c *Client) handle(event, data string) {
+	if c.Delay <= 0 {
+		c.apply(event, data)
+		return
+	}
+	time.AfterFunc(c.Delay, func() { c.apply(event, data) })
+}
+
+func (c *Client) apply(event, data string) {
 	// The song is the default (unnamed) event; color rides a named `color`
 	// event on the same stream. Route by name so one isn't shown as the other.
 	if event == "color" {

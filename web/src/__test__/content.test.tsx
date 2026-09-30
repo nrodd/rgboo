@@ -1,9 +1,12 @@
-import { expect } from "vitest";
+import { afterEach, expect } from "vitest";
 import { page } from "vitest/browser";
 import { test } from "./setup/test-extend";
-import { renderApp } from "./setup/test-utils";
+import { renderApp, stubYouTubeApi } from "./setup/test-utils";
+
+afterEach(() => { delete window.YT; });
 
 test("the homepage is a full viewport canvas without the old page UI", async () => {
+  stubYouTubeApi();
   await renderApp();
   await expect.element(page.getByTestId("stream-embed-container")).toBeInTheDocument();
   await expect.poll(() => document.querySelectorAll(".scene-canvas-host canvas").length).toBe(1);

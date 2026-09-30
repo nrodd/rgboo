@@ -56,7 +56,7 @@ test("second tape opens old links from the right and the dialog traps focus", as
   await userEvent.keyboard("{Tab}");
   await expect.element(page.getByRole("button", { name: "Close", exact: true })).toHaveFocus();
   expect(document.activeElement?.matches(":focus-visible")).toBe(true);
-  await expect.element(page.getByRole("link", { name: /Twitch/ })).toHaveAttribute("href", "https://twitch.tv/roddzillaaa");
+  await expect.element(page.getByRole("link", { name: /Twitch/ })).toHaveAttribute("href", "https://twitch.tv/na10_dev");
   await expect.element(page.getByRole("link", { name: /GitHub/ })).toHaveAttribute("href", "https://github.com/nrodd/rgboo");
   for (let i = 0; i < 8; i++) {
     await userEvent.keyboard("{Tab}");
@@ -132,8 +132,23 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
 test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preserving the draft", async (width, height) => {
   const initialViewport = [window.innerWidth, window.innerHeight];
   await render(<StreamEmbed videoId="" />);
+  // The scene keeps rendering at up to 30fps regardless of motion
+  // preferences (createScene's ticker isn't gated by reduceMotion, only the
+  // animations within a frame are). A canvas this large under CI's software
+  // WebGL can burn enough CPU per frame to starve the clicks below well past
+  // any timeout, which neither a longer timeout nor a settle-wait fixed.
+  // Reuse the app's own visibility-driven pause (it calls app.stop() on
+  // hidden) instead of out-waiting a CPU-bound render loop.
+  let hidden = false;
+  Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+  const setHidden = (value: boolean) => { hidden = value; document.dispatchEvent(new Event("visibilitychange")); };
+  setHidden(true);
   try {
     await page.viewport(width, height);
+    // clickThroughBackdrop below reads tape positions that a ResizeObserver
+    // sets after the viewport change, not the resize itself; without this, a
+    // slow reflow leaves it clicking where a tape used to be.
+    await expect.poll(() => document.querySelector("canvas")?.width).toBe(width);
     await tape(1).click();
     await page.getByRole("textbox", { name: "Name", exact: true }).fill("Draft Viewer");
     const clickThroughBackdrop = async (index: number) => {
@@ -151,6 +166,8 @@ test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preser
     await userEvent.keyboard("{Escape}");
     await expect.element(tape(1)).toHaveFocus();
   } finally {
+    setHidden(false);
+    delete (document as { hidden?: boolean }).hidden;
     await page.viewport(initialViewport[0], initialViewport[1]);
   }
 });

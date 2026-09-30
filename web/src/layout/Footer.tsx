@@ -13,7 +13,7 @@ export const Footer = () => {
     <footer id="footer" data-testid="footer" className="footer">
       <div className="flex justify-center gap-8">
       <a
-        href="https://twitch.tv/roddzillaaa"
+        href="https://twitch.tv/na10_dev"
         target="_blank"
         rel="noopener noreferrer"
         className="content-center text-bone pointer-events-auto"
