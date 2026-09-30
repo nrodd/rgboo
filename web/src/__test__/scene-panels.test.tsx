@@ -31,7 +31,9 @@ test("first tape submits a name and RGB color, shares frog cooldown, and returns
   await expect.element(page.getByRole("button", { name: /Wait \d+s/ })).toBeDisabled();
   await userEvent.keyboard("{Escape}");
   await expect.element(tape(1)).toHaveFocus();
-  await canvas().click({ position: { x: 10, y: 10 } });
+  // Keyboard interaction needs focus, not a GPU-dependent pointer round trip.
+  document.querySelector<HTMLCanvasElement>("canvas")!.focus();
+  await expect.element(canvas()).toHaveFocus();
   await userEvent.keyboard("f");
   expect(requests).toHaveLength(1);
   expect(document.body.textContent).not.toContain("Frog is resting");

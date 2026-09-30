@@ -207,10 +207,11 @@ test("frog sleeps for six ticks then two, waking briefly every 47 seconds", () =
 });
 
 
-test("the default channel embed follows new broadcasts and its watch link targets the channel", () => {
+test("the default channel embed follows new broadcasts and its watch link targets the channel", async () => {
   const host = document.createElement("div");
   const source = "channel:UC2GJYmn0WCqW8k1NFp1W7KQ";
   const player = createYouTubePlayer(host, source, () => {});
+  await Promise.resolve();
   const url = new URL(host.querySelector("iframe")!.src);
   expect(url.pathname).toBe("/embed/live_stream");
   expect(url.searchParams.get("channel")).toBe("UC2GJYmn0WCqW8k1NFp1W7KQ");
@@ -260,5 +261,50 @@ test("YouTube retries one transient player failure, ignores stale callbacks and 
   handle.destroy();
   await vi.advanceTimersByTimeAsync(20000);
   expect(host.children).toHaveLength(0);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+
+test("a disposed startup never navigates an iframe; an unready controller is replaced rather than orphaned", async () => {
+  vi.useFakeTimers();
+  const instances: { frame: HTMLIFrameElement; events: ConstructorParameters<YouTubeAPI["Player"]>[1]["events"]; destroy: ReturnType<typeof vi.fn> }[] = [];
+  window.YT = { Player: class {
+    constructor(frame: HTMLIFrameElement, { events }: ConstructorParameters<YouTubeAPI["Player"]>[1]) {
+      const destroy = vi.fn();
+      instances.push({ frame, events, destroy });
+      return { destroy } as unknown as InstanceType<YouTubeAPI["Player"]>;
+    }
+  } as YouTubeAPI["Player"] };
+  const host = document.createElement("div");
+  const abandoned = createYouTubePlayer(host, "test-video-id", () => {});
+  abandoned.destroy();
+  await Promise.resolve();
+  expect(host.children).toHaveLength(0);
+  expect(instances).toHaveLength(0);
+  const changes = vi.fn();
+  const handle = createYouTubePlayer(host, "test-video-id", changes);
+  await Promise.resolve();
+  const firstSource = instances[0].frame.src;
+  await vi.advanceTimersByTimeAsync(15000);
+  expect(instances).toHaveLength(2);
+  expect(instances[0].destroy).toHaveBeenCalledOnce();
+  expect(instances[0].frame.src).toBe(firstSource);
+  expect(host.querySelector("iframe")).toBe(instances[1].frame);
+  await vi.advanceTimersByTimeAsync(15000);
+  expect(instances[1].destroy).toHaveBeenCalledOnce();
+  const native = host.querySelector("iframe")!;
+  expect(native).not.toBe(instances[1].frame);
+  expect(new URL(native.src).searchParams.get("enablejsapi")).toBe("0");
+  const count = changes.mock.calls.length;
+  instances[1].events.onStateChange({ target: {} as InstanceType<YouTubeAPI["Player"]>, data: 1 });
+  expect(changes).toHaveBeenCalledTimes(count);
+  window.dispatchEvent(new Event("online"));
+  await Promise.resolve();
+  expect(instances).toHaveLength(3);
+  expect(host.querySelector("iframe")).toBe(instances[2].frame);
+  handle.destroy();
+  window.dispatchEvent(new Event("online"));
+  await Promise.resolve();
+  expect(instances).toHaveLength(3);
   expect(vi.getTimerCount()).toBe(0);
 });

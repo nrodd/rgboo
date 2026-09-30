@@ -6,7 +6,7 @@ interface YouTubePlayer {
 }
 interface PlayerEvent { target: YouTubePlayer; data: number }
 export interface YouTubeAPI {
-  Player: new (element: HTMLIFrameElement, options: { events: {
+  Player: new (element: HTMLIFrameElement, options: { host?: string; events: {
     onReady(event: PlayerEvent): void; onStateChange(event: PlayerEvent): void;
     onError(event: PlayerEvent): void; onAutoplayBlocked(event: PlayerEvent): void;
   } }) => YouTubePlayer;
@@ -59,7 +59,7 @@ export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange
     try { player?.destroy(); } catch { /* The fresh iframe can still reconnect. */ }
     player = undefined; iframe?.remove(); iframe = undefined;
   };
-  const connect = () => {
+  const connect = async () => {
     if (disposed) return;
     const current = ++generation;
     release();
@@ -67,6 +67,11 @@ export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange
     state.status = videoId ? "loading" : "unconfigured";
     emit();
     if (!videoId) return;
+    // Wait for the controller before navigating the frame. An effect cleaned up
+    // during Strict Mode startup must never start an abandoned embed request.
+    let api: YouTubeAPI | undefined;
+    try { api = await loadYouTubeAPI(); } catch { /* Native controls remain available. */ }
+    if (disposed || current !== generation) return;
     const frame = document.createElement("iframe");
     iframe = frame;
     frame.title = "RGBOO live stream on YouTube";
@@ -81,16 +86,26 @@ export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange
     const active = () => !disposed && current === generation;
     const fallback = () => {
       if (!active() || state.ready) return;
-      state.status = "error"; state.ready = false;
-      frame.src = url.replace("controls=0", "controls=1");
-      emit();
+      if (automaticRetries++ === 0) { void connect(); return; }
+      // Release the stalled controller before installing a standalone player.
+      // Never navigate a frame still owned by an API instance.
+      generation++; release();
+      const nativeFrame = frame.cloneNode(false) as HTMLIFrameElement;
+      nativeFrame.removeAttribute("id");
+      const nativeUrl = new URL(url);
+      nativeUrl.searchParams.set("controls", "1");
+      nativeUrl.searchParams.set("enablejsapi", "0");
+      nativeFrame.src = nativeUrl.href;
+      iframe = nativeFrame; host.appendChild(nativeFrame);
+      state.status = "blocked"; state.ready = false; emit();
     };
-    frame.src = url;
+    frame.src = api ? url : url.replace("controls=0", "controls=1").replace("enablejsapi=1", "enablejsapi=0");
     host.appendChild(frame);
-    void loadYouTubeAPI().then((api) => {
-      if (!active()) return;
+    emit();
+    if (!api) { state.status = "blocked"; emit(); return; }
+    try {
       readinessTimeout = window.setTimeout(fallback, 15000);
-      player = new api.Player(frame, { events: {
+      player = new api.Player(frame, { host: "https://www.youtube-nocookie.com", events: {
         onReady: ({ target }) => {
           if (!active()) return;
           clearTimeout(readinessTimeout);
@@ -114,14 +129,23 @@ export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange
         },
         onAutoplayBlocked: () => { if (active()) { state.status = "blocked"; emit(); } },
       } });
-    }).catch(fallback);
+    } catch { fallback(); }
   };
-  connect();
+  let connectionLost = !navigator.onLine;
+  const offline = () => { connectionLost = true; clearTimeout(readinessTimeout); clearTimeout(retryTimer); };
+  const reconnect = () => {
+    const interruptedPlayback = connectionLost && ["playing", "buffering", "loading", "error"].includes(state.status);
+    connectionLost = false;
+    if (!disposed && navigator.onLine && (!state.ready || interruptedPlayback)) { automaticRetries = 0; void connect(); }
+  };
+  window.addEventListener("offline", offline);
+  window.addEventListener("online", reconnect);
+  void connect();
   return {
     togglePlayback: () => { if (state.ready && player) { if ([1, 3].includes(player.getPlayerState())) player.pauseVideo(); else player.playVideo(); } },
     toggleSound: () => { if (state.ready && player) { if (player.isMuted()) player.unMute(); else player.mute(); sync(); } },
     setVolume: (volume) => { if (state.ready && player) { player.setVolume(volume); if (volume > 0) player.unMute(); else player.mute(); sync(); } },
-    retry: () => { automaticRetries = 0; connect(); },
-    destroy: () => { disposed = true; generation++; release(); },
+    retry: () => { automaticRetries = 0; void connect(); },
+    destroy: () => { disposed = true; generation++; window.removeEventListener("offline", offline); window.removeEventListener("online", reconnect); release(); },
   };
 }

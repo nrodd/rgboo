@@ -15,12 +15,12 @@ import type { ScenePreferences } from "../../scene/preferences";
 interface Props {
   submitAttempt: number; panel: number | null; onSelectTape(index: number): void; onClose(): void; returnFocus: RefObject<HTMLElement | null>;
   player: RefObject<YouTubeHandle | null>; playback: YouTubeState; videoId: string;
-  preferences: ScenePreferences; onPreferences(value: ScenePreferences): void; onRetry(): void;
+  preferences: ScenePreferences; onPreferences(value: ScenePreferences): void;
 }
 const titles = ["Color", "Links", "Settings"];
 const swatches = ["#8fa77b", "#d5854c", "#946172", "#697fa8", "#d2b575", "#722cc7"];
 
-export function ScenePanels({ submitAttempt, panel, onSelectTape, onClose, returnFocus, player, playback, videoId, preferences, onPreferences, onRetry }: Props) {
+export function ScenePanels({ submitAttempt, panel, onSelectTape, onClose, returnFocus, player, playback, videoId, preferences, onPreferences }: Props) {
   const glassId = useId();
   const handledSubmit = useRef(0);
   const formRef = useRef<HTMLFormElement>(null);
@@ -135,7 +135,6 @@ export function ScenePanels({ submitAttempt, panel, onSelectTape, onClose, retur
           <div className="setting-heading"><Label htmlFor="stream-volume">Volume</Label><span>{playback.muted ? "Muted" : `${playback.volume}%`}</span></div>
           <Slider id="stream-volume" className="panel-slider" aria-label="Stream volume" value={[playback.volume]} max={100} step={1} disabled={!playback.ready} onValueChange={([value]) => player.current?.setVolume(value)} />
           <p role="status" className="panel-hint">{playback.status === "blocked" ? "Ready" : playback.status === "error" ? "Unavailable" : playback.status === "unconfigured" ? "Offline" : playback.status === "loading" ? "Connecting…" : playback.status}</p>
-          {playback.status === "error" && <Button className="panel-button" onClick={onRetry}>Retry</Button>}
         </section>
         <section className="panel-field"><h3>Accessibility</h3>
           <div className="setting-row"><div><Label htmlFor="reduce-motion">Reduce motion</Label></div><Switch id="reduce-motion" className="panel-switch" checked={preferences.reduceMotion} onCheckedChange={(v) => togglePreference("reduceMotion", v)} /></div>

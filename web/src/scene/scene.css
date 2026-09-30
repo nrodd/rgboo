@@ -126,5 +126,3 @@
   .mobile-panel-nav .panel-button { flex: 1; }
   .mobile-panel-nav [aria-current="page"] { background: #675544; border-color: #bca788; }
 }
-
-.stream-retry { position: absolute; z-index: 2; left: calc(var(--screen-x) + var(--screen-width) - 140px); top: calc(var(--screen-y) + var(--screen-height) - 48px); width: 124px; min-height: 36px; border: 1px solid #d5cbbd; border-radius: 8px; background: #242126; color: #eee6d7; font: 13px/1.4 sans-serif; cursor: pointer; }
