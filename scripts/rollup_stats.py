@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Rebuild the daily colour aggregates that GET /api/stats reads.
+"""Rebuild the daily colour aggregates that GET /admin/stats reads.
 
 The only writer of the stats_daily collection. Offline rather than scheduled:
 the request log is append-only, so one run before publishing produces the same

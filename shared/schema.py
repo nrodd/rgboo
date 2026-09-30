@@ -63,7 +63,7 @@ DARK_LIGHTNESS_MAX = 0.10
 # Chroma, not HLS saturation -- see buckets.chroma() for why.
 NEUTRAL_CHROMA_MAX = 0.10
 
-# Guard rails for GET /api/stats?days=
+# Guard rails for GET /admin/stats?days=
 STATS_MIN_DAYS = 1
 STATS_MAX_DAYS = 90
 STATS_DEFAULT_DAYS = 30
