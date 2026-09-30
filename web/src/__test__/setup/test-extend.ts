@@ -1,23 +1,18 @@
 import { test as testBase } from "vitest";
 import { worker } from "../mocks/browser";
 
+let start: ReturnType<typeof worker.start> | undefined;
 export const test = testBase.extend({
   worker: [
     async ({}, use) => {
-      // Start the worker before the test.
-      // Start the worker before the test. If it's already started this will
-      // cause an MSW warning; we suppress that warning in setupTests.
-      await worker.start();
-
-      // Expose the worker object on the test's context.
-      await use(worker);
-
-      // Remove any request handlers added in individual test cases.
-      // This prevents them from affecting unrelated tests.
-      worker.resetHandlers();
+      start ??= worker.start({ quiet: true });
+      await start;
+      try {
+        await use(worker);
+      } finally {
+        worker.resetHandlers();
+      }
     },
-    {
-      auto: true,
-    },
+    { auto: true },
   ],
 });

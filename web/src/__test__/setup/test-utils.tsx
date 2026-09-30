@@ -1,11 +1,16 @@
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import App from "../../App";
+import ColorForm from "../../components/ColorForm";
 import { expect } from "vitest";
 
 export async function renderApp() {
   render(<App />);
-  await expect.element(page.getByText("RGBOO")).toBeInTheDocument();
+  await expect.element(page.getByRole("main", { name: "RGBOO" })).toBeInTheDocument();
+}
+
+export async function renderColorForm() {
+  await render(<ColorForm />);
 }
 
 export function nameInput() {
@@ -13,7 +18,7 @@ export function nameInput() {
 }
 
 export function submitButton() {
-  return page.getByRole("button");
+  return page.getByRole("button", { name: "Send", exact: true });
 }
 
 export async function fillName(value: string) {

@@ -2,6 +2,12 @@
 
 Cloudflare workers deployed web app that allows someone to submit a color and name to the cloud API. The video stream will also be displayed on here.
 
+## Scene development
+
+The homepage uses PixiJS with configurable artwork layers and a direct-video
+CRT surface. Start with [the scene development guide](docs/scene-development.md)
+for adding artwork, placing the TV screen, and connecting HLS or MP4 playback.
+
 ## Setup
 
 - [node >=22](https://nodejs.org/en/download)
