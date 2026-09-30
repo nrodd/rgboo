@@ -129,7 +129,7 @@ Optional live playback check (contacts YouTube; requires an active, embeddable
 broadcast):
 
 ```sh
-VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test -- src/__test__/youtube-live.test.tsx
+VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test:live
 ```
 
 
@@ -292,3 +292,17 @@ All room sprites and the logo use lossless WebP, with exact RGBA round-trip
 verification against their original PNGs (399,688 → 245,008 bytes). Nearest-neighbor
 sampling remains unchanged. Vite emits separate hashed assets instead of inlining
 frames into JavaScript, allowing browser caching without inflating the scene bundle.
+
+## Shared pre-push tests
+
+Run `corepack yarn install` in `web/` after cloning. The postinstall script
+configures this checkout to use the versioned `.githooks/pre-push` hook. Every
+push runs the web unit/browser suite and is blocked if it fails. Install the
+browser once with `corepack yarn playwright install chromium` (on Linux, use
+`corepack yarn playwright install --with-deps chromium`). CI skips hook setup.
+
+The normal suite uses a local test-stream iframe and a fake YouTube API, so it
+never loads the production broadcast or YouTube scripts. Adapter URL tests use
+detached iframes. The explicitly opted-in live check remains separate and is
+excluded from the pre-push hook. Production and local app previews keep the
+hardcoded channel; the test fixture is only loaded by Vitest.
