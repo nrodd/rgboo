@@ -1,14 +1,13 @@
 import { useEffect, useRef } from "react";
-import logoUrl from "../../assets/rgboo-logo.webp";
-import Eyes from "../../assets/logo-eyes.svg?react";
+import Logo from "../../assets/rgboo-logo.svg?react";
 import "./brandLogo.css";
 
 export function BrandLogo() {
   const eyesRef = useRef<SVGSVGElement>(null);
   useEffect(() => {
     const eyes = eyesRef.current!;
-    const pupils = Array.from(eyes.querySelectorAll<SVGEllipseElement>("[data-logo-eyes] ellipse"));
-    const sockets = Array.from(eyes.querySelectorAll<SVGPathElement>("[data-logo-eyes] path"));
+    const pupils = Array.from(eyes.querySelectorAll<SVGEllipseElement>("[data-logo-pupil]"));
+    const sockets = Array.from(eyes.querySelectorAll<SVGPathElement>("[data-logo-socket]"));
     const neutral = sockets.map((socket, i) => {
       const bounds = socket.getBBox();
       return { x: bounds.x + bounds.width / 2 - pupils[i].cx.baseVal.value,
@@ -52,8 +51,8 @@ export function BrandLogo() {
         const horizontal = dx / 75;
         const vertical = dy / 90;
         const limit = Math.max(1, Math.hypot(horizontal, vertical));
-        targets[i].x = horizontal / limit * 36;
-        targets[i].y = vertical / limit * 26;
+        targets[i].x = horizontal / limit * 19.15;
+        targets[i].y = vertical / limit * 13.83;
       });
       start();
     };
@@ -76,22 +75,6 @@ export function BrandLogo() {
     };
   }, []);
   return <div className="brand-logo" role="img" aria-label="RGBOO">
-    <svg ref={eyesRef} className="brand-logo-eyes" viewBox="80 300 840 450" aria-hidden="true">
-      <defs>
-        <filter id="logo-remove-black" colorInterpolationFilters="sRGB">
-          <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  1 1 1 0 0" />
-        </filter>
-        <mask id="logo-perched-text" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
-          <path d="M0 0H445V420C430 445 420 470 420 505C420 550 435 580 460 594H0Z" fill="white" />
-        </mask>
-        <mask id="logo-perched-ghost" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
-          <path d="M470 0H1000V1000H560V740C500 725 470 690 470 594Z" fill="white" />
-        </mask>
-      </defs>
-      <image href={logoUrl} x="0" y="0" width="1000" height="1000" filter="url(#logo-remove-black)" mask="url(#logo-perched-text)" transform="translate(0 56)" />
-      <image href={logoUrl} x="0" y="0" width="1000" height="1000" filter="url(#logo-remove-black)" mask="url(#logo-perched-ghost)" />
-      <path d="M 563 623 a 26 29 0 1 0 52 0 a 26 29 0 1 0 -52 0" fill="black" />
-      <g data-logo-eyes><Eyes x="364" y="289" width="429" height="429" /></g>
-    </svg>
+    <Logo ref={eyesRef} className="brand-logo-eyes" aria-hidden="true" />
   </div>;
 }

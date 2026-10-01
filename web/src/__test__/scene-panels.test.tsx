@@ -6,6 +6,7 @@ import { test } from "./setup/test-extend";
 import { worker } from "./mocks/browser";
 import { StreamEmbed } from "../components/StreamEmbed";
 import { getSceneLayout } from "../scene/layout";
+import { tvArtwork } from "../scene/scene.config";
 
 import { useStaticScene } from "./setup/test-scene-adapter";
 
@@ -125,7 +126,10 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
     const logo = document.querySelector<HTMLElement>(".brand-logo")!;
     await expect.poll(() => logo.offsetWidth).toBe(Math.round(l.logo.width));
     expect(logo.getBoundingClientRect().left + logo.getBoundingClientRect().width / 2).toBeCloseTo(player.getBoundingClientRect().left + player.getBoundingClientRect().width / 2, 0);
-    expect(logo.getBoundingClientRect().bottom).toBeLessThanOrEqual(player.getBoundingClientRect().top);
+    const logoSvg = logo.querySelector("svg")!;
+    const letteringBaseline = new DOMPoint(0, 205).matrixTransform(logoSvg.getScreenCTM()!).y;
+    const tvTop = player.getBoundingClientRect().top - tvArtwork.opening.y * l.screen.height / tvArtwork.opening.height;
+    expect(letteringBaseline).toBeCloseTo(tvTop, 0);
     expect(document.querySelectorAll("[data-tape-index]")).toHaveLength(4);
     // A cleared/black WebGL buffer has one color; a rendered room has many.
     const snapshot = document.createElement("canvas"); snapshot.width = 64; snapshot.height = 64;

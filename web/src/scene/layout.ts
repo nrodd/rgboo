@@ -29,11 +29,12 @@ export function getSceneLayout(width: number, height: number) {
   const sy = screen.height / tvArtwork.opening.height;
   const tvX = screen.x - tvArtwork.opening.x * sx;
   const tvY = screen.y - tvArtwork.opening.y * sy;
-  // Perch the smaller logo on the upper rim, keeping all artwork above video.
+  // Align the SVG lettering baseline with the TV upper rim.
   const logoWidth = Math.min(220, screen.width * (compact ? .36 : .27));
-  const logoY = tvY - 350 / 840 * logoWidth;
+  const logoHeight = 205 / 360 * logoWidth;
+  const logoY = tvY - 125 / 360 * logoWidth;
   const logo = { x: tvX + (tvArtwork.width * sx - logoWidth) / 2, y: logoY, width: logoWidth,
-    height: Math.min(450 / 840 * logoWidth, screen.y - logoY - 2) };
+    height: logoHeight };
   const stand = { x: tvX, y: tvY + 161 * sy, width: tvArtwork.width * sx, height: 47 * sy };
   const tapes = tapeArtworkSlots.map((slot) => ({
     x: tvX + slot.x * sx, y: tvY + slot.y * sy,
