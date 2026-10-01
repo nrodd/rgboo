@@ -15,6 +15,7 @@ jobs:
       web: ${{ steps.changes.outputs.web }}
       cloud_api: ${{ steps.changes.outputs.cloud_api }}
       bridge: ${{ steps.changes.outputs.bridge }}
+      rgboo: ${{ steps.changes.outputs.rgboo }}
     # https://github.com/dorny/paths-filter
     steps:
       - id: changes
@@ -31,6 +32,10 @@ jobs:
             bridge:
             - 'bridge/**'
             - 'shared/**'
+            rgboo:
+            - 'cmd/rgboo/**'
+            - 'go.mod'
+            - '.goreleaser.yaml'
 
   build-firmware:
     name: "👻 build firmware"
@@ -105,3 +110,24 @@ jobs:
       - run: corepack yarn playwright install
       - run: corepack yarn build
       - run: corepack yarn test
+
+  build-rgboo:
+    name: "👻 build rgboo"
+    needs: [changes]
+    runs-on: ubuntu-latest
+    if: ${{ needs.changes.outputs.rgboo == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          # No go.sum (zero dependencies), so there is nothing to key a cache on.
+          cache: false
+      - run: gofmt -l ./cmd && test -z "$(gofmt -l ./cmd)"
+      - run: go vet ./cmd/...
+      - run: go test ./cmd/...
+      # Catches a broken release config before a tag does.
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: check

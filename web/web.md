@@ -2,6 +2,12 @@
 
 Cloudflare workers deployed web app that allows someone to submit a color and name to the cloud API. The video stream will also be displayed on here.
 
+## Scene development
+
+The homepage uses PixiJS with configurable artwork layers and a direct-video
+CRT surface. Start with [the scene development guide](docs/scene-development.md)
+for adding artwork, placing the TV screen, and connecting HLS or MP4 playback.
+
 ## Setup
 
 - [node >=22](https://nodejs.org/en/download)
@@ -33,6 +39,14 @@ Deployed using Cloudflare Workers.
 ```
 yarn deploy
 ```
+
+## Pages
+
+| Route | Access |
+| --- | --- |
+| `/` | Public colour form and stream |
+| `/admin` | Cloudflare Access only |
+| `/admin/stats` | Cloudflare Access only, until there's a plan for public load on Firestore. Its data comes from `/admin-api/stats`. |
 
 ## API proxy
 

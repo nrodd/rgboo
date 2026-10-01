@@ -138,7 +138,7 @@ def register_routes(app, store, stats=None):
         status['queue_contents'] = store.get_queue_contents()
         return jsonify(status)
 
-    @app.route('/api/stats', methods=['GET'])
+    @app.route('/admin/stats', methods=['GET'])
     def get_stats():
         """Daily colour aggregates for the stats page.
 
@@ -165,7 +165,7 @@ def register_routes(app, store, stats=None):
             return jsonify({'error': 'Internal server error'}), 500
 
         response = jsonify(payload)
-        response.headers['Cache-Control'] = f'public, max-age={STATS_CACHE_SECONDS}'
+        response.headers['Cache-Control'] = f'private, max-age={STATS_CACHE_SECONDS}'
         return response
 
     @app.route('/admin/status', methods=['GET'])

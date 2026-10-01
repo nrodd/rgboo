@@ -85,12 +85,12 @@ sequenceDiagram
   A->>A: constant-time key compare
   A->>A: validate rgb, profanity check
   A->>FS: transaction on meta/pacing
-  FS-->>A: slot = max(now, last) + 20s
+  FS-->>A: slot = max(now, last + 20s); now if no last slot
   A->>FS: create request doc, status=pending
   A-->>B: 200 request_id, queue_position, wait
   Note over A,FS: the HTTP request ends here.<br/>dispatch is a separate, later sequence.
   FS-->>BR: on_snapshot push
-  BR->>BR: wait until scheduled_time
+  BR->>BR: wait until scheduled_time and previous display has had 20s
   BR->>FS: re-read the doc
   FS-->>BR: still pending
   BR->>E: RGB:r,g,b over USB serial
@@ -99,7 +99,13 @@ sequenceDiagram
 
 The pacing transaction (5–6) is what guarantees one colour every 20 seconds
 even with concurrent requests and multiple API instances — it is the
-distributed replacement for a mutex.
+distributed replacement for a mutex. When the last slot is at least 20 seconds
+old (or there is no previous slot), a new request is due immediately and the
+existing Firestore snapshot stream wakes the bridge. If the previous slot
+started recently, only its remaining time is added. The bridge also enforces
+20 seconds from its last actual display update during the running session,
+so delayed delivery does not cut a turn short. Queue wait times are estimates;
+bridge delays can extend them.
 
 ## Cancelling
 
@@ -198,7 +204,7 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 | `POST /api/color` | Validate → assign slot → create pending doc |
 | `GET /api/status` | Queue size, next free slot, hardware state |
 | `GET /api/queue` | Pending requests in slot order |
-| `GET /api/stats` | 30-day colour aggregates for the stats page. Cacheable |
+| `GET /admin/stats` | 30-day colour aggregates for the admin stats page. **Worker `X-Api-Key`** |
 | `POST /admin/queue/clear` | Cancel **all** pending. **Worker `X-Api-Key`** |
 | `POST /admin/queue/remove` | Cancel one request by ID. **Worker `X-Api-Key`** |
 | `POST /admin/clear-current` | Pull one user off the overlay. **Worker `X-Api-Key`** |
@@ -226,9 +232,9 @@ same-origin `/admin-api/*` paths and forwards the existing API credential.
 | Pico 2 unplugged | Request marked `failed` with the error; the queue keeps moving. |
 | Serial write fails after re-read | Doc left `pending`; the next resync retries rather than dropping it. |
 | Firestore unreachable from home | Bridge logs and retries; heartbeat goes stale, so the cloud reports it offline. |
-| The stats rollup has never run | `/api/stats` returns an all-zero window. No error. |
+| The stats rollup has never run | `/admin/stats` returns an all-zero window. No error. |
 | `STATS_TIMEZONE` changes | Existing aggregates are wrong until the rollup is re-run over the full range. |
-| The API has no stats store | `/api/stats` answers 503; the rest of the API is unaffected. |
+| The API has no stats store | `/admin/stats` answers 503; the rest of the API is unaffected. |
 
 ## Security
 
@@ -249,7 +255,7 @@ serve this path over a Cloudflare Tunnel has been removed.
 | Firestore + composite index | Live |
 | `bridge/` | Live on the home machine under systemd |
 | `web/worker/` | Pointing at Cloud Run for both production and staging |
-| `/stats` page | Built and reachable, deliberately unlinked until a month of data exists |
+| `/admin/stats` page | Built, behind Cloudflare Access until there's a plan for public load on Firestore |
 
 ## Cost
 

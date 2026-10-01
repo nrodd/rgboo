@@ -1,0 +1,28 @@
+// Minimal wire-compatible subset of Google's streaming live chat schema.
+// Source: https://developers.google.com/youtube/v3/live/streaming-live-chat
+// Google code samples are licensed under Apache 2.0.
+syntax = "proto2";
+package youtube.api.v3;
+message LiveChatMessageListRequest {
+  optional string live_chat_id = 1;
+  optional string page_token = 99;
+  repeated string part = 100;
+}
+message LiveChatMessageListResponse {
+  optional string offline_at = 2;
+  optional string next_page_token = 100602;
+  repeated LiveChatMessage items = 1007;
+}
+message LiveChatMessage {
+  optional string id = 101;
+  optional LiveChatMessageSnippet snippet = 2;
+  optional LiveChatMessageAuthorDetails author_details = 3;
+}
+message LiveChatMessageAuthorDetails { optional string display_name = 103; }
+message LiveChatMessageSnippet {
+  // Numeric values: TEXT_MESSAGE_EVENT=1, CHAT_ENDED_EVENT=4.
+  optional int32 type = 1;
+  optional string published_at = 4;
+  optional LiveChatTextMessageDetails text_message_details = 19;
+}
+message LiveChatTextMessageDetails { optional string message_text = 1; }

@@ -1,0 +1,109 @@
+# Release config for the rgboo terminal player (cmd/rgboo).
+# Cut a release by pushing a tag:  git tag v0.1.0 && git push origin v0.1.0
+# Try it without releasing:        goreleaser release --snapshot --clean
+version: 2
+
+project_name: rgboo
+
+builds:
+  - id: rgboo
+    main: ./cmd/rgboo
+    binary: rgboo
+    # No cgo, so every target cross-compiles from one Linux runner.
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      # windows/arm64 mpv builds are basically nonexistent; don't ship a binary
+      # that can't find a player.
+      - goos: windows
+        goarch: arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: rgboo
+    ids: [rgboo]
+    name_template: >-
+      rgboo_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - src: cmd/rgboo/README.md
+        dst: README.md
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge branch"
+
+release:
+  github:
+    owner: nrodd
+    name: rgboo
+  name_template: "rgboo {{ .Tag }}"
+  footer: |
+    ## Install
+
+    ```sh
+    brew install nrodd/tap/rgboo      # macOS
+    curl -fsSL https://rgboo.com/install.sh | sh   # macOS + Linux
+    ```
+
+    Needs `mpv` and `yt-dlp` on PATH (Homebrew pulls them in for you).
+
+# macOS install. A cask rather than a formula because GoReleaser deprecated
+# formula output for binaries. Casks are macOS-only, so Linux takes install.sh.
+#
+# The quarantine hook is load-bearing, however much Homebrew complains about
+# it. Homebrew stamps every cask download with com.apple.quarantine, and
+# these binaries are only ad-hoc signed (no Apple Developer ID), so Gatekeeper
+# SIGKILLs them on first run: "Apple could not verify rgboo is free of
+# malware". Worse, that dialog's default button is Move to Trash, which
+# deletes the binary and leaves brew still reporting it as installed.
+#
+# Homebrew deprecated `postflight` in favour of `postflight_steps` and warns
+# twice per install, but `postflight_steps` cannot replace this. It is a
+# declarative, JSON-serialisable step list with no system_command and no
+# quarantine step, so it cannot shell out to xattr at all. Deprecated and
+# working beats modern and broken.
+#
+# The real fix is notarizing with an Apple Developer ID ($99/yr), which would
+# drop the quarantine problem entirely and let this go away.
+homebrew_casks:
+  - name: rgboo
+    ids: [rgboo]
+    repository:
+      owner: nrodd
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: https://rgboo.com
+    description: Stream the RGBoo live broadcast to your speakers with an animated terminal scene
+    commit_author:
+      name: goreleaser
+      email: noreply@rgboo.com
+    dependencies:
+      - formula: mpv
+      - formula: yt-dlp
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/rgboo"]
+          end

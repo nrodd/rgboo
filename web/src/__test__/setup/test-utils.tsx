@@ -1,11 +1,29 @@
 import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import App from "../../App";
+import ColorForm from "../../components/ColorForm";
 import { expect } from "vitest";
+import type { YouTubeAPI } from "../../media/youtubePlayer";
 
 export async function renderApp() {
   render(<App />);
-  await expect.element(page.getByText("RGBOO")).toBeInTheDocument();
+  await expect.element(page.getByRole("main", { name: "RGBOO" })).toBeInTheDocument();
+}
+
+// The app embeds the real channel by default, which would otherwise have
+// createYouTubePlayer inject a real <script src=".../iframe_api"> and contact
+// YouTube. Short-circuits loadYouTubeAPI's `window.YT?.Player` check instead.
+export function stubYouTubeApi() {
+  const player = {
+    playVideo() {}, pauseVideo() {}, mute() {}, unMute() {},
+    setVolume() {}, getVolume: () => 70, isMuted: () => true,
+    getPlayerState: () => -1, destroy() {},
+  };
+  window.YT = { Player: class { constructor(_element: HTMLIFrameElement, _options: ConstructorParameters<YouTubeAPI["Player"]>[1]) { return player; } } as YouTubeAPI["Player"] };
+}
+
+export async function renderColorForm() {
+  await render(<ColorForm />);
 }
 
 export function nameInput() {
@@ -13,7 +31,7 @@ export function nameInput() {
 }
 
 export function submitButton() {
-  return page.getByRole("button");
+  return page.getByRole("button", { name: "Send", exact: true });
 }
 
 export async function fillName(value: string) {
