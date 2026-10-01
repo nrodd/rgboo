@@ -9,9 +9,18 @@
 #define SERIAL_BUFFER_SIZE 256
 
 // LED settings
-#define MAX_LEDS 50
+// Each connected piece is about 12 inches (30 cm): three 10 cm pixels.
+#define LEDS_PER_STRIP 3
+#define STRIP_COUNT 5
+#define MAX_LEDS (LEDS_PER_STRIP * STRIP_COUNT)
+// Strip numbers follow the data path from the controller and start at 1.
+#define STATIC_WHITE_STRIP 2
+// Amber output mix: strong yellow/orange with almost no blue.
+#define STATIC_WHITE_RED 255
+#define STATIC_WHITE_GREEN 80
+#define STATIC_WHITE_BLUE 5
 #define LED_PIN 4
-#define LED_BRIGHTNESS 51
+#define LED_BRIGHTNESS 75
 // Convert screen-style RGB values to LED output; 1.0 disables correction.
 #define LED_GAMMA 2.2f
 

@@ -6,6 +6,9 @@
 
 // LED strip setup
 CRGB leds[MAX_LEDS];
+static_assert(STATIC_WHITE_STRIP >= 1 && STATIC_WHITE_STRIP <= STRIP_COUNT,
+              "STATIC_WHITE_STRIP must identify a connected strip");
+static_assert(LEDS_PER_STRIP > 0, "LEDS_PER_STRIP must be positive");
 
 SerialHandler serialHandler;
 
@@ -26,20 +29,24 @@ void showCurrentColor()
                            gammaCorrect(currentColor.g),
                            gammaCorrect(currentColor.b));
     fill_solid(leds, MAX_LEDS, outputColor);
+    // Reapply on every frame so serial commands cannot change the white strip.
+    fill_solid(leds + (STATIC_WHITE_STRIP - 1) * LEDS_PER_STRIP,
+               LEDS_PER_STRIP,
+               CRGB(STATIC_WHITE_RED, STATIC_WHITE_GREEN, STATIC_WHITE_BLUE));
     FastLED.show();
 }
 
 // Function to update LED colors with smooth transition
 void updateLEDColor(uint8_t r, uint8_t g, uint8_t b, uint8_t brightness)
 {
-    // Always keep brightness at 20% (ignore incoming brightness parameter)
-    FastLED.setBrightness(LED_BRIGHTNESS); // 20% of 255 = 51
+    // Use the configured brightness limit (ignore incoming brightness).
+    FastLED.setBrightness(LED_BRIGHTNESS);
 
     // Set the target color for transition
     targetColor = CRGB(r, g, b);
     transitionInProgress = true;
 
-    Serial.printf("Transitioning to: R=%d, G=%d, B=%d (Brightness fixed at 20%)\n", r, g, b);
+    Serial.printf("Transitioning to: R=%d, G=%d, B=%d (Brightness fixed at %d/255)\n", r, g, b, LED_BRIGHTNESS);
 }
 
 // Function to handle smooth color transitions using FastLED blend
@@ -54,7 +61,7 @@ void handleColorTransition()
     // Use FastLED's blend function for smooth color mixing
     currentColor = blend(currentColor, targetColor, BLEND_AMOUNT);
 
-    // Update all LEDs with the blended color
+    // Update the responsive strips while keeping the static strip white.
     showCurrentColor();
 
     // Check if transition is complete (colors are very close)
@@ -92,15 +99,16 @@ void setup()
     FastLED.addLeds<WS2811, LED_PIN, RGB>(leds, MAX_LEDS);
     FastLED.setBrightness(LED_BRIGHTNESS);
 
-    // Set all LEDs to blue and initialize color state
+    // Start the responsive strips blue; the static strip starts white.
     currentColor = CRGB::Blue;
     targetColor = CRGB::Blue;
     showCurrentColor();
 
-    Serial.println("LEDs set to blue at 20% brightness");
+    Serial.printf("Responsive strips set to blue; strip %d stays white (brightness %d/255)\n",
+                  STATIC_WHITE_STRIP, LED_BRIGHTNESS);
     Serial.println("Waiting for color data over USB serial...");
     Serial.println("Send commands like: RGB:255,0,0 (red) or RGB:0,255,0 (green)");
-    Serial.println("Note: Brightness is fixed at 20% - brightness values in commands are ignored");
+    Serial.println("Note: Brightness is fixed by LED_BRIGHTNESS - brightness values in commands are ignored");
 
     // Initialize serial handler and set color callback
     serialHandler.begin();

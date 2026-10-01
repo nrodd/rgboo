@@ -2,7 +2,7 @@
 
 This firmware receives color commands from the Windows bridge over USB serial
 and drives the PAUTIX 24 V RGBIC COB strip. The strip uses WS2811 signaling,
-has 50 addressable 10 cm segments across 5 m, and uses RGB color order
+has 50 addressable 10 cm segments per 5 m strip, and uses RGB color order
 (verified with pure red, green, and blue commands on the connected strip).
 
 ## Hardware
@@ -13,8 +13,18 @@ has 50 addressable 10 cm segments across 5 m, and uses RGB color order
 - 74AHCT125 or equivalent 3.3 V-to-5 V logic-level shifter
 - 330-470 ohm resistor in series with the data line
 
-The 3,150 COB emitters are grouped into 50 independently controlled pixels.
-`MAX_LEDS` therefore means addressable segments, not individual emitters.
+The full 5 m strip's 3,150 COB emitters are grouped into 50 independently
+controlled pixels. The connected installation uses five short pieces, each
+approximately 12 inches (30 cm), joined in series with connector cables.
+Based on the documented 10 cm addressable spacing, the configuration assumes
+three pixels per piece, for 15 addressable pixels total. Connector cables do
+not consume pixel addresses. `MAX_LEDS` counts addressable pixels, not emitters.
+Counting from the controller's data output, piece 2 (pixels 3–5, zero-based)
+stays static white from startup. Pieces 1, 3, 4, and 5 follow serial color commands.
+The static piece uses an amber orange output mix of RGB (255, 80, 5)
+at the same configured brightness limit. Adjust `STATIC_WHITE_RED`,
+`STATIC_WHITE_GREEN`, and `STATIC_WHITE_BLUE` to tune it; these are direct LED
+output values, applied without gamma correction before global brightness scaling.
 
 ## Wiring
 
@@ -88,8 +98,9 @@ Open the monitor at 115200 baud:
 pio device monitor --baud 115200 --port COM5
 ```
 
-Replace `COM5` with the port shown on your machine. The firmware starts the
-strip blue at 20% brightness. Type one of these commands and press Enter:
+Replace `COM5` with the port shown on your machine. The firmware starts strip 2
+white and the other strips blue at the configured brightness (75/255).
+Type one of these commands and press Enter:
 
 ```text
 RGB:255,0,0
@@ -98,8 +109,9 @@ RGB:0,0,255
 RGB:0,0,0
 ```
 
-You should see all 50 segments fade to the requested color and a transition
-message appear in the monitor.
+You should see strips 1, 3, 4, and 5 fade to the requested color and a transition
+message appear in the monitor. Strip 2 must remain white throughout, including
+after `RGB:0,0,0`, which turns only the responsive strips off.
 
 To test from PowerShell without the PlatformIO monitor:
 
@@ -119,11 +131,21 @@ Edit `include/Config.h` to change the GPIO, pixel count, serial timeout, or
 brightness limit. The current hardware configuration is:
 
 ```cpp
-#define MAX_LEDS 50
+#define LEDS_PER_STRIP 3
+#define STRIP_COUNT 5
+#define MAX_LEDS (LEDS_PER_STRIP * STRIP_COUNT)
+#define STATIC_WHITE_STRIP 2
 #define LED_PIN 4
-#define LED_BRIGHTNESS 51
+#define LED_BRIGHTNESS 75
 #define LED_GAMMA 2.2f
 ```
+
+Here, "strip" in the configuration means one short connected piece, not a full
+5 m reel. `STATIC_WHITE_STRIP` is a one-based piece number along the data chain.
+This configuration assumes all pieces have `LEDS_PER_STRIP` addressable pixels.
+If white does not match the second piece's boundaries, verify the number of
+10 cm addressable sections per piece and adjust `LEDS_PER_STRIP` accordingly.
+Rebuild and upload the firmware after changing these settings.
 
 Send original screen RGB values: the firmware applies gamma correction to the
 LED output after blending, then FastLED applies the brightness limit. For example,
