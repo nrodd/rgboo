@@ -47,7 +47,7 @@ export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange
   let player: YouTubePlayer | undefined;
   let iframe: HTMLIFrameElement | undefined;
   let poll: number | undefined, readinessTimeout: number | undefined, retryTimer: number | undefined;
-  const state: YouTubeState = { status: videoId ? "loading" : "unconfigured", ready: false, muted: true, volume: 70 };
+  const state: YouTubeState = { status: videoId ? "loading" : "unconfigured", ready: false, muted: false, volume: 70 };
   const emit = () => { if (!disposed) onChange({ ...state }); };
   const sync = () => {
     if (!state.ready || disposed || !player) return;
@@ -78,7 +78,7 @@ export function createYouTubePlayer(host: HTMLElement, videoId: string, onChange
     frame.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
     frame.allowFullscreen = true;
     frame.referrerPolicy = "strict-origin-when-cross-origin";
-    const params = new URLSearchParams({ enablejsapi: "1", origin: window.location.origin, autoplay: "1", mute: "1", controls: "0", playsinline: "1", rel: "0" });
+    const params = new URLSearchParams({ enablejsapi: "1", origin: window.location.origin, autoplay: "1", mute: state.muted ? "1" : "0", controls: "0", playsinline: "1", rel: "0" });
     const channel = videoId.startsWith("channel:") ? videoId.slice(8) : undefined;
     if (channel) params.set("channel", channel);
     // Use YouTube's privacy-enhanced embed domain.

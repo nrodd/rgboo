@@ -39,7 +39,7 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
     if (index === 3) setSubmitAttempt((value) => value + 1);
   };
   const playerRef = useRef<YouTubeHandle | null>(null);
-  const [state, setState] = useState<YouTubeState>({ status: "loading", ready: false, muted: true, volume: 70 });
+  const [state, setState] = useState<YouTubeState>({ status: "loading", ready: false, muted: false, volume: 70 });
   const [frogMessage, setFrogMessage] = useState("");
   const [sceneFailed, setSceneFailed] = useState(false);
   useEffect(() => {

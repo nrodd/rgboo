@@ -1,3 +1,3 @@
 .brand-logo { position: absolute; z-index: 1; left: var(--logo-x); top: var(--logo-y); width: var(--logo-width); height: var(--logo-height); overflow: hidden; pointer-events: none; }
-/* Shared TV geometry keeps the perched text and overhanging ghost clear of video. */
-.brand-logo-eyes { position: absolute; top: 0; left: 0; width: 100%; height: auto; aspect-ratio: 840 / 450; }
+/* Shared TV geometry perches the lettering on the rim with the ghost hanging over it. */
+.brand-logo-eyes { position: absolute; top: 0; left: 0; width: 100%; height: auto; aspect-ratio: 360 / 205; }
