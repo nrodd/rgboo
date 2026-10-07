@@ -21,7 +21,7 @@ test("first tape submits a name and RGB color, shares frog cooldown, and returns
   useStaticScene(false);
   const requests: unknown[] = [];
   worker.use(http.post("*/api/color", async ({ request }) => { requests.push(await request.json()); return HttpResponse.json({ queue_position: 3 }); }));
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   await tape(1).click();
   await expect.element(page.getByRole("dialog", { name: "Color" })).toHaveAttribute("data-side", "right");
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test Viewer");
@@ -43,7 +43,7 @@ test("first tape submits a name and RGB color, shares frog cooldown, and returns
 test("invalid inputs and server rejection keep the color form available to retry", async () => {
   const requests = vi.fn();
   worker.use(http.post("*/api/color", () => { requests(); return HttpResponse.json({ error: "Queue is full" }, { status: 503 }); }));
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   await tape(1).click();
   await page.getByRole("textbox", { name: "Name", exact: true }).fill("Test!!!");
   await page.getByRole("button", { name: "Send", exact: true }).click();
@@ -57,7 +57,7 @@ test("invalid inputs and server rejection keep the color form available to retry
 });
 
 test("second tape opens old links from the right and the dialog traps focus", async () => {
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   await tape(2).click();
   await expect.element(page.getByRole("dialog", { name: "Links" })).toHaveAttribute("data-side", "right");
   await expect.element(page.getByRole("dialog", { name: "Links" })).toHaveFocus();
@@ -65,7 +65,7 @@ test("second tape opens old links from the right and the dialog traps focus", as
   await userEvent.keyboard("{Tab}");
   await expect.element(page.getByRole("button", { name: "Close", exact: true })).toHaveFocus();
   expect(document.activeElement?.matches(":focus-visible")).toBe(true);
-  await expect.element(page.getByRole("link", { name: /Twitch/ })).toHaveAttribute("href", "https://twitch.tv/na10_dev");
+  await expect.element(page.getByRole("link", { name: /Twitch/ })).toHaveAttribute("href", "https://www.twitch.tv/test-channel");
   await expect.element(page.getByRole("link", { name: /GitHub/ })).toHaveAttribute("href", "https://github.com/nrodd/rgboo");
   for (let i = 0; i < 8; i++) {
     await userEvent.keyboard("{Tab}");
@@ -77,7 +77,7 @@ test("second tape opens old links from the right and the dialog traps focus", as
 
 test("settings change scene behavior without recreating the canvas and persist after remount", async () => {
   useStaticScene(false);
-  const view = await render(<StreamEmbed videoId="test-video-id" />);
+  const view = await render(<StreamEmbed channel="test-channel" />);
   await expect.element(canvas()).toHaveAttribute("data-motion", "full");
   const originalCanvas = document.querySelector("canvas");
   await tape(3).click();
@@ -95,7 +95,7 @@ test("settings change scene behavior without recreating the canvas and persist a
   expect(JSON.parse(localStorage.getItem("rgboo_scene_preferences")!)).toEqual({ reduceMotion: true, highContrast: true, showLabels: true });
   await userEvent.keyboard("{Escape}");
   await view.unmount();
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   await expect.element(canvas()).toHaveAttribute("data-motion", "reduced");
   await tape(3).click();
   await expect.element(page.getByRole("switch", { name: "Reduce motion", exact: true })).toBeChecked();
@@ -104,7 +104,7 @@ test("settings change scene behavior without recreating the canvas and persist a
 
 test("repeated live resizes retain the canvas, redraw pixels and align every tape with the scene", async () => {
   useStaticScene(false);
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   await expect.element(canvas()).toBeInTheDocument();
   const originalCanvas = document.querySelector("canvas")!;
   const root = document.querySelector<HTMLElement>(".scene-player")!;
@@ -147,7 +147,7 @@ test("repeated live resizes retain the canvas, redraw pixels and align every tap
 test.each([[390, 844], [1440, 900]])("one click swaps panels at %i × %i, preserving the draft", async (width, height) => {
   const initialViewport = [window.innerWidth, window.innerHeight];
   useStaticScene(false);
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   // The scene keeps rendering at up to 30fps regardless of motion
   // preferences (createScene's ticker isn't gated by reduceMotion, only the
   // animations within a frame are). A canvas this large under CI's software

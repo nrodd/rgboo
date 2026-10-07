@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: config.plugins?.filter((plugin) => plugin && "name" in plugin && plugin.name !== "offline-youtube-tests"),
   test: {
     ...config.test,
-    include: ["src/__test__/youtube-live.test.tsx"],
+    include: ["src/__test__/twitch-live.test.tsx"],
     exclude: ["**/node_modules/**"],
     setupFiles: ["./src/theme.css"],
   },

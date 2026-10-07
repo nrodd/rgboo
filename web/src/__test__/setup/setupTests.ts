@@ -1,4 +1,5 @@
 import "./test-youtube";
+import "./test-twitch";
 // Import global stylesheet so Vitest + Vite will process and inject it for tests
 import "../../theme.css";
 

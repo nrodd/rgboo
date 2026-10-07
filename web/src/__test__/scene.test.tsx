@@ -21,7 +21,7 @@ test("frog pointer interaction hops and sends the original color API payload onc
     requests.push(await request.json());
     return HttpResponse.json({ queue_position: 2, estimated_wait_seconds: 30 });
   }));
-  const view = await render(<StrictMode><StreamEmbed videoId="test-video-id" /></StrictMode>);
+  const view = await render(<StrictMode><StreamEmbed channel="test-channel" /></StrictMode>);
   await expect.poll(() => document.querySelectorAll("canvas").length).toBe(1);
   await page.getByRole("button", { name: "VHS tape 1: Send a color", exact: true }).click();
   await page.getByRole("textbox", { name: "Hex color" }).fill("#ffffff");
@@ -43,7 +43,7 @@ test("frog pointer interaction hops and sends the original color API payload onc
 
 test("frog handles a failed API call without pretending the color was queued", async () => {
   worker.use(http.post("*/api/color", () => new HttpResponse(null, { status: 503 })));
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   await canvas().click({ position: { x: 10, y: 10 } });
   await userEvent.keyboard("f");
   await expect.element(page.getByRole("status", { name: "Frog color submission" })).toHaveTextContent("Frog couldn't send green");
@@ -110,7 +110,7 @@ test("Submit opens missing fields and submits the saved color draft through the 
     requests.push(await request.json());
     return HttpResponse.json({ queue_position: 4 });
   }));
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   const submit = page.getByRole("button", { name: "VHS tape 4: Submit", exact: true });
   await submit.hover();
   await expect.element(canvas()).toHaveAttribute("data-hovered-tape", "vhs-4");
@@ -133,7 +133,7 @@ test("Submit opens missing fields and submits the saved color draft through the 
 test("idle animal behavior never submits a color", async () => {
   const submitted = vi.fn();
   worker.use(http.post("*/api/color", () => { submitted(); return HttpResponse.json({ queue_position: 1 }); }));
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   await expect.element(canvas()).toHaveAttribute("data-cat", "lounging");
   await expect.element(canvas()).toHaveAttribute("data-motion", "full");
   await expect.element(canvas(), { timeout: 6000 }).toHaveAttribute("data-frog-frame", "1");
@@ -149,7 +149,7 @@ test("reduced motion keeps rain and animal behavior still", async () => {
     if (query === "(prefers-reduced-motion: reduce)") Object.defineProperty(result, "matches", { value: true });
     return result;
   });
-  await render(<StreamEmbed videoId="test-video-id" />);
+  await render(<StreamEmbed channel="test-channel" />);
   await expect.element(canvas()).toHaveAttribute("data-motion", "reduced");
   await expect.element(canvas()).toHaveAttribute("data-cat", "lounging");
   await expect.element(canvas()).toHaveAttribute("data-frog", "resting");

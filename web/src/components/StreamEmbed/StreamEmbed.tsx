@@ -1,6 +1,6 @@
 import { BrandLogo } from "../BrandLogo/BrandLogo";
 import { useEffect, useRef, useState } from "react";
-import { createYouTubePlayer, type YouTubeHandle, type YouTubeState } from "../../media/youtubePlayer";
+import { createTwitchPlayer, type TwitchHandle, type TwitchState } from "../../media/twitchPlayer";
 import { createFrogSender } from "../../api/frogColor";
 import { tvArtwork, vhsTapes } from "../../scene/scene.config";
 import type { SceneHandle } from "../../scene/createScene";
@@ -10,9 +10,9 @@ import { readPreferences, type ScenePreferences } from "../../scene/preferences"
 import "../../scene/scene.css";
 
 // Follow the channel across broadcasts; keep the source here rather than in environment configuration.
-const youtubeChannelId = "UC2GJYmn0WCqW8k1NFp1W7KQ";
+const twitchChannel = "na10_dev";
 
-export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { videoId?: string }) => {
+export const StreamEmbed = ({ channel = twitchChannel }: { channel?: string }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
@@ -38,8 +38,8 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
     setPanel((current) => index === 3 ? 0 : current === index ? null : index);
     if (index === 3) setSubmitAttempt((value) => value + 1);
   };
-  const playerRef = useRef<YouTubeHandle | null>(null);
-  const [state, setState] = useState<YouTubeState>({ status: "loading", ready: false, muted: false, volume: 70 });
+  const playerRef = useRef<TwitchHandle | null>(null);
+  const [state, setState] = useState<TwitchState>({ status: "loading", ready: false, muted: false, volume: 70 });
   const [frogMessage, setFrogMessage] = useState("");
   const [sceneFailed, setSceneFailed] = useState(false);
   useEffect(() => {
@@ -47,7 +47,7 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
     const host = hostRef.current!;
     const controller = new AbortController();
     let playbackActive = false;
-    const player = createYouTubePlayer(screenRef.current!, videoId, (next) => {
+    const player = createTwitchPlayer(screenRef.current!, channel, (next) => {
       setState(next);
       playbackActive = next.status === "playing" || next.status === "buffering";
       sceneRef.current?.setPlaying(playbackActive);
@@ -88,7 +88,7 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
       setSceneFailed(true);
     });
     return () => { clearTimeout(toastTimer.current); sceneRef.current = null; controller.abort(); frog.destroy(); observer.disconnect(); player.destroy(); playerRef.current = null; };
-  }, [videoId]);
+  }, [channel]);
   return (
     <div ref={rootRef} className="scene-player" data-testid="stream-embed-container" data-playback={state.status} data-scene-failed={sceneFailed} data-high-contrast={preferences.highContrast} data-show-labels={preferences.showLabels} data-reduced-motion={preferences.reduceMotion}>
       <div className="scene-canvas-host" ref={hostRef} />
@@ -101,7 +101,7 @@ export const StreamEmbed = ({ videoId = `channel:${youtubeChannelId}` }: { video
           onFocus={() => sceneRef.current?.hoverTape(index)} onBlur={() => sceneRef.current?.hoverTape(null)}
           onClick={() => openTape(index)}><span className="tape-label">{tape.title}</span></button>)}
       </div>
-      <ScenePanels submitAttempt={submitAttempt} panel={panel} onSelectTape={openTape} onClose={() => setPanel(null)} returnFocus={returnFocus} player={playerRef} playback={state} videoId={videoId}
+      <ScenePanels submitAttempt={submitAttempt} panel={panel} onSelectTape={openTape} onClose={() => setPanel(null)} returnFocus={returnFocus} player={playerRef} playback={state} channel={channel}
         preferences={preferences} onPreferences={applyPreferences} />
       <p className="scene-toast frog-message" data-visible={Boolean(frogMessage)} role="status" aria-label="Frog color submission">{frogMessage}</p>
     </div>

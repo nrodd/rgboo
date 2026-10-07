@@ -3,9 +3,9 @@ import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { StreamEmbed } from "../components/StreamEmbed";
 
-// Opt in explicitly: this contacts YouTube and depends on the current broadcast.
-test.skipIf(!import.meta.env.VITE_TEST_LIVE_YOUTUBE)("plays the current broadcast through the official embed", async () => {
-  await render(<StreamEmbed videoId={import.meta.env.VITE_TEST_LIVE_YOUTUBE} />);
+// Opt in explicitly: this contacts Twitch and depends on the current broadcast.
+test.skipIf(!import.meta.env.VITE_TEST_LIVE_TWITCH)("plays the current broadcast through the official embed", async () => {
+  await render(<StreamEmbed channel={import.meta.env.VITE_TEST_LIVE_TWITCH} />);
   await expect.element(page.getByTestId("stream-embed-container"), { timeout: 30000 }).toHaveAttribute("data-playback", "playing");
   await expect.element(page.getByRole("group", { name: /Interactive scene/ })).toHaveAttribute("data-tv-powered", "true");
   const originalIframe = document.querySelector(".scene-youtube-screen iframe");

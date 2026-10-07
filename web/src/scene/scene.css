@@ -5,6 +5,7 @@
 .scene-canvas-host canvas:focus-visible { outline: 2px solid #ebdbbe; outline-offset: -2px; }
 /* The requested corner mask reveals the original TV bezel beneath the player. */
 .scene-youtube-screen { position: absolute; left: var(--screen-x); top: var(--screen-y); width: var(--screen-width); height: var(--screen-height); background: #080c12; border-radius: var(--screen-corner-x) / var(--screen-corner-y); overflow: hidden; }
+.scene-youtube-screen .stream-mount { width: 100%; height: 100%; }
 .scene-youtube-screen iframe { display: block; width: 100%; height: 100%; border: 0; }
 .vhs-hit-target { position: absolute; padding: 0; background: transparent; border: 0; cursor: pointer; touch-action: manipulation; }
 .vhs-hit-target:focus-visible { outline: 2px solid #e8d6a8; outline-offset: 4px; }
