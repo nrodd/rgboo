@@ -12,13 +12,15 @@ export default defineConfig({
     resolveId(source, importer) {
       const fixture = path.resolve("src/__test__/setup/test-youtube-adapter.ts");
       if (source.endsWith("/media/youtubePlayer") && importer !== fixture) return fixture;
+      const twitchFixture = path.resolve("src/__test__/setup/test-twitch-adapter.ts");
+      if (source.endsWith("/media/twitchPlayer") && importer !== twitchFixture) return twitchFixture;
       const sceneFixture = path.resolve("src/__test__/setup/test-scene-adapter.ts");
       if (source.endsWith("/scene/createScene") && importer !== sceneFixture) return sceneFixture;
     },
   }],
   optimizeDeps: { include: ["react-dom/client"] },
   test: {
-    exclude: ["**/node_modules/**", "src/__test__/youtube-live.test.tsx"],
+    exclude: ["**/node_modules/**", "src/__test__/twitch-live.test.tsx"],
     // Scene tests use real WebGL contexts and shared browser resources.
     fileParallelism: false,
     setupFiles: ["./src/__test__/setup/setupTests.ts"],

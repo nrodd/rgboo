@@ -40,12 +40,10 @@ const (
 	maxEventBytes = 1 << 20
 
 	// The bridge posts a now-playing change the instant the song starts, but
-	// that's real time, not stream time: YouTube's own "low latency" mode puts
-	// most viewers under 10 seconds behind, and mpv adds a little more on top
-	// getting the stream open. 7s is a middle-of-the-road guess at that total,
-	// so the scene changes roughly when the new song is actually heard instead
-	// of a few seconds ahead of it.
-	nowPlayingDelay = 7 * time.Second
+	// that's real time, not stream time: Twitch's low-latency mode usually
+	// runs a few seconds behind, plus a little more while mpv opens the
+	// stream. 5s keeps the scene changing roughly when the song is heard.
+	nowPlayingDelay = 5 * time.Second
 )
 
 // streamClient replaces http.DefaultClient for one reason: net/http strips

@@ -8,19 +8,19 @@ import { Slider } from "../ui/slider";
 import { Switch } from "../ui/switch";
 import { colorFormSchema } from "../ColorForm/colorForm.schema";
 import { cooldownRemaining, createColorSender, type SubmissionResult } from "../../api/colorSubmission";
-import { youtubeWatchUrl, type YouTubeHandle, type YouTubeState } from "../../media/youtubePlayer";
+import { twitchWatchUrl, type TwitchHandle, type TwitchState } from "../../media/twitchPlayer";
 import { glassLensMap } from "../../scene/glassMaterial";
 import type { ScenePreferences } from "../../scene/preferences";
 
 interface Props {
   submitAttempt: number; panel: number | null; onSelectTape(index: number): void; onClose(): void; returnFocus: RefObject<HTMLElement | null>;
-  player: RefObject<YouTubeHandle | null>; playback: YouTubeState; videoId: string;
+  player: RefObject<TwitchHandle | null>; playback: TwitchState; channel: string;
   preferences: ScenePreferences; onPreferences(value: ScenePreferences): void;
 }
 const titles = ["Color", "Links", "Settings"];
 const swatches = ["#8fa77b", "#d5854c", "#946172", "#697fa8", "#d2b575", "#722cc7"];
 
-export function ScenePanels({ submitAttempt, panel, onSelectTape, onClose, returnFocus, player, playback, videoId, preferences, onPreferences }: Props) {
+export function ScenePanels({ submitAttempt, panel, onSelectTape, onClose, returnFocus, player, playback, channel, preferences, onPreferences }: Props) {
   const glassId = useId();
   const handledSubmit = useRef(0);
   const formRef = useRef<HTMLFormElement>(null);
@@ -123,8 +123,8 @@ export function ScenePanels({ submitAttempt, panel, onSelectTape, onClose, retur
       </form>}
       {selected === 1 && <div className="panel-stack">
         <nav className="panel-links" aria-label="Project links">
-          <a href={youtubeWatchUrl(videoId)} target="_blank" rel="noreferrer"><span>YouTube</span><span aria-hidden="true">↗</span></a>
-          <a href="https://twitch.tv/na10_dev" target="_blank" rel="noreferrer"><span>Twitch</span><span aria-hidden="true">↗</span></a>
+          <a href={twitchWatchUrl(channel)} target="_blank" rel="noreferrer"><span>Twitch</span><span aria-hidden="true">↗</span></a>
+          <a href="https://www.youtube.com/channel/UC2GJYmn0WCqW8k1NFp1W7KQ/live" target="_blank" rel="noreferrer"><span>YouTube</span><span aria-hidden="true">↗</span></a>
           <a href="https://github.com/nrodd/rgboo" target="_blank" rel="noreferrer"><span>GitHub</span><span aria-hidden="true">↗</span></a>
         </nav>
       </div>}

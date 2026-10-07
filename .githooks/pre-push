@@ -3,6 +3,6 @@ set -eu
 repository=$(git rev-parse --show-toplevel)
 cd "$repository/web"
 # Live playback is an opt-in integration check, never a push prerequisite.
-unset VITE_TEST_LIVE_YOUTUBE
+unset VITE_TEST_LIVE_TWITCH
 printf 'Running web tests before push…\n'
 corepack yarn test

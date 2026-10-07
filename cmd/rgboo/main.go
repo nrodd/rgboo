@@ -3,7 +3,7 @@
 // under the moon, tinted with the latest LED color, over the username who
 // requested it and the current + previous track.
 //
-// Playback is mpv, which pulls the YouTube stream through yt-dlp. Both are
+// Playback is mpv, which pulls the Twitch stream through yt-dlp. Both are
 // system dependencies; `brew install mpv yt-dlp` covers it.
 package main
 
@@ -25,17 +25,15 @@ import (
 )
 
 // Whatever the channel is broadcasting right now, rather than a pinned video,
-// so starting a new stream doesn't need a new release. This is the @na10_dev
-// channel by ID, because the ID survives a handle rename and installed
-// binaries don't get to be re-released when one happens.
-const broadcastURL = "https://www.youtube.com/channel/UC2GJYmn0WCqW8k1NFp1W7KQ/live"
+// so starting a new stream doesn't need a new release.
+const broadcastURL = "https://www.twitch.tv/na10_dev"
 
 // Nothing is playing, which is an ordinary state rather than a failure.
 var errNotLive = errors.New("the stream isn't live right now, check back later")
 
 const fps = 8
 
-// Long enough for yt-dlp to negotiate with YouTube, short enough that a
+// Long enough for yt-dlp to negotiate with Twitch, short enough that a
 // wedged resolve doesn't look like a hang.
 const resolveTimeout = 45 * time.Second
 
@@ -226,39 +224,35 @@ func resolveBroadcastURL(envURL string) string {
 	return broadcastURL
 }
 
-// resolveBroadcast asks yt-dlp what is streaming now and hands back a plain
-// watch URL, so mpv plays the same video we just checked was live.
+// resolveBroadcast asks yt-dlp what is streaming now and hands back its page
+// URL, so mpv plays the same stream we just checked was live.
 func resolveBroadcast(ctx context.Context, ytdlpPath, url string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, resolveTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, ytdlpPath, "--no-warnings", "--simulate",
-		"--print", "%(id)s|%(live_status)s", url)
+		"--print", "%(live_status)s|%(webpage_url)s", url)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 
 	// Run first: arguments are evaluated before the call, so reading the
 	// buffers inline would read them empty.
 	runErr := cmd.Run()
-	id, err := broadcastID(stdout.String(), stderr.String(), runErr)
-	if err != nil {
-		return "", err
-	}
-	return "https://www.youtube.com/watch?v=" + id, nil
+	return broadcastPage(stdout.String(), stderr.String(), runErr)
 }
 
-// broadcastID reads yt-dlp's answer. Kept apart from the exec so every failure
+// broadcastPage reads yt-dlp's answer. Kept apart from the exec so every failure
 // mode is testable without a network or a binary.
-func broadcastID(stdout, stderr string, runErr error) (string, error) {
+func broadcastPage(stdout, stderr string, runErr error) (string, error) {
 	line, _, _ := strings.Cut(strings.TrimSpace(stdout), "\n")
-	id, status, _ := strings.Cut(line, "|")
+	status, page, _ := strings.Cut(line, "|")
 
-	if runErr == nil && id != "" {
+	if runErr == nil && page != "" {
 		// A scheduled stream resolves fine but has nothing to play yet.
 		if status == "is_upcoming" {
 			return "", errNotLive
 		}
-		return id, nil
+		return page, nil
 	}
 
 	reason := ytdlpError(stderr)

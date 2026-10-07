@@ -125,11 +125,10 @@ References: [YouTube player parameters](https://developers.google.com/youtube/pl
 [YouTube player requirements](https://developers.google.com/youtube/terms/required-minimum-functionality),
 [Pixi events](https://pixijs.com/8.x/guides/components/events).
 
-Optional live playback check (contacts YouTube; requires an active, embeddable
-broadcast):
+Optional live playback check (contacts Twitch; requires the channel to be live):
 
 ```sh
-VITE_TEST_LIVE_YOUTUBE=6LVM4iQfMX4 npm run test:live
+VITE_TEST_LIVE_TWITCH=na10_dev npm run test:live
 ```
 
 

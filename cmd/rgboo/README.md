@@ -1,6 +1,6 @@
 # rgboo (terminal player)
 
-Streams the [RGBoo live broadcast](https://www.youtube.com/@na10_dev/live) to
+Streams the [RGBoo live broadcast](https://www.twitch.tv/na10_dev) to
 your speakers and draws a small animated scene while it plays: a witch flying
 her broom under the moon, trees drifting past below. The witch is tinted with
 the latest LED color, and the username who requested it plus the current and
@@ -60,10 +60,10 @@ in `RGBOO_BROADCAST_URL`.
 ## Sync delay
 
 The bridge posts a now-playing update the instant a song starts, but a
-low-latency YouTube stream still lags a few seconds behind real time by the
+low-latency Twitch stream still lags a few seconds behind real time by the
 time mpv plays it. To keep the scene from changing before you actually hear
-the new track, rgboo holds every update back by a fixed 7 seconds, a
-middle-of-the-road guess based on YouTube's own low-latency numbers.
+the new track, rgboo holds every update back by a fixed 5 seconds, a
+middle-of-the-road guess based on Twitch's own low-latency numbers.
 
 ## Staging vs production
 
